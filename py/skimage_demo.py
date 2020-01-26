@@ -24,38 +24,32 @@ from skimage.external import tifffile
 
 rgb_raw = tifffile.imread('composite.tiff')
 
-
 gray_raw = rgb2gray(rgb_raw)  # Y = 0.2125 R + 0.7154 G + 0.0721 B
-
-a = gray_raw.shape
-
-print(a)
-print(a[2])
-
-
-
-
-
-
+image = gray_raw[1]
 
 
 # image = gaussian_filter(image, 2)
 
-#seed = np.copy(image)
+seed = np.copy(image)
+seed = seed - .8
 #seed[1:-1, 1:-1] = image.min()
-#mask = image
+mask = image
 
-#dilated = reconstruction(seed, mask, method='dilation')
+dilated = reconstruction(seed, mask, method='dilation')
+result = image - dilated
+
+print(seed.min(), seed.max())
+print(result.min(), result.max())
 
 
-#fig, (ax0, ax1) = plt.subplots(nrows=1,
-                               #ncols=2,
-                               #figsize=(8, 2.5),
-                               #sharex=True,
-                               #sharey=True)
+fig, (ax0, ax1) = plt.subplots(nrows=1,
+                               ncols=2,
+                               figsize=(8, 2.5),
+                               sharex=True,
+                               sharey=True)
 
-#ax0.imshow(image, cmap='gray')
-#ax1.imshow(seed, vmin=image.min(), vmax=image.max(), cmap='gray')
+ax0.imshow(image, cmap='gray')
+ax1.imshow(image - dilated, cmap='gray')
 
-#plt.show()
+plt.show()
 
