@@ -1,7 +1,7 @@
 name: trans_scripts
 channels:
-- conda-forge
 - anaconda
+- conda-forge
 - defaults
 dependencies:
 - libtiff=4.1.0=h2733197_0
