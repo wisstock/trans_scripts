@@ -22,34 +22,42 @@ from skimage.morphology import reconstruction
 from skimage.external import tifffile
 
 
-rgb_raw = tifffile.imread('composite.tiff')
 
-gray_raw = rgb2gray(rgb_raw)  # Y = 0.2125 R + 0.7154 G + 0.0721 B
+wd_path = os.path.split(os.getcwd())  # working dir path
+os.chdir(wd_path[0] + '/temp/data/')  # go to DATA dir
+
+
+gray_raw = tifffile.imread('Fluorescence_435nmDD500_cell1.tiff')
+
+# gray_raw = rgb2gray(rgb_raw)  # Y = 0.2125 R + 0.7154 G + 0.0721 B
 image = gray_raw[1]
 
+plt.figure(figsize=(4, 4))
+plt.imshow(image, cmap='gray')
+plt.axis('off')
 
 # image = gaussian_filter(image, 2)
 
-seed = np.copy(image)
-seed = seed - .8
+# seed = np.copy(image)
+# seed = seed - .8
 #seed[1:-1, 1:-1] = image.min()
-mask = image
+# mask = image
 
-dilated = reconstruction(seed, mask, method='dilation')
-result = image - dilated
+# dilated = reconstruction(seed, mask, method='dilation')
+# result = image - dilated
 
-print(seed.min(), seed.max())
-print(result.min(), result.max())
+# print(seed.min(), seed.max())
+# print(result.min(), result.max())
 
 
-fig, (ax0, ax1) = plt.subplots(nrows=1,
-                               ncols=2,
-                               figsize=(8, 2.5),
-                               sharex=True,
-                               sharey=True)
+# fig, (ax0, ax1) = plt.subplots(nrows=1,
+                               # ncols=2,
+                               # figsize=(8, 2.5),
+                               # sharex=True,
+                               # sharey=True)
 
-ax0.imshow(image, cmap='gray')
-ax1.imshow(image - dilated, cmap='gray')
+# ax0.imshow(image, cmap='gray')
+# ax1.imshow(image - dilated, cmap='gray')
 
 plt.show()
 
