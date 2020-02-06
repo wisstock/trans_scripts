@@ -3,6 +3,13 @@
 '''
 Copyright © 2020 Borys Olifirov
 
+Script for cell edges detection.
+
+Provide inage preprocessing:
+    - camera offset value compensation
+    - offsets upper pixel intensiry limit (17000)
+    - create threshold mask (avaliable methods - percentile, triangle)
+
 '''
 
 import os
@@ -60,31 +67,43 @@ def cellPercent(img, percent=80):
 
 	return(out)
 
-def cellEdge(img, method="first"):
-	'''
-	method:
+def cellEdge(img, thbreshold_method="triangle", seed_method="first", percent=85):
+    '''
+	seed methods:
 	    first - build threshold mask for first frame of series
 	    max - build threshold mask for max intensity frame
 	    mean - build threshold mask for mean intensity of all serie frames
 
+    treshold methods:
+        triangle - threshold_triangle
+        percent - extract pixels abowe fix percentile value
+
 	'''
+
+    thresh_out = threshold_triangle(img)
+    positive_mask = img > thresh_out  # create negative threshold mask
+    threshold_mask = positive_mask * -1  # inversion threshold mask
+
+    output_img = np.copy(img)
+    output_img[threshold_mask] = 0
+
+    return(threshold_mask, output_img)
+
+
 
 
 input_file = 'Fluorescence_435nmDD500_cell1.tiff'
 
-img = getTiff(input_file, 1, 5)
-# img_eq = exposure.equalize_hist(img)
-img_thresh = cellThresh(img)
-img_perc = cellPercent(img, 98)
-img_eq = exposure.equalize_hist(img_perc)
+img = getTiff(input_file, 0, 0)
+img_eq = exposure.equalize_hist(img)
 
+img_perc = cellPercent(img, 95)
+img_eq_perc = exposure.equalize_hist(img_perc)
 
-invert_mask = np.copy(img_thresh)  # create bollean mask for threshold result
-invert_mask[:,:] = -1
-thresh_mask = (img_thresh * invert_mask)^2
+mask, img_edge = cellEdge(img)
+img_eq_edge = exposure.equalize_hist(img_edge)
 
-extract_thresh = np.copy(img)
-extract_thresh[thresh_mask] = 0
+print(mask)
 
 
 
@@ -96,13 +115,13 @@ fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1,
 ax0.imshow(img)  #, cmap='gray')
 ax0.axis("off")
 
-ax1.imshow(img_perc)  #, cmap='gray')
+ax1.imshow(img_eq)
 ax1.axis("off")
 
-ax2.imshow(thresh_mask)
+ax2.imshow(mask)
 ax2.axis("off")
 
-ax3.imshow(extract_thresh)
+ax3.imshow(img_edge)
 ax3.axis("off")
 
 plt.show()
