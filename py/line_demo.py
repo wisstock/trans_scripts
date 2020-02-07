@@ -48,6 +48,10 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
     			print("Frame number out of range!")
 
 def lineSlice(img, coordinates=[0,0,100,100]):
+
+
+    
+
     x0, y0, x1, y1 = coordinates[0], coordinates[1], coordinates[2], coordinates[3]
     line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
