@@ -18,9 +18,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from skimage import data, img_as_float
-from skimage import exposure
 from skimage.external import tifffile
+from skimage import data, img_as_float
+
+from skimage import exposure
 from skimage.filters import threshold_triangle
 from skimage.filters import scharr
 
@@ -88,21 +89,30 @@ def cellEdge(img, thbreshold_method="triangle", percent=90, seed_method="one"):
     else:
         print("Incorrect treshold method!")
 
+def lineSlice(img, coordinates=[0,0,100,100]):
+    x0, y0, x1, y1 = coordinates[0], coordinates[1], coordinates[2], coordinates[3]
+    line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
+    x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
+
+    output_img = img[x.astype(np.int), y.astype(np.int)]
+    return(output_img)
+
 
 
 input_file = 'Fluorescence_435nmDD500_cell1.tiff'
 
-
-
 img = getTiff(input_file, 1, 10)
 img_eq = exposure.equalize_hist(img)
 
-img_perc = cellEdge(img, "percent", 97)
+
+img_perc = cellEdge(img, "percent", 95)
 img_eq_perc = exposure.equalize_hist(img_perc)
 
-# img_edge = cellEdge(img)
-# img_eq_edge = exposure.equalize_hist(img_edge)
+ends_coord = [200, 200, 380, 550]
+x0, y0, x1, y1 = ends_coord[0], ends_coord[1], ends_coord[2], ends_coord[3]
 
+raw_slice = lineSlice(img, ends_coord)
+perc_slice = lineSlice(img_perc, ends_coord)
 
 
 
@@ -111,15 +121,18 @@ fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1,
                                          figsize=(8, 8))
 
 ax0.imshow(img)  #, cmap='gray')
-ax0.axis("off")
+ax0.plot([x0, x1], [y0, y1], 'ro-')
+# ax0.axis("off")
 
-ax1.imshow(img_eq)
-ax1.axis("off")
+ax1.plot(raw_slice)
+# ax1.imshow(img_eq)
+# ax1.axis("off")
 
 ax2.imshow(img_perc)
-ax2.axis("off")
+ax2.plot([x0, x1], [y0, y1], 'ro-')
+# ax2.axis("off")
 
-ax3.imshow(img_eq_perc)
-ax3.axis("off")
+ax3.plot(perc_slice)
+# ax3.axis("off")
 
 plt.show()
