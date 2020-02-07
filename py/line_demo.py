@@ -49,8 +49,48 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
 
 def lineSlice(img, coordinates=[0,0,100,100]):
 
+    # y = a * x + b
+    # a = tg alpha
+    # b = y | x = 0
+    
+    
+    #  x
+    #  ^       90
+    #  |       |
+    #  |       |
+    #  |       |
+    #  0-------*-------180
+    #  |       |
+    #  |       |
+    #  |       |
+    #  +------270--------> y
 
     
+    # IF  0 >= alpha >= b>=max(y)
+    #
+    # LEFT PART
+    # deltha x = length([0, y-cent][x-cent, y-cent])
+    # deltha y =  deltha x * arctg alpha
+    # b = [0, y-cent + deltha y]
+    #
+    # RIGHT PART
+    # delta x = length([x-cent, y-cent], [max(x), y-cent])
+    # delta y = deltha x * arctg alpha
+    # -b = [max(x), y-cent - deltha y]
+
+
+    # IF 180 >= y >= half(y)
+    #
+    # LEFT PART
+    #
+
+
+
+    img_shape = np.shape(img)
+
+    centr_coordinate = [np.int(img_shape[1]/2),
+                        np.int(img_shape[0]/2)]  # [x, y]
+    print(centr_coordinate) 
 
     x0, y0, x1, y1 = coordinates[0], coordinates[1], coordinates[2], coordinates[3]
     line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
