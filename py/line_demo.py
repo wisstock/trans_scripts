@@ -10,6 +10,8 @@ scipy.ndimage.measurements.center_of_mass
 '''
 
 import os
+import logging
+import math
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -17,6 +19,11 @@ import numpy as np
 
 from skimage.external import tifffile
 from skimage import data, img_as_float
+
+
+logging.basicConfig(filename="sample.log",
+                    level=logging.DEBUG,
+                    filemode="w")
 
 
 def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
@@ -47,52 +54,164 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
     		if frame_number > frame_amount[0]:
     			print("Frame number out of range!")
 
-def lineSlice(img, coordinates=[0,0,100,100]):
+def lineSlice(img, angle=0, cntr_coord="center"):
+    '''
+    Returns coordinates of intersection points custom line with frame edges.
+    Requires cell image mass center coordinates (default set up frame center)
+    and angle value (in degree).
 
-    # y = a * x + b
-    # a = tg alpha
-    # b = y | x = 0
+
+    Angles annotation:
+               mass centre coord 
+          180 /
+           | /
+           |/
+    90 ----+---- 
+           |
+           |
+           0
+
+    y = a * x + b
+    a = tg alpha
+    b = y | x = 0
     
-    
-    #  x
-    #  ^       90
-    #  |       |
-    #  |       |
-    #  |       |
-    #  0-------*-------180
-    #  |       |
-    #  |       |
-    #  |       |
-    #  +------270--------> y
 
-    
-    # IF  0 >= alpha >= b>=max(y)
-    #
-    # LEFT PART
-    # deltha x = length([0, y-cent][x-cent, y-cent])
-    # deltha y =  deltha x * arctg alpha
-    # b = [0, y-cent + deltha y]
-    #
-    # RIGHT PART
-    # delta x = length([x-cent, y-cent], [max(x), y-cent])
-    # delta y = deltha x * arctg alpha
-    # -b = [max(x), y-cent - deltha y]
+    IF deltha y < lim y
 
+      y
+      ^
+      |
+     Y|------------------
+      |                  |
+      |                  |
+      |                  |
+     B| *                |
+      |   *              |
+      |     *            |
+      |  Up   *          |
+      |        a* O      |
+     A|-----------*------|A'
+      |           | *    |
+      |  D        |   *  |
+      |           |     *|B'
+     S+-----------------------> x
+                         X
+    LEFT
+    AB = AO * tg(a)
 
-    # IF 180 >= y >= half(y)
-    #
-    # LEFT PART
-    #
+    RIGHT
+    A'B' = OA' * tg(a)
 
 
 
+    IF deltha y > lim y
+
+      y
+      ^
+      |
+     Y|*
+      | *
+      |  *                
+      |   *               
+      |    *C              
+     B|-----* -----------               
+      |      *           |
+      |       *          |
+      |        *         |
+      |        a* O      |
+     A|-----------*------|A'
+      |           |*     |
+      |           | *    |
+      |           |  *   |B'
+     S+---------------*-------> x
+      |              C'* | 
+      |                 *|X
+      |
+
+    LEFT
+    BC = AO - AB/tg(a)
+
+    RIGHT
+    B'C' = OA' - A'B'/tg(a)                    
+
+    '''
+
+    def anglPars(angl):
+        '''
+        Parse input angle value.
+
+        '''
+        if 0 < angl < 90:
+            logging.debug("anglPars done! d")
+            return("d", math.radians(angl))
+        elif 90 < angl < 180:
+            logging.debug("anglPars done! u")
+            return("u", math.radians(180-angl))
+        elif angl == 0 | angl == 180:
+            logging.debug("anglPars done! v")
+            return("v", "NaN")
+        elif angl == 90:
+            logging.debug("anglPars done! h")
+            return("h", "NaN")
+
+    x0, y0, x1, y1 = 0, 0, 0, 0  
     img_shape = np.shape(img)
+    x_lim = img_shape[0]-1
+    y_lim = img_shape[1]-1
 
-    centr_coordinate = [np.int(img_shape[1]/2),
-                        np.int(img_shape[0]/2)]  # [x, y]
-    print(centr_coordinate) 
+    indicator, angl_rad = anglPars(angle)
 
-    x0, y0, x1, y1 = coordinates[0], coordinates[1], coordinates[2], coordinates[3]
+    if cntr_coord == "center":
+        cntr_coord = [np.int(x_lim/2),
+                      np.int(y_lim/2)]  # [x, y]
+        logging.debug("center mode, %s" % cntr_coord)
+    # else:
+        # continue
+
+
+    logging.debug("indicator = %s" % indicator)
+    if indicator == "h":  # boundary cases check
+        x0, y0 = 0, cntr_coord[1]
+        x1, y1 = x_lim, cntr_coord[1]
+        logging.debug("coordinate h")
+        return([x0, y0], [x1, y1])
+
+    elif indicator == "v":  # boundary cases check
+        x0, y0 = cntr_coord[0], 0 
+        x1, y1 = cntr_coord[0], y_lim
+        logging.debug("coordinate v")
+        return([x0-1, y0], [x1-1, y1-1])
+
+    elif indicator == "u":
+        # calculate up left (90-180)
+        AB_left = np.int(cntr_coord[0]*math.tan(angl_rad))
+        if  AB_left <= y_lim - cntr_coord[1]:
+            x0 = 0
+            y0 = cntr_coord[1] + AB_left
+        elif AB_left > y_lim - cntr_coord[1]:
+            x0 = cntr_coord[0] - np.int((y_lim - cntr_coord[1])/math.tan(angl_rad))
+            y0 = y_lim
+
+        # calculate up right
+        AB_right = np.int((x_lim - cntr_coord[0])*math.tan(angl_rad))
+        if cntr_coord[1] - AB_right >= 0:
+            x1 = x_lim
+            y1 = cntr_coord[1] - AB_right
+        elif cntr_coord[1] - AB_right < 0:
+            x1 = x_lim  - np.int(cntr_coord[1]/math.tan(angl_rad))
+            y1 = 0
+
+    return([x0, y0], [x1, y1])
+
+def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
+    '''
+    Extraction pixel values thoward the guide line
+    Require img im NumPy array format and line ends coordinate (in px)
+
+    '''
+
+    x0, y0 = start_coors[0], start_coors[1]
+    x1, y1 = end_coord[0], end_coord[1]
     line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
 
@@ -106,14 +225,18 @@ def lineSlice(img, coordinates=[0,0,100,100]):
 
 
 input_file = 'Fluorescence_435nmDD500_cell1.tiff'
-ends_coord = [0, 500, 650, 500]
 
 img = getTiff(input_file, 1, 10)
 # data_shape = img.shape()
 # print(data_shape[1], data_shape[2])
 
-line_slice = lineSlice(img, ends_coord)
-x0, y0, x1, y1 = ends_coord[0], ends_coord[1], ends_coord[2], ends_coord[3]
+start, end = lineSlice(img, 91)
+
+print(start, end)
+line_slice = lineExtract(img, start, end)
+
+x0, y0 = start[0], start[1]
+x1, y1 = end[0], end[1]
 
 
 fig, axes = plt.subplots(nrows=2)
