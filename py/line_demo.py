@@ -156,20 +156,27 @@ def lineSlice(img, angle=0, cntr_coord="center"):
 
     x0, y0, x1, y1 = 0, 0, 0, 0  
     img_shape = np.shape(img)
-    x_lim = img_shape[0]-1
-    y_lim = img_shape[1]-1
+
+    logging.debug("array shape: %s", img_shape)
+
+    x_lim = img_shape[1]-1
+    y_lim = img_shape[0]-1
 
     indicator, angl_rad = anglPars(angle)
 
     if cntr_coord == "center":
         cntr_coord = [np.int(x_lim/2),
                       np.int(y_lim/2)]  # [x, y]
-        logging.debug("center mode, %s" % cntr_coord)
-    # else:
-        # continue
+        logging.debug("center mode")
 
+    AO_left = cntr_coord[0]
+    OA_right = x_lim - cntr_coord[0]
+    x_cntr = cntr_coord[0]
+    y_cntr = cntr_coord[1]
 
+    logging.debug("center coord: %s" % cntr_coord)
     logging.debug("indicator = %s" % indicator)
+
     if indicator == "h":  # boundary cases check
         x0, y0 = 0, cntr_coord[1]
         x1, y1 = x_lim, cntr_coord[1]
@@ -186,6 +193,7 @@ def lineSlice(img, angle=0, cntr_coord="center"):
         # calculate up left (90-180)
         AB_left = np.int(cntr_coord[0]*math.tan(angl_rad))
         if  AB_left <= y_lim - cntr_coord[1]:
+            logging.debug("AB left: %s" % AB_left)
             x0 = 0
             y0 = cntr_coord[1] + AB_left
         elif AB_left > y_lim - cntr_coord[1]:
@@ -210,10 +218,17 @@ def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
 
     '''
 
+    logging.debug("start point, end point: %s, %s" % (start_coors, end_coord))
+
     x0, y0 = start_coors[0], start_coors[1]
     x1, y1 = end_coord[0], end_coord[1]
     line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
+
+    logging.debug("line length: %s" % (np.hypot(x1-x0, y1-y0)))
+
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
+
+    logging.debug("x and y length: %s, %s" % (np.shape(x), np.shape(y)))
 
     output_img = img[x.astype(np.int), y.astype(np.int)]
     return(output_img)
@@ -225,14 +240,14 @@ def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
 
 
 input_file = 'Fluorescence_435nmDD500_cell1.tiff'
+angle = 115
+
 
 img = getTiff(input_file, 1, 10)
 # data_shape = img.shape()
 # print(data_shape[1], data_shape[2])
 
-start, end = lineSlice(img, 91)
-
-print(start, end)
+start, end = lineSlice(img, angle)
 line_slice = lineExtract(img, start, end)
 
 x0, y0 = start[0], start[1]
