@@ -16,6 +16,7 @@ import os
 
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import transforms
 import numpy as np
 
 from skimage.external import tifffile
@@ -115,6 +116,8 @@ raw_slice = lineSlice(img, ends_coord)
 perc_slice = lineSlice(img_perc, ends_coord)
 
 
+
+rot =  transforms.Affine2D().rotate_deg(90) # rotating to 90 degree
 
 fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1,
                                          ncols=4,

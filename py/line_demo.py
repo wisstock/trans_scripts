@@ -21,7 +21,7 @@ from skimage.external import tifffile
 from skimage import data, img_as_float
 
 
-logging.basicConfig(filename="sample.log",
+logging.basicConfig(filename="sample.log",  # logging options
                     level=logging.DEBUG,
                     filemode="w")
 
@@ -62,13 +62,15 @@ def lineSlice(img, angle=0, cntr_coord="center"):
 
 
     Angles annotation:
-               mass centre coord 
-          180 /
-           | /
+                
+
+           Vertical line (v)     
+          180 
+    Up(u)  | mass centre coord
            |/
-    90 ----+---- 
+    90 ----+---- Horizontal line (h) 
            |
-           |
+    Down(d)|
            0
 
     y = a * x + b
@@ -159,8 +161,8 @@ def lineSlice(img, angle=0, cntr_coord="center"):
 
     logging.debug("array shape: %s", img_shape)
 
-    x_lim = img_shape[1]-1
-    y_lim = img_shape[0]-1
+    x_lim = img_shape[0]-1
+    y_lim = img_shape[1]-1
 
     indicator, angl_rad = anglPars(angle)
 
@@ -240,7 +242,7 @@ def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
 
 
 input_file = 'Fluorescence_435nmDD500_cell1.tiff'
-angle = 115
+angle = 90
 
 
 img = getTiff(input_file, 1, 10)
@@ -248,18 +250,15 @@ img = getTiff(input_file, 1, 10)
 # print(data_shape[1], data_shape[2])
 
 start, end = lineSlice(img, angle)
-line_slice = lineExtract(img, start, end)
-
-x0, y0 = start[0], start[1]
-x1, y1 = end[0], end[1]
+# line_slice = lineExtract(img, start, end)
 
 
 fig, axes = plt.subplots(nrows=2)
 
 axes[0].imshow(img)
-axes[0].plot([x0, x1], [y0, y1], 'ro-')
+axes[0].plot(start, end, 'ro-')
 axes[0].axis('image')
 
-axes[1].plot(line_slice)
+# axes[1].plot(line_slice)
 
 plt.show()
