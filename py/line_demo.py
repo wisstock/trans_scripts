@@ -141,6 +141,8 @@ def lineSlice(img, angle=0, cntr_coord="center"):
     def anglPars(angl):
         '''
         Parse input angle value.
+        Real angle range is from 0 till 180 degree
+        (because slice is diameter, not radius)
 
         '''
         if 0 < angl < 90:
@@ -164,6 +166,8 @@ def lineSlice(img, angle=0, cntr_coord="center"):
     x_lim = img_shape[0]-1
     y_lim = img_shape[1]-1
 
+    logging.debug("X coord lim: %s, Y coord lim: %s" % (x_lim, y_lim))
+
     indicator, angl_rad = anglPars(angle)
 
     if cntr_coord == "center":
@@ -179,17 +183,20 @@ def lineSlice(img, angle=0, cntr_coord="center"):
     logging.debug("center coord: %s" % cntr_coord)
     logging.debug("indicator = %s" % indicator)
 
+
     if indicator == "h":  # boundary cases check
-        x0, y0 = 0, cntr_coord[1]
-        x1, y1 = x_lim, cntr_coord[1]
+        x0, y0 = cntr_coord[0], 0
+        x1, y1 = cntr_coord[0], y_lim
         logging.debug("coordinate h")
+        logging.debug("0 point %s, 1 point %s" % ([x0, y0], [x1, y1]))
         return([x0, y0], [x1, y1])
 
     elif indicator == "v":  # boundary cases check
-        x0, y0 = cntr_coord[0], 0 
-        x1, y1 = cntr_coord[0], y_lim
+        x0, y0 = x_lim, cntr_coord[1]
+        x1, y1 = 0, cntr_coord[1]
         logging.debug("coordinate v")
-        return([x0-1, y0], [x1-1, y1-1])
+        logging.debug("0 point %s, 1 point %s" % ([x0, y0], [x1, y1]))
+        return([x0, y0], [x1, y1])
 
     elif indicator == "u":
         # calculate up left (90-180)
@@ -242,7 +249,7 @@ def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
 
 
 input_file = 'Fluorescence_435nmDD500_cell1.tiff'
-angle = 90
+angle = 120
 
 
 img = getTiff(input_file, 1, 10)
@@ -250,15 +257,21 @@ img = getTiff(input_file, 1, 10)
 # print(data_shape[1], data_shape[2])
 
 start, end = lineSlice(img, angle)
+print(start, end)
 # line_slice = lineExtract(img, start, end)
+shape = np.shape(img)
+cntr = [np.int((shape[0]-1)/2),
+        np.int((shape[1]-1)/2)]
+print(cntr)
 
 
-fig, axes = plt.subplots(nrows=2)
+fig, (ax0) = plt.subplots(nrows=1,
+                          ncols=1,
+                          figsize=(8, 8))
 
-axes[0].imshow(img)
-axes[0].plot(start, end, 'ro-')
-axes[0].axis('image')
+ax0.imshow(img)  #, cmap='gray')
+ax0.plot([start[1], end[1]], [start[0], end[0]], 'ro-')
+ax0.scatter(cntr[1],cntr[0],color='r')
 
-# axes[1].plot(line_slice)
-
+plt.gca().invert_yaxis()
 plt.show()
