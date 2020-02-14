@@ -81,7 +81,7 @@ Examples
 
 Read the image from an OIB file as numpy array:
 
->>> image = imread('test.oib')
+>>> image = OibImread('test.oib')
 >>> image.shape
 (3, 256, 256)
 >>> image[:, 95, 216]
@@ -160,7 +160,7 @@ import numpy
 from tifffile import TiffFile, TiffSequence, lazyattr, natural_sorted
 
 
-def imread(filename, *args, **kwargs):
+def OibImread(filename, *args, **kwargs):
     """Return image data from OIF or OIB file as numpy array.
 
     'args' and 'kwargs' are arguments to OifFile.asarray().

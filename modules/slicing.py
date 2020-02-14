@@ -26,35 +26,6 @@ logging.basicConfig(filename="sample.log",  # logging options
                     filemode="w")
 
 
-def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
-    wd_path = os.path.split(os.getcwd())
-    os.chdir(wd_path[0])
-    
-    tiff_tensor = tifffile.imread(file_name)
-    # print(tiff_tensor.shape, np.max(tiff_tensor))
-
-    channel_one = tiff_tensor[0::2, :, :]
-    channel_two = tiff_tensor[1::2, :, :]
-    # print(channel_one.shape)
-    # print(channel_two.shape)
-
-    if channel == 0:
-    	frame_amount = channel_one.shape
-    	try:
-    		img = channel_one[frame_number] - camera_offset
-    		return(img)
-    	except ValueError:
-    		if frame_number > frame_amount[0]:
-    			print("Frame number out of range!")
-    else:
-    	frame_amount = channel_two.shape
-    	try:
-    		img = channel_two[frame_number] - camera_offset
-    		return(img)
-    	except ValueError:
-    		if frame_number > frame_amount[0]:
-    			print("Frame number out of range!")
-
 def lineSlice(img, angle=1, cntr_coord="center"):
     """ Returns coordinates of intersection points custom line with frame edges.
     Requires cell image mass center coordinates (default set up frame center)
@@ -232,7 +203,8 @@ def lineSlice(img, angle=1, cntr_coord="center"):
 
             logging.debug("A'B' > y_max. x1, y1 = %s, %s" % (x1, y1))
         elif AB_right >= y_lim - cntr_coord[1]:
-            BC_right = ((x_lim - cntr_coord[0]) - np.int((y_lim - cntr_coord[1])/math.tan(angl_rad)))  # B'C', see comment above
+            OC_right = np.int((y_lim - cntr_coord[1])/math.tan(angl_rad))
+            BC_right = ((x_lim - cntr_coord[0]) - OC_right)  # B'C', see comment above
             x1 = x_lim - BC_right
             y1 = y_lim
 

@@ -49,13 +49,14 @@ def cellEdge(img, thbreshold_method="triangle", percent=90, seed_method="one"):
         print("Incorrect treshold method!")
 
 
-wd_path = os.path.split(os.getcwd())
-os.chdir(wd_path[0] + '/temp/data/')  # go to DATA dir
+if __name__=="__main__":
+    wd_path = os.path.split(os.getcwd())
+    os.chdir(wd_path[0] + '/temp/data/')  # go to DATA dir
 
-offset = 250  # camera offset value
-gray_raw = tifffile.imread('Fluorescence_435nmDD500_cell1.tiff')
-img = gray_raw[0] - offset
+    offset = 250  # camera offset value
+    gray_raw = tifffile.imread('Fluorescence_435nmDD500_cell1.tiff')
+    img = gray_raw[0] - offset
 
-fig, ax = try_all_threshold(img, figsize=(8, 10),
-                                 verbose=False)
-plt.show()
+    fig, ax = try_all_threshold(img, figsize=(8, 10),
+                                     verbose=False)
+    plt.show()
