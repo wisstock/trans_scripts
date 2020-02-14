@@ -1,52 +1,65 @@
 #!/usr/bin/env python3
 
-'''
-Copyright © 2020 Borys Olifirov
+""" Copyright © 2020 Borys Olifirov
 
-'''
+Functions for cell detecting and ROI extraction.
+Optimysed for confocal images
+ of the individual HEK 293 cells.
+(mYFP-HPCa project).
+
+"""
 
 import os
-from skimage.external import tifffile
-from skimage.filters import try_all_threshold
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from skimage.external import tifffile
+from skimage import filters
+from skimage import measure
 
-def cellEdge(img, thbreshold_method="triangle", percent=90, seed_method="one"):
-    '''
-	seed methods:
-        one - calculate threshold for one image
-	    first - build threshold mask for first frame of series
-	    max - build threshold mask for max intensity frame
-	    mean - build threshold mask for mean intensity of all serie frames
 
-    treshold methods:
-        triangle - threshold_triangle
-        percent - extract pixels abowe fix percentile value
+def cellMask(img, thbreshold_method="triangle",
+             percent=90, seed_method="one"):
+    """ Extract cells using symple mask.
+    Treshold methods:
+    triangle - threshold_triangle;
+    percent - extract pixels abowe fix percentile value.
 
-	'''
+	"""
 
     if thbreshold_method == "triangle":
-        thresh_out = threshold_triangle(img)
+        thresh_out = filters.threshold_triangle(img)
         positive_mask = img > thresh_out  # create negative threshold mask
         threshold_mask = positive_mask * -1  # inversion threshold mask
 
         output_img = np.copy(img)
         output_img[threshold_mask] = 0
 
-        return(output_img)
+        return output_img 
 
     elif thbreshold_method == "percent":
         percentile = np.percentile(img, percent)
         output_img = np.copy(img)
         output_img[output_img < percentile] = 0
 
-        return(output_img)
+        return output_img
 
     else:
         print("Incorrect treshold method!")
+
+def cellMass():
+    """ Calculating of the center of mass coordinate using threshold mask
+    for already detected cell.
+
+    """
+    pass
+
+def cellEdge(img):
+    output = filters.hessian(img, sigmas=range(10, 28, 1))
+    
+    return output
 
 
 if __name__=="__main__":

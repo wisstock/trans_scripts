@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-"""Copyright © 2020 Borys Olifirov
+""" Copyright © 2020 Borys Olifirov
 
-Functions for extract pixel values by line
-
-scipy.ndimage.measurements.center_of_mass
+Functions for extract pixel values by line.
 
 """
 
@@ -262,8 +260,8 @@ def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
 
     logging.debug("x and y length: %s, %s" % (np.shape(x), np.shape(y)))
 
-    output_img = img[x.astype(np.int), y.astype(np.int)]
-    return(output_img)
+    output = img[x.astype(np.int), y.astype(np.int)]
+    return output
 
 
 # Generate some data...
