@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-'''
-Copyright © 2020 Borys Olifirov
+"""Copyright © 2020 Borys Olifirov
 
-Script for extract pixel values by line
+Functions for extract pixel values by line
 
 scipy.ndimage.measurements.center_of_mass
 
-'''
+"""
 
+import sys
 import os
 import logging
-import math
 
+import math
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -300,7 +300,7 @@ def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
 
 if __name__=="__main__":
     input_file = 'temp/data/Fluorescence_435nmDD500_cell1.tiff'
-    angle = 5
+    angle = 45
 
     img = getTiff(input_file, 1, 10)
     # data_shape = img.shape()
