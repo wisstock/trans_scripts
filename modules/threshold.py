@@ -19,6 +19,8 @@ from skimage.external import tifffile
 from skimage import filters
 from skimage import measure
 
+from scipy.ndimage import measurements as msr
+
 
 def cellMask(img, thbreshold_method="triangle",
              percent=90, seed_method="one"):
@@ -49,12 +51,25 @@ def cellMask(img, thbreshold_method="triangle",
     else:
         print("Incorrect treshold method!")
 
-def cellMass():
+def cellMass(img):
     """ Calculating of the center of mass coordinate using threshold mask
     for already detected cell.
 
+    Treshold function use modifyed Hessian filter.
+    This method optimysed for confocal image of HEK 293 cells with fluorecent-
+    labelled protein who located into the membrane.
+
+    Results of this method for fluorecent microscop images
+    or fluorecent-labelled proteins with cytoplasmic localization
+    may by unpredictable and incorrect.
+
     """
-    pass
+    
+    mass_mask = filters.hessian(img, sigmas=range(10, 28, 1))
+    # print(type(mass_mask))
+    mass_cntr = msr.center_of_mass(mass_mask)
+
+    return [np.int(mass_cntr[1]), np.int(mass_cntr[0])]
 
 def cellEdge(img):
     output = filters.hessian(img, sigmas=range(10, 28, 1))

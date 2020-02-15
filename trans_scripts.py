@@ -70,17 +70,20 @@ logging.basicConfig(filename="sample.log",  # logging options
                     filemode="w")
 
 
-# input_file = 'Fluorescence_435nmDD500_cell1.tiff'
-# img = getTiff(input_file, 0, 1)
+input_file = '/home/astria/Bio_data/s_C001Z007.tif'  # 'Fluorescence_435nmDD500_cell1.tiff'
 
 oif_path = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell1/20180523-1404-0003-250um.oif'
 oif_raw = oif.OibImread(oif_path)
 oif_img = oif_raw[0,:,:,:]
-img = oif_img[8,:,:]
 
+# img = getTiff(input_file, 0, 1)
+img = oif_img[6,:,:]
+# img = tifffile.imread(input_file)
+
+img = filters.gaussian(img, sigma=1)
 img_mod = ts.cellEdge(img)
 
-measure.find_contours(img, 0.8)
+# measure.find_contours(img, 0.8)
 
 # for n, contour in enumerate(contours):
     # ax.plot(contour[:, 1], contour[:, 0], linewidth=2)
@@ -88,15 +91,19 @@ measure.find_contours(img, 0.8)
 # filters.gaussian(img, sigma=1)
 # filters.median(img)
 
-angle = 170
-xy0, xy1 = slc.lineSlice(img, angle)
+angle = 210
+cntr = ts.cellMass(img)
+xy0, xy1 = slc.lineSlice(img, angle, cntr)
 
 raw_slice = slc.lineExtract(img, xy0, xy1)
 mod_slice = slc.lineExtract(img_mod, xy0, xy1)
 
 shape = np.shape(img)
-cntr = [np.int((shape[1]-1)/2),
+cntr_img = [np.int((shape[1]-1)/2),
         np.int((shape[0]-1)/2)]
+
+logging.debug("Image center coord: %s" % cntr_img)
+logging.debug("Image center of mass coord: %s" % cntr)
 
 # rot =  transforms.Affine2D().rotate_deg(90) # rotating to 90 degree
 
@@ -106,6 +113,7 @@ fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=4,
 ax0.imshow(img)  #, cmap='gray')
 ax0.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
 ax0.scatter(cntr[0],cntr[1],color='r')
+ax0.scatter(cntr_img[0],cntr_img[1])
 # ax0.scatter(start[0]+5, start[1]+5)
 
 ax1.plot(raw_slice)

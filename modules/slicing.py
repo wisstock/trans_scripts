@@ -25,8 +25,11 @@ logging.basicConfig(filename="sample.log",  # logging options
 
 
 def lineSlice(img, angle=1, cntr_coord="center"):
-    """ Returns coordinates of intersection points custom line with frame edges.
-    Requires cell image mass center coordinates (default set up frame center)
+    """ Returns coordinates of intersection points  for the image edges
+    and the line which go through point with set up coordinates
+    at the set up angle.
+    Requires cell image mass center coordinates
+    (default set up frame center)
     and angle value (in degree).
 
 
@@ -242,9 +245,9 @@ def lineSlice(img, angle=1, cntr_coord="center"):
 
     return([x0, y0], [x1, y1])
 
-def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
-    """ Extraction pixel values thoward the guide line
-    Require img im NumPy array format and line ends coordinate (in px).
+def lineExtract(img, start_coors, end_coord):
+    """ Returns values ​​of pixels intensity along the line
+    with specified ends coordinates.
 
     """
 
@@ -263,6 +266,14 @@ def lineExtract(img, start_coors = [0, 0], end_coord = [100, 100]):
     output = img[x.astype(np.int), y.astype(np.int)]
     return output
 
+def bandExtract(img, start_coors, end_coord):
+    """ Returns values ​​of pixels intensity
+    in set up interval (in pixels) around the line
+    with specified ends coordinates.
+    
+    Requires cell image, 
+
+    """
 
 # Generate some data...
 # x, y = np.mgrid[-5:5:0.1, -5:5:0.1]
