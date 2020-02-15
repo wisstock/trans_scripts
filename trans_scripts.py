@@ -81,7 +81,7 @@ img = oif_img[6,:,:]
 # img = tifffile.imread(input_file)
 
 img = filters.gaussian(img, sigma=1)
-img_mod = ts.cellEdge(img)
+# img_mod = ts.cellEdge(img)
 
 # measure.find_contours(img, 0.8)
 
@@ -96,7 +96,9 @@ cntr = ts.cellMass(img)
 xy0, xy1 = slc.lineSlice(img, angle, cntr)
 
 raw_slice = slc.lineExtract(img, xy0, xy1)
-mod_slice = slc.lineExtract(img_mod, xy0, xy1)
+mod_slice = slc.bandExtract(img, xy0, xy1)
+
+# mod_slice = slc.lineExtract(img_mod, xy0, xy1)
 
 shape = np.shape(img)
 cntr_img = [np.int((shape[1]-1)/2),
@@ -107,7 +109,8 @@ logging.debug("Image center of mass coord: %s" % cntr)
 
 # rot =  transforms.Affine2D().rotate_deg(90) # rotating to 90 degree
 
-fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=4,
+
+fig, (ax0, ax1, ax2) = plt.subplots(nrows=3,
                                          ncols=1)
 
 ax0.imshow(img)  #, cmap='gray')
@@ -118,12 +121,12 @@ ax0.scatter(cntr_img[0],cntr_img[1])
 
 ax1.plot(raw_slice)
 
-ax2.imshow(img_mod)  #, cmap='gray')
-ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
-ax2.scatter(cntr[0],cntr[1],color='r')
+# ax2.imshow(img_mod)  #, cmap='gray')
+# ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
+# ax2.scatter(cntr[0],cntr[1],color='r')
 # ax0.scatter(start[0]+5, start[1]+5)
 
-ax3.plot(mod_slice)
+ax2.plot(mod_slice)
 
 # plt.gca().invert_yaxis()
 plt.show()

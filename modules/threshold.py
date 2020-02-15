@@ -25,6 +25,7 @@ from scipy.ndimage import measurements as msr
 def cellMask(img, thbreshold_method="triangle",
              percent=90, seed_method="one"):
     """ Extract cells using symple mask.
+    
     Treshold methods:
     triangle - threshold_triangle;
     percent - extract pixels abowe fix percentile value.
@@ -64,7 +65,7 @@ def cellMass(img):
     may by unpredictable and incorrect.
 
     """
-    
+
     mass_mask = filters.hessian(img, sigmas=range(10, 28, 1))
     # print(type(mass_mask))
     mass_cntr = msr.center_of_mass(mass_mask)

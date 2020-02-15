@@ -19,11 +19,6 @@ from skimage.external import tifffile
 from skimage import data, img_as_float
 
 
-logging.basicConfig(filename="sample.log",  # logging options
-                    level=logging.DEBUG,
-                    filemode="w")
-
-
 def lineSlice(img, angle=1, cntr_coord="center"):
     """ Returns coordinates of intersection points  for the image edges
     and the line which go through point with set up coordinates
@@ -249,15 +244,14 @@ def lineExtract(img, start_coors, end_coord):
     """ Returns values ​​of pixels intensity along the line
     with specified ends coordinates.
 
+    Requires cell image, and line ends coordinate (results of lineSlice).
+
     """
-
-    logging.debug("start point, end point: %s, %s" % (start_coors, end_coord))
-
     x0, y0 = start_coors[1], start_coors[0]
     x1, y1 = end_coord[1], end_coord[0]
     line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
 
-    logging.debug("line length: %s" % (np.hypot(x1-x0, y1-y0)))
+    # logging.debug("line length: %s" % (np.hypot(x1-x0, y1-y0)))
 
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
 
@@ -266,14 +260,41 @@ def lineExtract(img, start_coors, end_coord):
     output = img[x.astype(np.int), y.astype(np.int)]
     return output
 
-def bandExtract(img, start_coors, end_coord):
-    """ Returns values ​​of pixels intensity
-    in set up interval (in pixels) around the line
-    with specified ends coordinates.
+def bandExtract(img, start_coors, end_coord, band_width=2):
+    """ Returns values ​​of pixels intensity in fixed neighborhood (in pixels)
+    for each points in the the line with specified ends coordinates.
     
-    Requires cell image, 
+    Requires cell image, and line ends coordinate (results of lineSlice).
 
     """
+
+    def neighborPix(img, coord, shift):
+
+      sub_img = img[coord[0]-shift:coord[0]+shift:1,
+                    coord[1]-shift:coord[1]+shift:1]
+
+      mean_val = np.mean(sub_img)
+
+      return mean_val
+
+    x0, y0 = start_coors[1], start_coors[0]
+    x1, y1 = end_coord[1], end_coord[0]
+    line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
+
+    x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
+
+    i = 0
+    output = []
+
+    while i < np.shape(x)[0]:
+      x_point = np.int(x[i])
+      y_point = np.int(y[i])
+
+      output.append(neighborPix(img, [x_point, y_point], band_width))
+
+      i += 1
+
+    return output
 
 # Generate some data...
 # x, y = np.mgrid[-5:5:0.1, -5:5:0.1]
