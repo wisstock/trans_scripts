@@ -128,12 +128,13 @@ def lineSlice(img, angle=1, cntr_coord="center"):
     x0, y0, x1, y1 = 0, 0, 0, 0  # init line ends coordinates
     img_shape = np.shape(img)
 
-    logging.debug("array shape: %s", img_shape)
+    logging.info("Frame shape: %s", img_shape)
+    logging.info("Slice angle: %s", angle)
 
     x_lim = img_shape[1]-1  # create global image size var 
     y_lim = img_shape[0]-1  # "-1" because pixels indexing starts from 0
 
-    logging.debug("X coord lim: %s, Y coord lim: %s" % (x_lim, y_lim))
+    logging.info("Frame lim: X = %s, Y = %s" % (x_lim, y_lim))
 
     indicator, angl_rad = anglPars(angle)
 
@@ -141,7 +142,7 @@ def lineSlice(img, angle=1, cntr_coord="center"):
         cntr_coord = [np.int(x_lim/2),
                       np.int(y_lim/2)]  # [x, y]
 
-        logging.debug("center mode")
+        logging.info("Center mode, coord: %s" % cntr_coord)
 
     AO_left = cntr_coord[0]
     OA_right = x_lim - cntr_coord[0]
@@ -150,7 +151,7 @@ def lineSlice(img, angle=1, cntr_coord="center"):
     y_cntr = cntr_coord[1]
     
 
-    logging.debug("center coord: %s" % cntr_coord)
+    logging.info("Custom center, coord: %s" % cntr_coord)
 
 
     if indicator == "h":  # boundary cases check
@@ -255,12 +256,13 @@ def lineExtract(img, start_coors, end_coord):
 
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
 
-    logging.debug("x and y length: %s, %s" % (np.shape(x), np.shape(y)))
+    logging.info("X and Y length: %s, %s" % (np.shape(x)[0], np.shape(y)[0]))
 
     output = img[x.astype(np.int), y.astype(np.int)]
+
     return output
 
-def bandExtract(img, start_coors, end_coord, band_width=2):
+def bandExtract(img, start_coors, end_coord, band_width=2, mode="mean"):
     """ Returns values ​​of pixels intensity in fixed neighborhood (in pixels)
     for each points in the the line with specified ends coordinates.
     
@@ -269,7 +271,10 @@ def bandExtract(img, start_coors, end_coord, band_width=2):
     """
 
     def neighborPix(img, coord, shift):
+      """ Mean value of matrix with setting shifr.
+      Default 4x4.
 
+      """
       sub_img = img[coord[0]-shift:coord[0]+shift:1,
                     coord[1]-shift:coord[1]+shift:1]
 
@@ -277,56 +282,39 @@ def bandExtract(img, start_coors, end_coord, band_width=2):
 
       return mean_val
 
+    def parallelPix(img, coord, length, shift):
+      """ Calculate mean value for points with same indexes in several
+      slice lines. Ends coordinates for each line 
+      """
+      pass
+
+
     x0, y0 = start_coors[1], start_coors[0]
     x1, y1 = end_coord[1], end_coord[0]
     line_length = int(np.hypot(x1-x0, y1-y0))  # calculate line length
 
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
 
-    i = 0
-    output = []
+    if mode == "mean":
 
-    while i < np.shape(x)[0]:
-      x_point = np.int(x[i])
-      y_point = np.int(y[i])
+      logging.info("Band side shift: %s px" % band_width)
 
-      output.append(neighborPix(img, [x_point, y_point], band_width))
+      i = 0
+      output = []
 
-      i += 1
+      while i < np.shape(x)[0]:
+        x_point = np.int(x[i])
+        y_point = np.int(y[i])
 
-    return output
+        output.append(neighborPix(img, [x_point, y_point], band_width))
 
-# Generate some data...
-# x, y = np.mgrid[-5:5:0.1, -5:5:0.1]
-# z = np.sqrt(x**2 + y**2) + np.sin(x**2 + y**2)
+        i += 1
+
+      return output
+
+    elif mode == 'parallel':
+      pass  
+
 
 if __name__=="__main__":
-    input_file = 'temp/data/Fluorescence_435nmDD500_cell1.tiff'
-    angle = 45
-
-    img = getTiff(input_file, 1, 10)
-    # data_shape = img.shape()
-    # print(data_shape[1], data_shape[2])
-
-    # cntr = [250,800]
-
-    start, end = lineSlice(img, angle)
-    line_slice = lineExtract(img, start, end)
-    shape = np.shape(img)
-    cntr = [np.int((shape[1]-1)/2),
-            np.int((shape[0]-1)/2)]
-
-
-    fig, (ax0, ax1) = plt.subplots(nrows=2,
-                              ncols=1,
-                              figsize=(8, 8))
-
-    ax0.imshow(img)  #, cmap='gray')
-    ax0.plot([start[0], end[0]], [start[1], end[1]], 'ro-')
-    ax0.scatter(cntr[0],cntr[1],color='r')
-    # ax0.scatter(start[0]+5, start[1]+5)
-
-    ax1.plot(line_slice)
-
-    # plt.gca().invert_yaxis()
-    plt.show()
+  pass

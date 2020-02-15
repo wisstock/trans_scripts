@@ -10,6 +10,7 @@ Optimysed for confocal images
 """
 
 import os
+import logging
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -25,7 +26,7 @@ from scipy.ndimage import measurements as msr
 def cellMask(img, thbreshold_method="triangle",
              percent=90, seed_method="one"):
     """ Extract cells using symple mask.
-    
+
     Treshold methods:
     triangle - threshold_triangle;
     percent - extract pixels abowe fix percentile value.
@@ -50,7 +51,7 @@ def cellMask(img, thbreshold_method="triangle",
         return output_img
 
     else:
-        print("Incorrect treshold method!")
+        logging.warning("Incorrect treshold method!")
 
 def cellMass(img):
     """ Calculating of the center of mass coordinate using threshold mask
@@ -67,10 +68,12 @@ def cellMass(img):
     """
 
     mass_mask = filters.hessian(img, sigmas=range(10, 28, 1))
-    # print(type(mass_mask))
     mass_cntr = msr.center_of_mass(mass_mask)
+    mass_coord = [np.int(mass_cntr[1]), np.int(mass_cntr[0])]
 
-    return [np.int(mass_cntr[1]), np.int(mass_cntr[0])]
+    logging.info("Image center of mass coord: %s" % mass_coord)
+
+    return mass_coord
 
 def cellEdge(img):
     output = filters.hessian(img, sigmas=range(10, 28, 1))

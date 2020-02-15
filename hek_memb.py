@@ -64,10 +64,11 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
     		if frame_number > frame_amount[0]:
     			print("Frame number out of range!")
 
-
-logging.basicConfig(filename="sample.log",  # logging options
-                    level=logging.DEBUG,
-                    filemode="w")
+FORMAT = "%(levelname)s [%(filename)s: - %(funcName)20s() ]  %(message)s"
+logging.basicConfig(filename="sample.log",
+                    level=logging.INFO,
+                    filemode="w",
+                    format=FORMAT)
 
 
 input_file = '/home/astria/Bio_data/s_C001Z007.tif'  # 'Fluorescence_435nmDD500_cell1.tiff'
@@ -91,7 +92,7 @@ img = filters.gaussian(img, sigma=1)
 # filters.gaussian(img, sigma=1)
 # filters.median(img)
 
-angle = 210
+angle = 107
 cntr = ts.cellMass(img)
 xy0, xy1 = slc.lineSlice(img, angle, cntr)
 
@@ -104,8 +105,8 @@ shape = np.shape(img)
 cntr_img = [np.int((shape[1]-1)/2),
         np.int((shape[0]-1)/2)]
 
-logging.debug("Image center coord: %s" % cntr_img)
-logging.debug("Image center of mass coord: %s" % cntr)
+
+
 
 # rot =  transforms.Affine2D().rotate_deg(90) # rotating to 90 degree
 
