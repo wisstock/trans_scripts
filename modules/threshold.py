@@ -3,8 +3,7 @@
 """ Copyright © 2020 Borys Olifirov
 
 Functions for cell detecting and ROI extraction.
-Optimysed for confocal images
- of the individual HEK 293 cells.
+Optimysed for confocal images of the individual HEK 293 cells.
 (mYFP-HPCa project).
 
 """
@@ -23,8 +22,7 @@ from skimage import measure
 from scipy.ndimage import measurements as msr
 
 
-def cellMask(img, thbreshold_method="triangle",
-             percent=90, seed_method="one"):
+def cellMask(img, thbreshold_method="triangle", percent=90):
     """ Extract cells using symple mask.
 
     Treshold methods:
@@ -76,19 +74,13 @@ def cellMass(img):
     return mass_coord
 
 def cellEdge(img):
+    """ Returns the cell edge mask generating by modifyed Hessian filter.
+
+    """
     output = filters.hessian(img, sigmas=range(10, 28, 1))
     
     return output
 
 
 if __name__=="__main__":
-    wd_path = os.path.split(os.getcwd())
-    os.chdir(wd_path[0] + '/temp/data/')  # go to DATA dir
-
-    offset = 250  # camera offset value
-    gray_raw = tifffile.imread('Fluorescence_435nmDD500_cell1.tiff')
-    img = gray_raw[0] - offset
-
-    fig, ax = try_all_threshold(img, figsize=(8, 10),
-                                     verbose=False)
-    plt.show()
+    pass

@@ -115,15 +115,23 @@ def lineSlice(img, angle=1, cntr_coord="center"):
         if 0 < angl < 90 or 180 < angl < 270:
             logging.debug("anglPars done! d")
             return("d", math.radians(90 - angl))
+
         elif 90 < angl < 180 or 270 < angl < 360:
             logging.debug("anglPars done! u")
             return("u", math.radians(angl-90))
+
         elif angl == 0 or angl == 180:
             logging.debug("anglPars done! v")
             return("v", 0)
+
         elif angl == 90 or angl == 270:
             logging.debug("anglPars done! h")
             return("h", 90)
+
+
+
+
+
 
     x0, y0, x1, y1 = 0, 0, 0, 0  # init line ends coordinates
     img_shape = np.shape(img)
@@ -133,8 +141,6 @@ def lineSlice(img, angle=1, cntr_coord="center"):
 
     x_lim = img_shape[1]-1  # create global image size var 
     y_lim = img_shape[0]-1  # "-1" because pixels indexing starts from 0
-
-    logging.info("Frame lim: X = %s, Y = %s" % (x_lim, y_lim))
 
     indicator, angl_rad = anglPars(angle)
 
@@ -240,6 +246,158 @@ def lineSlice(img, angle=1, cntr_coord="center"):
             logging.debug("A'B' < 0. x1, y1 = %s, %s" % (x1, y1))
 
     return([x0, y0], [x1, y1])
+
+def radiusSlice(img, angl=1, cntr_coord="center"):
+    """ Returns coordinates of intersection points for the image edges
+    and the line starting from center point at the set up angle. 
+
+    Algorithm is the same as the function lineSlice
+
+     y^
+      |
+      |
+      |------------------------
+      |                        |
+      |                        |
+      |                        |
+      |                        |
+      |                        |
+     A|--------- ** * O        |
+      |       **   *|          |
+      |    **    *  |          |
+     a|**      *    |          |
+      |      *      |          |
+      |    *        |          |
+      +-------------------------------->
+          b        B                  x
+
+
+     II | III
+        |
+    ----+----
+        |
+      I | IV
+
+    """ 
+
+    def anglPars(angl):
+        """Parse input angle value.
+        Real angle range is from 0 till 180 degree
+        (because slice is diameter, not radius)
+
+        """
+
+        if 0 <= angl <90:
+            logging.debug("anglPars done! I")
+            return("I")  # , math.radians(angl))
+
+        elif 90 <= angl < 180:
+            logging.debug("anglPars done! II")
+            return("II")  # , math.radians(angl))
+
+        elif 180 <= angl < 270:
+            logging.debug("anglPars done! III")
+            return("III")  # , math.radians(angl))
+
+        elif 270 <= angl <= 360:
+            logging.debug("anglPars done! IV")
+            return("III")  # , math.radians(angl))
+
+
+    img_shape = np.shape(img)
+
+    logging.info("Frame shape: %s", img_shape)
+    logging.info("Slice angle: %s", angl)
+
+    x_lim = img_shape[1]-1  # create global image size var 
+    y_lim = img_shape[0]-1  # "-1" because pixels indexing starts from 0
+
+    indicator = anglPars(angl)
+
+    if cntr_coord == "center":
+        cntr_coord = [np.int(x_lim/2),
+                      np.int(y_lim/2)]  # [x, y]
+
+        logging.info("Center mode, coord: %s" % cntr_coord)
+
+    x0, y0 = 0, 0  # init line ends coordinates
+
+    x_cntr = cntr_coord[0]  # AO_left = x_cntr, OA_right = x_lim - x_cntr
+    y_cntr = cntr_coord[1]  # BO_down = y_cntr, OB_up = y_lim - y_cntr
+
+
+    logging.info("Custom center, coord: %s" % cntr_coord)
+
+    if indicator == 'I':
+      Bb = np.int(y_cntr * math.tan(math.radians(angl)))
+
+      logging.debug("Bb = %s" % Bb)
+
+      if Bb <= x_cntr:
+        x0 = x_cntr - Bb
+        y0 = 0
+
+      if Bb > x_cntr:
+        Aa = np.int(x_cntr * math.tan(math.radians(90 - angl)))
+        
+        logging.debug("Aa = %s" % Aa)
+
+        x0 = 0
+        y0 = y_cntr - Aa
+
+
+    elif indicator == 'II':
+      Aa = np.int(x_cntr * math.tan(math.radians(angl - 90)))
+
+      logging.debug("Aa = %s" % Aa)
+
+      if Aa <= y_cntr + Aa:
+        x0 = 0
+        y0 = y_cntr + Aa
+
+      if Aa > y_cntr:
+        Bb = np.int((y_lim-y_cntr) * math.tan(math.radians(180 - angl)))
+        
+        logging.debug("Bb = %s" % Bb)
+
+        x0 = x_cntr - Bb
+        y0 = y_lim
+
+    elif indicator == 'III':
+      Bb = np.int((y_lim - y_cntr) * math.tan(math.radians(angl - 180)))
+
+      logging.debug('Bb = %s' % Bb)
+
+      if Bb <= x_lim - x_cntr:
+        x0 = x_cntr + Bb
+        y0 = y_lim
+
+      if Bb > x_lim - x_cntr:
+        Aa = np.int((x_lim - x_cntr) * math.tan(math.radians(270 - angl)))
+
+        logging.debug('Aa = %s' % Aa)
+
+        x0 = x_lim
+        y0 = y_cntr + Aa
+
+    elif indicator == 'IV':
+      Aa = np.int((x_lim - x_cntr) * math.tan(math.radians(angl - 270)))
+
+      logging.debug('Aa = %s' % Aa)
+
+      if Aa <= y_cntr:
+        x0 = x_lim
+        y0 = y_cntr - Aa
+
+      if Aa > y_cntr:
+        Bb = np.int(y_cntr * math.tan(math.radians(360 - angl)))
+
+        logging.debug('Bb = %s' % Bb)
+
+        x0 = x_cntr + Bb
+        y0 = 0
+
+    return([x_cntr, y_cntr], [x0, y0])
 
 def lineExtract(img, start_coors, end_coord):
     """ Returns values ​​of pixels intensity along the line

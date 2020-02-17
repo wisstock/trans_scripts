@@ -66,7 +66,7 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
 
 FORMAT = "%(levelname)s [%(filename)s: - %(funcName)20s() ]  %(message)s"
 logging.basicConfig(filename="sample.log",
-                    level=logging.INFO,
+                    level=logging.DEBUG,
                     filemode="w",
                     format=FORMAT)
 
@@ -92,12 +92,12 @@ img = filters.gaussian(img, sigma=1)
 # filters.gaussian(img, sigma=1)
 # filters.median(img)
 
-angle = 107
+angle = 300
 cntr = ts.cellMass(img)
-xy0, xy1 = slc.lineSlice(img, angle, cntr)
+xy0, xy1 = slc.radiusSlice(img, angle, cntr)
 
 raw_slice = slc.lineExtract(img, xy0, xy1)
-mod_slice = slc.bandExtract(img, xy0, xy1)
+mod_slice = slc.bandExtract(img, xy0, xy1, 2)
 
 # mod_slice = slc.lineExtract(img_mod, xy0, xy1)
 
