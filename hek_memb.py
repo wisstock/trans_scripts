@@ -64,9 +64,9 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
     		if frame_number > frame_amount[0]:
     			print("Frame number out of range!")
 
-FORMAT = "%(levelname)s [%(filename)s: - %(funcName)20s() ]  %(message)s"
+FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(filename="sample.log",
-                    level=logging.DEBUG,
+                    level=logging.INFO,
                     filemode="w",
                     format=FORMAT)
 
@@ -92,7 +92,7 @@ img = filters.gaussian(img, sigma=1)
 # filters.gaussian(img, sigma=1)
 # filters.median(img)
 
-angle = 300
+angle = 359
 cntr = ts.cellMass(img)
 xy0, xy1 = slc.radiusSlice(img, angle, cntr)
 

@@ -288,45 +288,39 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
         """
 
         if 0 <= angl <90:
-            logging.debug("anglPars done! I")
             return("I")  # , math.radians(angl))
 
         elif 90 <= angl < 180:
-            logging.debug("anglPars done! II")
             return("II")  # , math.radians(angl))
 
         elif 180 <= angl < 270:
-            logging.debug("anglPars done! III")
             return("III")  # , math.radians(angl))
 
         elif 270 <= angl <= 360:
-            logging.debug("anglPars done! IV")
-            return("III")  # , math.radians(angl))
-
+            return("IV")  # , math.radians(angl))
 
     img_shape = np.shape(img)
 
-    logging.info("Frame shape: %s", img_shape)
-    logging.info("Slice angle: %s", angl)
-
     x_lim = img_shape[1]-1  # create global image size var 
     y_lim = img_shape[0]-1  # "-1" because pixels indexing starts from 0
-
-    indicator = anglPars(angl)
 
     if cntr_coord == "center":
         cntr_coord = [np.int(x_lim/2),
                       np.int(y_lim/2)]  # [x, y]
 
         logging.info("Center mode, coord: %s" % cntr_coord)
+    else:
+        logging.info("Custom center, coord: %s" % cntr_coord)
 
     x0, y0 = 0, 0  # init line ends coordinates
 
     x_cntr = cntr_coord[0]  # AO_left = x_cntr, OA_right = x_lim - x_cntr
     y_cntr = cntr_coord[1]  # BO_down = y_cntr, OB_up = y_lim - y_cntr
 
+    indicator = anglPars(angl)
+    logging.debug("Square quartile: %s" % indicator)
 
-    logging.info("Custom center, coord: %s" % cntr_coord)
+    logging.info("Frame shape: %s, slice angle: %s" % (img_shape, angl))
 
     if indicator == 'I':
       Bb = np.int(y_cntr * math.tan(math.radians(angl)))
@@ -414,7 +408,7 @@ def lineExtract(img, start_coors, end_coord):
 
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
 
-    logging.info("X and Y length: %s, %s" % (np.shape(x)[0], np.shape(y)[0]))
+    logging.debug("X and Y length: %s, %s" % (np.shape(x)[0], np.shape(y)[0]))
 
     output = img[x.astype(np.int), y.astype(np.int)]
 
