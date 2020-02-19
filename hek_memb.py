@@ -22,12 +22,14 @@ from skimage import exposure
 from skimage import filters
 from skimage.filters import scharr
 from skimage.external import tifffile
+from skimage import restoration
 
 
 sys.path.append('modules')
 import oiffile as oif
 import slicing as slc
 import threshold as ts
+import deconvolute as dec
 
 
 def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
@@ -79,14 +81,20 @@ oif_raw = oif.OibImread(oif_path)
 oif_img = oif_raw[0,:,:,:]
 
 # img = getTiff(input_file, 0, 1)
-img = oif_img[8,:,:]
+img = oif_img[6,:,:]
 # img = tifffile.imread(input_file)
 
-img = filters.gaussian(img, sigma=1)
-img_mod = ts.cellEdge(img)
+# img = filters.gaussian(img, sigma=1)
+# img_mod = ts.cellEdge(img)
 # exposure.equalize_hist(img)
 # filters.gaussian(img, sigma=1)
 # filters.median(img)
+
+psf_model = dec.psf_example()
+psf = psf_model.data
+print(np.shape(psf))
+
+img_mod = restoration.richardson_lucy(img, psf, iterations=10)
 
 
 angle = 10
@@ -94,8 +102,12 @@ band_w = 2
 cntr = ts.cellMass(img)
 xy0, xy1 = slc.lineSlice(img, angle, cntr)
 
-raw_slice = slc.lineExtract(img, xy0, xy1)
-mod_slice = slc.bandExtract(img, xy0, xy1, band_w)
+# raw_slice = slc.lineExtract(img, xy0, xy1)  # for compare slice func
+# mod_slice = slc.bandExtract(img, xy0, xy1, band_w)
+
+
+raw_slice = slc.bandExtract(img, xy0, xy1, band_w)
+mod_slice = slc.bandExtract(img_mod, xy0, xy1, band_w)
 
 # mod_slice = slc.lineExtract(img_mod, xy0, xy1)
 
@@ -115,18 +127,18 @@ ax0.scatter(cntr_img[0],cntr_img[1])
 
 ax1 = plt.subplot(322)
 ax1.imshow(img_mod)  #, cmap='gray')
-ax1.set_title('Hessian filter threshold')
+ax1.set_title('Deconvolute image')
 ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
 ax1.scatter(cntr[0],cntr[1],color='r')
 ax1.scatter(cntr_img[0],cntr_img[1])
 # ax0.scatter(start[0]+5, start[1]+5)
 
 ax2 = plt.subplot(312)
-ax2.set_title('Line slice (1px)')
+ax2.set_title('Rav slice')
 ax2.plot(raw_slice)
 
 ax3 = plt.subplot(313)
-ax3.set_title('Band slice (shift %spx)' % band_w)
+ax3.set_title('Deconvolute slice')
 ax3.plot(mod_slice)
 
 # plt.gca().invert_yaxis()
