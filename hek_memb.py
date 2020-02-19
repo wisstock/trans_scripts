@@ -11,16 +11,17 @@ import os
 import glob
 import logging
 
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from matplotlib import transforms
-import numpy as np
 
-from skimage.external import tifffile
 from skimage import data
 from skimage import exposure
 from skimage import filters
 from skimage.filters import scharr
+from skimage.external import tifffile
 
 
 sys.path.append('modules')
@@ -78,26 +79,23 @@ oif_raw = oif.OibImread(oif_path)
 oif_img = oif_raw[0,:,:,:]
 
 # img = getTiff(input_file, 0, 1)
-img = oif_img[6,:,:]
+img = oif_img[8,:,:]
 # img = tifffile.imread(input_file)
 
 img = filters.gaussian(img, sigma=1)
-# img_mod = ts.cellEdge(img)
-
-# measure.find_contours(img, 0.8)
-
-# for n, contour in enumerate(contours):
-    # ax.plot(contour[:, 1], contour[:, 0], linewidth=2)
+img_mod = ts.cellEdge(img)
 # exposure.equalize_hist(img)
 # filters.gaussian(img, sigma=1)
 # filters.median(img)
 
-angle = 359
+
+angle = 10
+band_w = 2
 cntr = ts.cellMass(img)
-xy0, xy1 = slc.radiusSlice(img, angle, cntr)
+xy0, xy1 = slc.lineSlice(img, angle, cntr)
 
 raw_slice = slc.lineExtract(img, xy0, xy1)
-mod_slice = slc.bandExtract(img, xy0, xy1, 2)
+mod_slice = slc.bandExtract(img, xy0, xy1, band_w)
 
 # mod_slice = slc.lineExtract(img_mod, xy0, xy1)
 
@@ -107,27 +105,30 @@ cntr_img = [np.int((shape[1]-1)/2),
 
 
 
-
-# rot =  transforms.Affine2D().rotate_deg(90) # rotating to 90 degree
-
-
-fig, (ax0, ax1, ax2) = plt.subplots(nrows=3,
-                                         ncols=1)
-
+ax0 = plt.subplot(321)
 ax0.imshow(img)  #, cmap='gray')
+ax0.set_title('Raw image')
 ax0.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
 ax0.scatter(cntr[0],cntr[1],color='r')
 ax0.scatter(cntr_img[0],cntr_img[1])
 # ax0.scatter(start[0]+5, start[1]+5)
 
-ax1.plot(raw_slice)
-
-# ax2.imshow(img_mod)  #, cmap='gray')
-# ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
-# ax2.scatter(cntr[0],cntr[1],color='r')
+ax1 = plt.subplot(322)
+ax1.imshow(img_mod)  #, cmap='gray')
+ax1.set_title('Hessian filter threshold')
+ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
+ax1.scatter(cntr[0],cntr[1],color='r')
+ax1.scatter(cntr_img[0],cntr_img[1])
 # ax0.scatter(start[0]+5, start[1]+5)
 
-ax2.plot(mod_slice)
+ax2 = plt.subplot(312)
+ax2.set_title('Line slice (1px)')
+ax2.plot(raw_slice)
+
+ax3 = plt.subplot(313)
+ax3.set_title('Band slice (shift %spx)' % band_w)
+ax3.plot(mod_slice)
 
 # plt.gca().invert_yaxis()
+plt.tight_layout()
 plt.show()

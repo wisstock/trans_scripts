@@ -277,6 +277,7 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
     ----+----
         |
       I | IV
+    0
 
     """ 
 
