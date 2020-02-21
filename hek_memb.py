@@ -81,8 +81,15 @@ oif_raw = oif.OibImread(oif_path)
 oif_img = oif_raw[0,:,:,:]
 
 # img = getTiff(input_file, 0, 1)
-img = oif_img[6,:,:]
+# img = oif_img[6,:,:]
 # img = tifffile.imread(input_file)
+
+input_img = '/home/astria/Bio_data/Deconvoluted/s_C001Z009.tif'
+input_img_mod = '/home/astria/Bio_data/Deconvoluted/Deconvolved_23.tif'
+
+
+img = tifffile.imread(input_img)
+img_mod = tifffile.imread(input_img_mod)
 
 # img = filters.gaussian(img, sigma=1)
 # img_mod = ts.cellEdge(img)
@@ -90,11 +97,11 @@ img = oif_img[6,:,:]
 # filters.gaussian(img, sigma=1)
 # filters.median(img)
 
-psf_model = dec.psf_example()
-psf = psf_model.data
-print(np.shape(psf))
+# psf_model = dec.psf_example()
+# psf = psf_model.data
+# print(np.shape(psf))
 
-img_mod = restoration.richardson_lucy(img, psf, iterations=10)
+# img_mod = restoration.richardson_lucy(img, psf, iterations=10)
 
 
 angle = 10

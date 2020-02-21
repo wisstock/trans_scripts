@@ -26,10 +26,10 @@ plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
 plt.rcParams['image.cmap'] = 'viridis'
 
-print('Python {}\n'.format(sys.version))
-print('NumPy\t\t{}'.format(np.__version__))
-print('matplotlib\t{}'.format(matplotlib.__version__))
-print('SciPy\t\t{}'.format(scipy.__version__))
+# print('Python {}\n'.format(sys.version))
+# print('NumPy\t\t{}'.format(np.__version__))
+# print('matplotlib\t{}'.format(matplotlib.__version__))
+# print('SciPy\t\t{}'.format(scipy.__version__))
 
 
 # Image properties
