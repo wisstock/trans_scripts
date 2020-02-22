@@ -68,40 +68,31 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
     			print("Frame number out of range!")
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
-logging.basicConfig(filename="sample.log",
+logging.basicConfig(filename="logs/sample.log",
                     level=logging.INFO,
                     filemode="w",
                     format=FORMAT)
 
 
-input_file = '/home/astria/Bio_data/s_C001Z007.tif'  # 'Fluorescence_435nmDD500_cell1.tiff'
+# input_file = '/home/astria/Bio_data/s_C001Z007.tif'  # 'Fluorescence_435nmDD500_cell1.tiff'
 
 oif_path = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell1/20180523-1404-0003-250um.oif'
 oif_raw = oif.OibImread(oif_path)
 oif_img = oif_raw[0,:,:,:]
 
 # img = getTiff(input_file, 0, 1)
-# img = oif_img[6,:,:]
+img = oif_img[6,:,:]
 # img = tifffile.imread(input_file)
 
-input_img = '/home/astria/Bio_data/Deconvoluted/s_C001Z009.tif'
-input_img_mod = '/home/astria/Bio_data/Deconvoluted/Deconvolved_23.tif'
-
-
-img = tifffile.imread(input_img)
-img_mod = tifffile.imread(input_img_mod)
 
 # img = filters.gaussian(img, sigma=1)
-# img_mod = ts.cellEdge(img)
-# exposure.equalize_hist(img)
-# filters.gaussian(img, sigma=1)
-# filters.median(img)
+img_mod = ts.cellEdge(img)
 
-# psf_model = dec.psf_example()
-# psf = psf_model.data
-# print(np.shape(psf))
-
-# img_mod = restoration.richardson_lucy(img, psf, iterations=10)
+# IMAGEJ DATA VIS
+# input_img = '/home/astria/Bio_data/Deconvoluted/s_C001Z009.tif'
+# input_img_mod = '/home/astria/Bio_data/Deconvoluted/Deconvolved_23.tif'
+# img = tifffile.imread(input_img)
+# img_mod = tifffile.imread(input_img_mod)
 
 
 angle = 10

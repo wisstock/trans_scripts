@@ -1,6 +1,9 @@
 demo_data/
-temp/
+.temp/
 .ipynb_checkpoints/
+logs/
 
 *.log
+*.sublime-project
+*.sublime-workspace
 
