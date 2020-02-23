@@ -74,6 +74,11 @@ logging.basicConfig(filename="sample.log",
                     format=FORMAT)
 
 
+plt.style.use('dark_background')
+plt.rcParams['figure.facecolor'] = '#272b30'
+plt.rcParams['image.cmap'] = 'inferno'
+
+
 # input_file = '/home/astria/Bio_data/s_C001Z007.tif'  # 'Fluorescence_435nmDD500_cell1.tiff'
 
 oif_path = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell1/20180523-1404-0003-250um.oif'
@@ -81,12 +86,22 @@ oif_raw = oif.OibImread(oif_path)
 oif_img = oif_raw[0,:,:,:]
 
 # img = getTiff(input_file, 0, 1)
-img = oif_img[6,:,:]
+# img = oif_img[6,:,:]
 # img = tifffile.imread(input_file)
+# img_mod = ts.cellEdge(img)
 
+data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
+output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
 
-# img = filters.gaussian(img, sigma=1)
-img_mod = ts.cellEdge(img)
+raw = tifffile.imread(data_path)
+dec = tifffile.imread(output_path)
+frame = 10
+angle = 45
+band_w = 2
+
+img = raw[frame,:,:]
+img_mod = dec[frame,:,:]
+
 
 # IMAGEJ DATA VIS
 # input_img = '/home/astria/Bio_data/Deconvoluted/s_C001Z009.tif'
@@ -95,8 +110,6 @@ img_mod = ts.cellEdge(img)
 # img_mod = tifffile.imread(input_img_mod)
 
 
-angle = 10
-band_w = 2
 cntr = ts.cellMass(img)
 xy0, xy1 = slc.lineSlice(img, angle, cntr)
 
@@ -125,7 +138,7 @@ ax0.scatter(cntr_img[0],cntr_img[1])
 
 ax1 = plt.subplot(322)
 ax1.imshow(img_mod)  #, cmap='gray')
-ax1.set_title('Deconvolute image')
+ax1.set_title('Deconvoluted image')
 ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
 ax1.scatter(cntr[0],cntr[1],color='r')
 ax1.scatter(cntr_img[0],cntr_img[1])
@@ -136,7 +149,7 @@ ax2.set_title('Rav slice')
 ax2.plot(raw_slice)
 
 ax3 = plt.subplot(313)
-ax3.set_title('Deconvolute slice')
+ax3.set_title('Deconvoluted slice')
 ax3.plot(mod_slice)
 
 # plt.gca().invert_yaxis()

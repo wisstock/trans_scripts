@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-""" PSF Gibson-Lanni model
+""" Copyright © 2020 Borys Olifirov
+
+PSF Gibson-Lanni model
 
 http://kmdouglass.github.io/posts/implementing-a-fast-gibson-lanni-psf-solver-in-python/
 
@@ -19,16 +21,7 @@ import scipy.special
 from scipy.interpolate import interp1d
 
 
-plt.style.use('dark_background')
-plt.rcParams['figure.facecolor'] = '#272b30'
-plt.rcParams['image.cmap'] = 'viridis'
-
-# print('Python {}\n'.format(sys.version))
-# print('NumPy\t\t{}'.format(np.__version__))
-# print('matplotlib\t{}'.format(matplotlib.__version__))
-# print('SciPy\t\t{}'.format(scipy.__version__))
-
-def demo(size=[128, 128, 128]):
+def demo(size=[128, 128, 128], fb_plot=False):
 
 	# Image properties
 	# Size of the PSF array, pixels
@@ -43,22 +36,22 @@ def demo(size=[128, 128, 128]):
 
 	# Microscope parameters
 	NA          = 0.9
-	wavelength  = 0.610 # microns
+	wavelength  = 0.512 # microns
 	M           = 60   # magnification
 	ns          = 1.33  # specimen refractive index (RI)
 	ng0         = 1.5   # coverslip RI design value
 	ng          = 1.5   # coverslip RI experimental value
-	ni0         = 1.5   # immersion medium RI design value
-	ni          = 1.5   # immersion medium RI experimental value
+	ni0         = 1.33   # immersion medium RI design value
+	ni          = 1.33   # immersion medium RI experimental value
 	ti0         = 150   # microns, working distance (immersion medium thickness) design value
-	tg0         = 180   # microns, coverslip thickness design value
-	tg          = 180   # microns, coverslip thickness experimental value
-	res_lateral = 0.1   # microns
-	res_axial   = 0.25  # microns
+	tg0         = 170   # microns, coverslip thickness design value
+	tg          = 170   # microns, coverslip thickness experimental value
+	res_lateral = 0.05   # microns
+	res_axial   = 1  # microns
 	pZ          = 2     # microns, particle distance from coverslip
 
 	# Scaling factors for the Fourier-Bessel series expansion
-	min_wavelength = 0.436 # microns
+	min_wavelength = 0.488 # microns
 	scaling_factor = NA * (3 * np.arange(1, num_basis + 1) - 2) * min_wavelength / wavelength
 
 
@@ -109,22 +102,23 @@ def demo(size=[128, 128, 128]):
 	z0 = 24
 
 	# The Fourier-Bessel approximation
-	# est = J.T.dot(C[:,z0])
+	if fb_plot == True:
+	    est = J.T.dot(C[:,z0])
 
-	# fig, ax = plt.subplots(ncols=2, sharey=True, figsize=(10,5))
-	# ax[0].plot(rho, np.real(phase[z0, :]), label=r'$ \exp{ \left[ jW \left( \rho \right) \right] }$')
-	# ax[0].plot(rho, np.real(est), '--', label='Fourier-Bessel')
-	# ax[0].set_xlabel(r'$\rho$'))
-	# ax[0].set_title('Real')
-	# ax[0].legend(loc='upper left')
+	    fig, ax = plt.subplots(ncols=2, sharey=True, figsize=(10,5))
+	    ax[0].plot(rho, np.real(phase[z0, :]), label=r'$ \exp{ \left[ jW \left( \rho \right) \right] }$')
+	    ax[0].plot(rho, np.real(est), '--', label='Fourier-Bessel')
+	    ax[0].set_xlabel(r'$\rho$')
+	    ax[0].set_title('Real')
+	    ax[0].legend(loc='upper left')
 
-	# ax[1].plot(rho, np.imag(phase[z0, :]))
-	# ax[1].plot(rho, np.imag(est), '--')
-	# ax[1].set_xlabel(r'$\rho$')
-	# ax[1].set_title('Imaginary')
-	# ax[1].set_ylim((-1.5, 1.5))
+	    ax[1].plot(rho, np.imag(phase[z0, :]))
+	    ax[1].plot(rho, np.imag(est), '--')
+	    ax[1].set_xlabel(r'$\rho$')
+	    ax[1].set_title('Imaginary')
+	    ax[1].set_ylim((-1.5, 1.5))
 
-	# plt.show()
+	    plt.show()
 
 
 
