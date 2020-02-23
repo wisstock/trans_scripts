@@ -29,7 +29,7 @@ sys.path.append('modules')
 import oiffile as oif
 import slicing as slc
 import threshold as ts
-import deconvolute as dec
+# import deconvolute as dec
 
 
 def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
@@ -68,7 +68,7 @@ def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
     			print("Frame number out of range!")
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
-logging.basicConfig(filename="logs/sample.log",
+logging.basicConfig(filename="sample.log",
                     level=logging.INFO,
                     filemode="w",
                     format=FORMAT)

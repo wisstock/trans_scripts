@@ -7,7 +7,6 @@ http://kmdouglass.github.io/posts/implementing-a-fast-gibson-lanni-psf-solver-in
 """
 
 import sys
-# %pylab inline
 
 from math import *
 import numpy as np
@@ -19,8 +18,6 @@ from matplotlib import animation
 import scipy.special
 from scipy.interpolate import interp1d
 
-from IPython.core.pylabtools import figsize, getfigs
-
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
@@ -31,13 +28,13 @@ plt.rcParams['image.cmap'] = 'viridis'
 # print('matplotlib\t{}'.format(matplotlib.__version__))
 # print('SciPy\t\t{}'.format(scipy.__version__))
 
-def demo():
+def demo(size=[128, 128, 128]):
 
 	# Image properties
 	# Size of the PSF array, pixels
-	size_x = 128
-	size_y = 128
-	size_z = 128
+	size_x = size[0]
+	size_y = size[1]
+	size_z = size[2]
 
 	# Precision control
 	num_basis    = 100  # Number of rescaled Bessels that approximate the phase function
