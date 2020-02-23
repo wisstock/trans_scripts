@@ -2,7 +2,7 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Deconvolutio experiments with lib flowdec
+Deconvolutio functions demo experiments with lib flowdec
 
 https://github.com/wisstock/flowdec
 
@@ -23,6 +23,8 @@ from flowdec import psf as fd_psf
 
 sys.path.append('modules')
 import oiffile as oif
+import slicing as slc
+import threshold as ts
 
 
 
@@ -42,29 +44,19 @@ def resolve_psf(config, logger):
     return psf.generate()
 
 
+
+logging.basicConfig(format='%(levelname)s:%(asctime)s:%(message)s',
+                    level=logging.getLevelName('DEBUG'))
+logger = logging.getLogger('DeconvolutionCLI')
+
 # oif_input = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell2/20180523-1414-0011-500um.oif'
 data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
 output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
 psf_config_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf.json"
 n_iter = 10
 
-logging.basicConfig(format='%(levelname)s:%(asctime)s:%(message)s',
-                    level=logging.getLevelName('DEBUG'))
-logger = logging.getLogger('DeconvolutionCLI')
 
 
-# # Create tiff file from oif
-# oif_raw = oif.OibImread(oif_input)
-# oif_img = oif_raw[0,:,:,:]
-
-# # print(np.shape(oif_img))
-
-# tifffile.imsave(data_path, oif_img)
-# logger.info('Create TIFF from OIF "{}"'.format(oif_input))
-
-
-
-# Deconvolution
 acq = fd_data.Acquisition(data=io.imread(data_path),
                           kernel=resolve_psf(psf_config_path,logger))
 
@@ -85,31 +77,3 @@ logger.info('Deconvolution complete (in {:.3f} seconds)'.format(end_time - start
 io.imsave(output_path, res.data)
 logger.info('Result saved to "{}"'.format(output_path))
 
-
-# oif_path = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell1/20180523-1404-0003-250um.oif'
-# oif_raw = oif.OibImread(oif_path)
-# oif_img = oif_raw[0,:,:,:]
-# data = oif_img[:,:,:]
-
-
-
-
-# tifffile.imsave('cell2.tif', data)
-
-# algo = fd_restoration.RichardsonLucyDeconvolver(data.ndim).initialize()
-
-# res = algo.run(fd_data.Acquisition(data=data, kernel=psf), niter=10).data
-
-
-# fig, axs = plt.subplots(1, 3)
-# axs = axs.ravel()
-# fig.set_size_inches(18, 12)
-# center = tuple([slice(None), slice(10, -10), slice(10, -10)])
-# titles = ['Original Image', 'Blurred Image', 'Reconstructed Image']
-# for i, d in enumerate([actual, data, res]):
-#     img = exposure.adjust_gamma(d[center].max(axis=0), gamma=.2)
-#     axs[i].imshow(img)
-#     axs[i].set_title(titles[i])
-#     axs[i].axis('off')
-
-# plt.show()
