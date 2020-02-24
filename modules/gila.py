@@ -47,7 +47,7 @@ def demo(size=[128, 128, 128], fb_plot=False):
 	tg0         = 170   # microns, coverslip thickness design value
 	tg          = 170   # microns, coverslip thickness experimental value
 	res_lateral = 0.1   # microns
-	res_axial   = 1  # microns
+	res_axial   = 0.1  # microns
 	pZ          = 2     # microns, particle distance from coverslip
 
 	# Scaling factors for the Fourier-Bessel series expansion
