@@ -113,3 +113,6 @@ plt.colorbar(slice_1, cax=cax)
 ax1.set_title('X-Z, middle')
 
 plt.show()
+
+
+# That's all!

@@ -104,3 +104,6 @@ cax = divider.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slic, cax=cax)
 
 plt.show()
+
+
+# That's all!

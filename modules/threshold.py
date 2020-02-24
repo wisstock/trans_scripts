@@ -84,3 +84,6 @@ def cellEdge(img):
 
 if __name__=="__main__":
     pass
+
+
+# That's all!
