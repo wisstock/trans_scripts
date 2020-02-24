@@ -46,7 +46,7 @@ def demo(size=[128, 128, 128], fb_plot=False):
 	ti0         = 150   # microns, working distance (immersion medium thickness) design value
 	tg0         = 170   # microns, coverslip thickness design value
 	tg          = 170   # microns, coverslip thickness experimental value
-	res_lateral = 0.05   # microns
+	res_lateral = 0.1   # microns
 	res_axial   = 1  # microns
 	pZ          = 2     # microns, particle distance from coverslip
 

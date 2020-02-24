@@ -2,25 +2,24 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Deconvolutio resylts vis
+Fast vis script
 
 """
 
 import sys
 
-import sys
-
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from timeit import default_timer as timer
-from skimage import io
+# from matplotlib import transforms
+
 from skimage.external import tifffile
 
 sys.path.append('modules')
 import oiffile as oif
-import slicing as slc
-import threshold as ts
+
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
@@ -28,79 +27,33 @@ plt.rcParams['image.cmap'] = 'inferno'
 
 
 
+# oif_path = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell1/20180523-1404-0003-250um.oif'
+# tiff_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell2.tif"
+
+
+# oif_raw = oif.OibImread(oif_path)
+# oif_img = oif_raw[0,:,:,:]
+
+# oif_data = oif.OifFile(oif_path)
+
+# print(oif_data.mainfile)
+
+
+# tifffile.imsave(output, tiff_path)
+
 
 
 data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
 output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
+frame_1 = 3
+frame_2 = 10
+frame_3 = 17
 
 
-frame = 10  # 
-angle = 45  # BAND SLICE ARGS
-band_w = 2  #
-
-frame_1 = 7   #
-frame_2 = 10  # GRID PLOT ARGS
-frame_3 = 12  #
-
-raw = tifffile.imread(data_path)  # load imput file
+raw = tifffile.imread(data_path)
 dec = tifffile.imread(output_path)
 
 
-
-# # Create tiff file from oif
-# oif_raw = oif.OibImread(oif_input)
-# oif_img = oif_raw[0,:,:,:]
-
-# # print(np.shape(oif_img))
-
-# tifffile.imsave(data_path, oif_img)
-# logger.info('Create TIFF from OIF "{}"'.format(oif_input))
-
-# 
-
-
-
-# BAND SLICE PLOT
-img = raw[frame,:,:]
-img_mod = dec[frame,:,:]
-
-cntr = ts.cellMass(img)
-xy0, xy1 = slc.lineSlice(img, angle, cntr)
-
-raw_slice = slc.bandExtract(img, xy0, xy1, band_w)
-mod_slice = slc.bandExtract(img_mod, xy0, xy1, band_w)
-
-
-fig, ax = plt.subplots(4, 8)
-
-ax[0] = plt.subplot(321)
-ax[0].imshow(img)  #, cmap='gray')
-ax[0].set_title('Raw image')
-ax[0].plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
-ax[0].scatter(cntr[0],cntr[1],color='r')
-# ax0.scatter(cntr_img[0],cntr_img[1])
-# ax0.scatter(start[0]+5, start[1]+5)
-
-ax[1] = plt.subplot(322)
-ax[1].imshow(img_mod)  #, cmap='gray')
-ax[1].set_title('Deconvoluted image')
-ax[1].plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
-ax[1].scatter(cntr[0],cntr[1],color='r')
-# ax1.scatter(cntr_img[0],cntr_img[1])
-# ax0.scatter(start[0]+5, start[1]+5)
-
-ax[2] = plt.subplot(312)
-ax[2].set_title('Rav slice')
-ax[2].plot(raw_slice)
-
-ax[3] = plt.subplot(313)
-ax[3].set_title('Deconvoluted slice')
-ax[3].plot(mod_slice)
-
-
-
-
-# GRID PLOT
 img_raw_1 = raw[frame_1,:,:]
 img_dec_1 = dec[frame_1,:,:]
 
@@ -158,6 +111,5 @@ divider_5 = make_axes_locatable(ax5)
 cax = divider_5.append_axes("right", size="3%", pad=0.1)
 plt.colorbar(slice_5, cax=cax)
 ax5.set_title('Deconvoluted, frame %s' % frame_3)
-
 
 plt.show()

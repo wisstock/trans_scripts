@@ -95,8 +95,8 @@ output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
 
 raw = tifffile.imread(data_path)
 dec = tifffile.imread(output_path)
-frame = 10
-angle = 45
+frame = 17
+angle = 57
 band_w = 2
 
 img = raw[frame,:,:]
@@ -128,7 +128,7 @@ cntr_img = [np.int((shape[1]-1)/2),
 
 
 
-ax0 = plt.subplot(321)
+ax0 = plt.subplot(221)
 ax0.imshow(img)  #, cmap='gray')
 ax0.set_title('Raw image')
 ax0.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
@@ -136,7 +136,7 @@ ax0.scatter(cntr[0],cntr[1],color='r')
 ax0.scatter(cntr_img[0],cntr_img[1])
 # ax0.scatter(start[0]+5, start[1]+5)
 
-ax1 = plt.subplot(322)
+ax1 = plt.subplot(222)
 ax1.imshow(img_mod)  #, cmap='gray')
 ax1.set_title('Deconvoluted image')
 ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
@@ -144,13 +144,16 @@ ax1.scatter(cntr[0],cntr[1],color='r')
 ax1.scatter(cntr_img[0],cntr_img[1])
 # ax0.scatter(start[0]+5, start[1]+5)
 
-ax2 = plt.subplot(312)
-ax2.set_title('Rav slice')
-ax2.plot(raw_slice)
+ax2 = plt.subplot(212)
+ax2.set_title('Band slices')
+ax2.plot(raw_slice, label='Raw')
+ax2.plot(mod_slice, label='Deconvoluted')
+ax2.legend(loc='upper left')
 
-ax3 = plt.subplot(313)
-ax3.set_title('Deconvoluted slice')
-ax3.plot(mod_slice)
+
+# ax3 = plt.subplot(313)
+# ax3.set_title('Deconvoluted slice')
+# ax3.plot(mod_slice)
 
 # plt.gca().invert_yaxis()
 plt.tight_layout()
