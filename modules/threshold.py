@@ -22,7 +22,7 @@ from skimage import measure
 from scipy.ndimage import measurements as msr
 
 
-def cellMask(img, thbreshold_method="triangle", percent=90):
+def cellMask(img, threshold_method="triangle", percent=90):
     """ Extract cells using symple mask.
 
     Treshold methods:
@@ -31,7 +31,7 @@ def cellMask(img, thbreshold_method="triangle", percent=90):
 
 	"""
 
-    if thbreshold_method == "triangle":
+    if threshold_method == "triangle":
         thresh_out = filters.threshold_triangle(img)
         positive_mask = img > thresh_out  # create negative threshold mask
         threshold_mask = positive_mask * -1  # inversion threshold mask
@@ -41,7 +41,7 @@ def cellMask(img, thbreshold_method="triangle", percent=90):
 
         return output_img 
 
-    elif thbreshold_method == "percent":
+    elif threshold_method == "percent":
         percentile = np.percentile(img, percent)
         output_img = np.copy(img)
         output_img[output_img < percentile] = 0
