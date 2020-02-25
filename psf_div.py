@@ -30,13 +30,13 @@ plt.rcParams['image.cmap'] = 'inferno'
 
 
 rw_args = {'shape': (64, 64),  # number of samples in z and r direction
-        'dims': (5, 2.0),   # size in z and r direction in micrometers
+        'dims': (1.0, 0.5),   # size in z and r direction in micrometers
         'ex_wavelen': 488.0,  # excitation wavelength in nanometers
         'em_wavelen': 512.0,  # emission wavelength in nanometers
         'num_aperture': 0.9,
         'refr_index': 1.333,
         'magnification': 60.0,
-        'pinhole_radius': 0.01,  # in micrometers
+        'pinhole_radius': 0.1,  # in micrometers
         'pinhole_shape': 'round'}
 
 gl_args = {'size_x': 127,
@@ -56,8 +56,8 @@ gl_args = {'size_x': 127,
            'ti0': 150,  # microns, working distance (immersion medium thickness) design value
            'tg0' :170,  # microns, coverslip thickness design value
            'tg': 170,  # microns, coverslip thickness experimental value
-           'res_lateral': 0.1,  # microns
-           'res_axial': 0.1,  # microns
+           'res_lateral': 0.5,  # microns
+           'res_axial': 1,  # microns
            'pZ': 2,  # microns, particle distance from coverslip
            'min_wavelength': 0.488}  # scaling factors for the Fourier-Bessel series expansion, microns
 
@@ -74,22 +74,59 @@ tifffile.imsave(psf_gl_file, psf_gl)
 
 psf_size = gl_args['size_x']
 
-# xy_slice = 9
+xy_slice = gl_args['size_z'] // 2
 slice_coord = int(psf_size / 2)
 
-psf_rw_xz = psf_rw[:,slice_coord,:]
-# psf_xy = psf_0[xy_slice,:,:]
-
 psf_gl_xz = psf_gl[:,slice_coord,:]
+psf_rw_xz = psf_rw[:,slice_coord,:]
 
-model_div = psf_rw_xz - psf_gl_xz
+psf_gl_xy = psf_gl[xy_slice,:,:]
+psf_rw_xy = psf_rw[xy_slice,:,:]
 
+psf_list = {'Gibson-Lanni, X-Z': psf_gl_xz,
+            'Richards-Wolf, X-Z': psf_rw_xz,
+            'Gibson-Lanni, X-Y': psf_gl_xy,
+            'Richards-Wolf, X-Y': psf_rw_xy}
+
+model_div = psf_gl_xz - psf_rw_xz
 
 ax = plt.subplot()
 slic = ax.imshow(model_div)
 divider = make_axes_locatable(ax)
 cax = divider.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slic, cax=cax)
+ax.set_title('Gibson-Lanni(X-Z) - Richards-Wolf(X-Z)')
+
+plt.show()
+
+pos = 1
+for key in psf_list:
+    img = psf_list[key]
+
+    ax = plt.subplot(2, 2, pos)
+    slc = ax.imshow(img)
+    div = make_axes_locatable(ax)
+    cax = div.append_axes('right', size='3%', pad=0.1)
+    plt.colorbar(slc, cax=cax)
+    ax.set_title(key)
+
+    pos += 1 
+
+
+# ax0 = plt.subplot(132)
+# slice_0 = ax0.imshow(psf_xy) 
+# divider_0 = make_axes_locatable(ax0)
+# cax = divider_0.append_axes("right", size="3%", pad=0.1)
+# plt.colorbar(slice_0, cax=cax)
+# ax0.set_title('X-Y, %s px' % xy_slice)
+
+# ax1 = plt.subplot(133)
+# slice_1 = ax1.imshow(psf_rw_xz)
+# ax1.plot([0, psf_size-1], [xy_slice, xy_slice])
+# divider_1 = make_axes_locatable(ax1)
+# cax = divider_1.append_axes("right", size="3%", pad=0.1)
+# plt.colorbar(slice_1, cax=cax)
+# ax1.set_title('X-Z, middle')
 
 plt.show()
 
