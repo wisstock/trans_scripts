@@ -21,37 +21,38 @@ import scipy.special
 from scipy.interpolate import interp1d
 
 
-def demo(size=[128, 128, 128], fb_plot=False):
+def generate(args, fb_plot=False):
 
 	# Image properties
 	# Size of the PSF array, pixels
-	size_x = size[0]
-	size_y = size[1]
-	size_z = size[2]
+	size_x = args['size_x']  # 128
+	size_y = args['size_y']  # 128
+	size_z = args['size_z']  # 128
 
 	# Precision control
-	num_basis    = 100  # Number of rescaled Bessels that approximate the phase function
-	num_samples  = 1000 # Number of pupil samples along radial direction
-	oversampling = 2    # Defines the upsampling ratio on the image space grid for computations
+	num_basis    = args['num_basis']  # Number of rescaled Bessels that approximate the phase function, 100
+	num_samples  = args['num_samples'] # Number of pupil samples along radial direction, 1000
+	oversampling = args['oversampling']    # Defines the upsampling ratio on the image space grid for computations, 2
 
 	# Microscope parameters
-	NA          = 0.9
-	wavelength  = 0.512 # microns
-	M           = 60   # magnification
-	ns          = 1.33  # specimen refractive index (RI)
-	ng0         = 1.5   # coverslip RI design value
-	ng          = 1.5   # coverslip RI experimental value
-	ni0         = 1.33   # immersion medium RI design value
-	ni          = 1.33   # immersion medium RI experimental value
-	ti0         = 150   # microns, working distance (immersion medium thickness) design value
-	tg0         = 170   # microns, coverslip thickness design value
-	tg          = 170   # microns, coverslip thickness experimental value
-	res_lateral = 0.1   # microns
-	res_axial   = 0.1  # microns
-	pZ          = 2     # microns, particle distance from coverslip
+	NA          = args['NA']  # 0.9
+	wavelength  = args['wavelength']  # microns, 0.512
+	M           = args['M']   # magnification, 60
+	ns          = args['ns']  # specimen refractive index (RI), 1.33
+	ng0         = args['ng0']   # coverslip RI design value, 1.5
+	ng          = args['ng']   # coverslip RI experimental value, 1.5
+	ni0         = args['ni0']   # immersion medium RI design value, 1.33
+	ni          = args['ni']   # immersion medium RI experimental value, 1.33
+	ti0         = args['ti0']   # microns, working distance (immersion medium thickness) design value, 150
+	tg0         = args['tg0']   # microns, coverslip thickness design value, 170
+	tg          = args['tg']   # microns, coverslip thickness experimental value, 170
+	res_lateral = args['res_lateral']   # microns, 0.1
+	res_axial   = args['res_axial']  # microns, 0.1
+	pZ          = args['pZ']     # microns, particle distance from coverslip, 2
 
 	# Scaling factors for the Fourier-Bessel series expansion
-	min_wavelength = 0.488 # microns
+	min_wavelength = args['min_wavelength'] # microns, 0.488
+
 	scaling_factor = NA * (3 * np.arange(1, num_basis + 1) - 2) * min_wavelength / wavelength
 
 

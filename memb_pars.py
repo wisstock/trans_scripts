@@ -95,7 +95,7 @@ output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
 
 raw = tifffile.imread(data_path)
 dec = tifffile.imread(output_path)
-frame = 17
+frame = 9
 angle = 57
 band_w = 2
 

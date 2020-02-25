@@ -44,7 +44,7 @@ plt.rcParams['image.cmap'] = 'inferno'
 
 
 data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
-output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
+output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res_rw.tif"
 frame_1 = 3
 frame_2 = 10
 frame_3 = 17

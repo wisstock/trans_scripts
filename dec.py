@@ -51,14 +51,18 @@ logger = logging.getLogger('DeconvolutionCLI')
 
 # oif_input = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell2/20180523-1414-0011-500um.oif'
 data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
-output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
+output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res_rw.tif"
 psf_config_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf.json"
-n_iter = 10
+
+psf_model_path = '/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf_rw.tif'
+psf_model = tifffile.imread(psf_model_path)
+
+n_iter = 25
 
 
 
 acq = fd_data.Acquisition(data=io.imread(data_path),
-                          kernel=resolve_psf(psf_config_path,logger))
+                          kernel=psf_model)# resolve_psf(psf_config_path,logger))
 
 logger.debug('Loaded data with shape {} and psf with shape {}'.format(acq.data.shape, acq.kernel.shape))
 
