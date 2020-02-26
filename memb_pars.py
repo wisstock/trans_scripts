@@ -91,11 +91,11 @@ oif_img = oif_raw[0,:,:,:]
 # img_mod = ts.cellEdge(img)
 
 data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
-output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res.tif"
+output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/dec_gl_300.tif"
 
 raw = tifffile.imread(data_path)
 dec = tifffile.imread(output_path)
-frame = 9
+frame = 10
 angle = 57
 band_w = 2
 

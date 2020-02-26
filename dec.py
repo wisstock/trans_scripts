@@ -51,13 +51,13 @@ logger = logging.getLogger('DeconvolutionCLI')
 
 # oif_input = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell2/20180523-1414-0011-500um.oif'
 data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
-output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/res_rw.tif"
-psf_config_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf.json"
+output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/dec_gl_300.tif"
+# psf_config_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf.json"
 
-psf_model_path = '/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf_rw.tif'
+psf_model_path = '/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf_gl.tif'
 psf_model = tifffile.imread(psf_model_path)
 
-n_iter = 25
+n_iter = 300
 
 
 
