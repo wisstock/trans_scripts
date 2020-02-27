@@ -45,16 +45,16 @@ logging.basicConfig(level=logging.INFO,
 
 
 
-data_path = os.path.join(sys.path[0], '.temp/data/dec_rw_30_rb.tif')  # os.path.join(sys.path[0], '.temp/data/cell1.tif')
-sample_path_1 = os.path.join(sys.path[0], '.temp/data/dec_rw_1000_rb.tif')
-sample_path_2 = os.path.join(sys.path[0], '.temp/data/dec_rw_30_rb.tif')
+data_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/cell1_tif/20180718-1252-0001.tif')  # os.path.join(sys.path[0], '.temp/data/cell1.tif')
+sample_path_1 = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/cell1_tif/20180718-1254-0002.tif')
+sample_path_2 = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/cell1_tif/20180718-1255-0003.tif')
 
-path_list = [data_path, sample_path_1]
+path_list = [data_path, sample_path_2]
 img_list = []  # list of read TIF files as np arrays
 frame_list = []  # list of separete frames
 slice_list = []  # list of slices over extracted frames
 
-frames = [3, 9, 16]  # indexes of frames
+frames = [5, 9, 16]  # indexes of frames
 
 angle = 80
 band_w = 2
@@ -108,44 +108,3 @@ for i in range(len(frame_list)//2):
     i += 1 
 
 plt.show()
-
-
-
-# ax0 = plt.subplot(231)
-# ax0.imshow(img)  #, cmap='gray')
-# ax0.set_title('Raw')
-# ax0.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
-# ax0.scatter(cntr[0],cntr[1],color='r')
-# ax0.scatter(cntr_img[0],cntr_img[1])
-# # ax0.scatter(start[0]+5, start[1]+5)
-
-# ax1 = plt.subplot(232)
-# ax1.imshow(img_mod_1)  #, cmap='gray')
-# ax1.set_title('1000')
-# ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
-# ax1.scatter(cntr[0],cntr[1],color='r')
-# ax1.scatter(cntr_img[0],cntr_img[1])
-# # ax0.scatter(start[0]+5, start[1]+5)
-
-# ax2 = plt.subplot(233)
-# ax2.imshow(img_mod_2)  #, cmap='gray')
-# ax2.set_title('30')
-# ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]], 'ro-')
-# ax2.scatter(cntr[0],cntr[1],color='r')
-# ax2.scatter(cntr_img[0],cntr_img[1])
-# # ax0.scatter(start[0]+5, start[1]+5)
-
-# ax3 = plt.subplot(212)
-# ax3.set_title('Band slices, frame %s' % (frame+1))
-# ax3.plot(raw_slice, label='Raw')
-# ax3.plot(mod_slice_1, label='1000', linestyle='dashed')
-# ax3.plot(mod_slice_2, label='30', linestyle='dotted')
-# ax3.legend(loc='upper left')
-
-
-# # ax3 = plt.subplot(313)
-# # ax3.set_title('Deconvoluted slice')
-# # ax3.plot(mod_slice)
-
-# # plt.gca().invert_yaxis()
-# plt.tight_layout()

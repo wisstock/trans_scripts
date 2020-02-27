@@ -29,56 +29,66 @@ import threshold as ts
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
-plt.rcParams['image.cmap'] = 'inferno' 
+# plt.rcParams['image.cmap'] = 'inferno' 
 
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(level=logging.INFO,
-                    filemode="w",
-                    format=FORMAT)  # , filename="demo.log")
+                    format=FORMAT)
+                    # filemode="w",
+                    # format=FORMAT)  # , filename="demo.log")
 
 
 
-# oif_path = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell1/20180523-1404-0003-250um.oif'
-# oif_raw = oif.OibImread(oif_path)
-# oif_img = oif_raw[0,:,:,:]
+wd_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/')
 
-# img = getTiff(input_file, 0, 1)
-# img = oif_img[6,:,:]
-# img = tifffile.imread(input_file)
-# img_mod = ts.cellEdge(img)
+sample_path = 'cell1_tif/'
+data_path = os.path.join(wd_path, sample_path)
 
-data_path = os.path.join(sys.path[0], '.temp/data/cell1.tif')  # "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
+logging.info('Dir path: %s' % data_path)
 
 
-img_raw = tifffile.imread(data_path)
-
-scaling_factor = 5  # substraction region part
-ex_img = ts.backCon(img_raw, np.shape(img_raw)[1] // scaling_factor)
-
-img = img_raw[:,0:50,0:50]
-ext_img = ex_img[:,0:50,0:50]
+frame = 12
+frame_list = []
 
 
+fig, ax = plt.subplots(1,3)
+ax = ax.ravel()
 
-img_dict = {'Raw, 3': img[2,:,:],
-            'Extracted, 3': ext_img[2,:,:],
-            'Raw, 10': img[9,:,:],
-            'Extracted, 10': ext_img[9,:,:]}
+i = 0
+for root, dirs, files in os.walk(data_path):  # loop over the TIF files
+    for file in files:
+    	if file.endswith('.tif'):
+    		logging.debug('File %s in work' % file)
+
+    		file_path = os.path.join(root, file)
+
+    		tif_raw = tifffile.imread(file_path)
+    		# frame_list.append(tif_raw[frame,:,:])
+
+    		img = tif_raw[frame,:,:]
+
+    		ax[i].imshow(img)
+    		ax[i].set_title('File %s' % file)
+
+    		i += 1
 
 
 
-pos = 1
-for key in img_dict:
-    img = img_dict[key]
 
-    ax = plt.subplot(2, 2, pos)
-    slc = ax.imshow(img)
-    div = make_axes_locatable(ax)
-    cax = div.append_axes('right', size='3%', pad=0.1)
-    plt.colorbar(slc, cax=cax)
-    ax.set_title(key)
 
-    pos += 1 
+# scaling_factor = 5  # substraction region part
+# ex_img = ts.backCon(img_raw, np.shape(img_raw)[1] // scaling_factor)
+
+
+
+
+# i = 0
+# for i in range(len(frame_list)):
+
+#     ax[i].axis('off') 
+#     ax[i].imshow(frame_list[i])
+
+#     i += 1
 
 plt.show()
