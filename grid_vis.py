@@ -7,6 +7,7 @@ Fast vis script
 """
 
 import sys
+import os
 
 import numpy as np
 import matplotlib
@@ -43,8 +44,10 @@ plt.rcParams['image.cmap'] = 'inferno'
 
 
 
-data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
-output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/dec_gl_300.tif"
+data_path = os.path.join(sys.path[0], '.temp/data/cell1.tif')  # "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
+output_path = os.path.join(sys.path[0], '.temp/data/dec_rw_30_rb.tif')  # "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/dec_gl_300.tif"
+
+print(data_path)
 frame_1 = 3
 frame_2 = 10
 frame_3 = 17

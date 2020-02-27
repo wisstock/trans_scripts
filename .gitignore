@@ -1,5 +1,6 @@
 demo_data/
 .ipynb_checkpoints/
+.temp/
 logs/
 
 *.log

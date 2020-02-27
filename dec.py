@@ -2,13 +2,14 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Deconvolutio functions demo experiments with lib flowdec
+Deconvolution functions demo experiments with lib flowdec
 
 https://github.com/wisstock/flowdec
 
 """
 
 import sys
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,24 +45,37 @@ def resolve_psf(config, logger):
     return psf.generate()
 
 
-
-logging.basicConfig(format='%(levelname)s:%(asctime)s:%(message)s',
+FORMAT = '%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s'
+logging.basicConfig(format=FORMAT,
                     level=logging.getLevelName('DEBUG'))
 logger = logging.getLogger('DeconvolutionCLI')
 
-# oif_input = '/home/astria/Bio_data/HEK_mYFP/20180523_HEK_membYFP/cell2/20180523-1414-0011-500um.oif'
-data_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
-output_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/dec_gl_300.tif"
-# psf_config_path = "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf.json"
 
-psf_model_path = '/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/psf_gl.tif'
+n_iter = 1000
+
+
+data_path = os.path.join(sys.path[0], '.temp/data/cell1.tif')
+output_path = os.path.join(sys.path[0], '.temp/data/dec_rw_30.tif')
+
+psf_model_path = os.path.join(sys.path[0], '.temp/data/psf_rw.tif')
 psf_model = tifffile.imread(psf_model_path)
 
-n_iter = 300
+# psf_config_path = os.path.join(sys.path[0], '.temp/data/psf.json')
+psf_model = tifffile.imread(psf_model_path)
+# try:
+#     psf_model = tifffile.imread(psf_model_path)
+# else:
+#     resolve_psf(psf_config_path, logger)
 
 
 
-acq = fd_data.Acquisition(data=io.imread(data_path),
+input_img = io.imread(data_path)
+
+scaling_factor = 5  # substraction region part
+processed_img = ts.backCon(input_img, np.shape(input_img)[1] // scaling_factor)  # extracimg background
+
+
+acq = fd_data.Acquisition(data=processed_img,
                           kernel=psf_model)# resolve_psf(psf_config_path,logger))
 
 logger.debug('Loaded data with shape {} and psf with shape {}'.format(acq.data.shape, acq.kernel.shape))
