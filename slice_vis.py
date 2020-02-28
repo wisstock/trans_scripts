@@ -45,18 +45,24 @@ logging.basicConfig(level=logging.INFO,
 
 
 
-data_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/cell1_tif/20180718-1252-0001.tif')  # os.path.join(sys.path[0], '.temp/data/cell1.tif')
-sample_path_1 = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/cell1_tif/20180718-1254-0002.tif')
-sample_path_2 = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/cell1_tif/20180718-1255-0003.tif')
+wd_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/input/')  # os.path.join(sys.path[0], '.temp/data/cell1.tif')
+dec_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/input/')
 
-path_list = [data_path, sample_path_2]
+raw_file = '20180718-1315-0007_ch1.tif'  # '20180718-1316-0008_ch1.tif'
+mod_file = '20180718-1315-0007_ch2.tif'
+
+data_path = os.path.join(wd_path, raw_file) 
+sample_path = os.path.join(dec_path, mod_file)
+
+
+path_list = [data_path, sample_path]
 img_list = []  # list of read TIF files as np arrays
 frame_list = []  # list of separete frames
 slice_list = []  # list of slices over extracted frames
 
-frames = [5, 9, 16]  # indexes of frames
+frames = [8, 9, 10]  # indexes of frames
 
-angle = 80
+angle = 15
 band_w = 2
 
 
@@ -66,7 +72,9 @@ for input_file in path_list:
 
 for img in img_list:
     for frame_num in frames:
-        frame_list.append(img[frame_num,:,:])
+        i = img[frame_num,:,:]
+        i = np.true_divide(i, np.max(i))
+        frame_list.append(i)
 
 
 frame_shape = np.shape(frame_list[0])
@@ -90,7 +98,7 @@ for i in range(len(frame_list)//2):
     div1 = make_axes_locatable(ax1)
     cax1 = div1.append_axes('right', size='3%', pad=0.1)
     plt.colorbar(slc1, cax=cax1)
-    ax1.set_title('Frame %s, i = 30' % frames[i])
+    ax1.set_title('HPCA-TFP, frame %s' % (frames[i]+1))
 
     ax2 = plt.subplot(3, 3, i+4)
     ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]])
@@ -98,13 +106,14 @@ for i in range(len(frame_list)//2):
     div2 = make_axes_locatable(ax2)
     cax2 = div2.append_axes('right', size='3%', pad=0.1)
     plt.colorbar(slc2, cax=cax2)
-    ax2.set_title('Frame %s, i = 1000' % frames[i])
+    ax2.set_title('membYFP, frame %s' % (frames[i]+1))
 
     ax3 = plt.subplot(3, 3, i+7)
-    ax3.plot(slice_list[i], label='i = 30')
-    ax3.plot(slice_list[i+3], label='i = 1000', linestyle='dashed')
+    ax3.plot(slice_list[i], label='HPCA-TFP')
+    ax3.plot(slice_list[i+3], label='membYFP', linestyle='dashed')
     ax3.legend(loc='upper left')
 
     i += 1 
 
+plt.suptitle('Raw file %s' % raw_file.split('.')[0])
 plt.show()

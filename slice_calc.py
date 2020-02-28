@@ -8,7 +8,6 @@ Slice calc for deconvoluted HEK263 data
 
 import sys
 import os
-import glob
 import logging
 import csv
 
@@ -37,7 +36,7 @@ plt.rcParams['image.cmap'] = 'inferno'
 
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format=FORMAT)  # ,
                     # filemode="w",
                     # filename="oif_read.log")
@@ -51,6 +50,7 @@ angl = 0
 angl_increment = 24
 band_w = 2
 
+
 ch1_list = []  # HPCA-TFP
 ch2_list = []  # membYFP
 
@@ -59,21 +59,25 @@ with open(os.path.join(output_path, output_name), 'w') as csvfile:  # init CSF o
                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
     writer.writerow(['sample', 'channel', 'frame', 'angl', 'val'])
 
-i = 0
+
 for root, dirs, files in os.walk(input_path):  # loop over the OIF files
     for file in files:
     	if file.endswith('.tif'):
-    		logging.debug('File %s in work' % file)
+    		priv_file = file
+
+    		logging.info('File %s in work' % file)
 
     		file_path = os.path.join(root, file)
    
     		img = tifffile.imread(file_path)
-    		frame_num = np.shape(img)[0] // 2  # frame of interes
+    		frame_num = np.shape(img)[0] // 2 + 1  # frame of interes
 
-    		logging.debug('Frame of interes: %s' % frame_num)
+    		logging.info('Frame of interes: %s' % frame_num)
 
     		frame = img[frame_num,:,:]
     		cntr = ts.cellMass(frame)  # calc center of mass of the frame
+
+    		logging.info(angl)
 
     		while angl < 360:
     			xy0, xy1 = slc.lineSlice(frame, angl, cntr)
@@ -86,6 +90,7 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
     				    writer.writerow([file.split('_')[0], file.split('_')[1], frame_num+1, angl, val])
 
-    			i += 1
     			angl += angl_increment
+
+    		angl = 0
 

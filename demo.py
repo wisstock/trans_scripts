@@ -40,55 +40,24 @@ logging.basicConfig(level=logging.INFO,
 
 
 
-wd_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/')
-
-sample_path = 'cell1_tif/'
-data_path = os.path.join(wd_path, sample_path)
+wd_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/demo_dec')
 
 logging.info('Dir path: %s' % data_path)
 
+data = {}
 
-frame = 12
-frame_list = []
+frame = 10
+angl = 120
 
-
-fig, ax = plt.subplots(1,3)
-ax = ax.ravel()
-
-i = 0
-for root, dirs, files in os.walk(data_path):  # loop over the TIF files
+for root, dirs, files in os.walk(wd_path):  # loop over the OIF files
     for file in files:
-    	if file.endswith('.tif'):
-    		logging.debug('File %s in work' % file)
+        if file.endswith('.tif'):
 
-    		file_path = os.path.join(root, file)
+            file_dict = {file.split('_')[1]: img = tifffile.imread(os.path.join(wd_path, file))}
 
-    		tif_raw = tifffile.imread(file_path)
-    		# frame_list.append(tif_raw[frame,:,:])
-
-    		img = tif_raw[frame,:,:]
-
-    		ax[i].imshow(img)
-    		ax[i].set_title('File %s' % file)
-
-    		i += 1
+            data.update(file_dict)
 
 
 
-
-
-# scaling_factor = 5  # substraction region part
-# ex_img = ts.backCon(img_raw, np.shape(img_raw)[1] // scaling_factor)
-
-
-
-
-# i = 0
-# for i in range(len(frame_list)):
-
-#     ax[i].axis('off') 
-#     ax[i].imshow(frame_list[i])
-
-#     i += 1
 
 plt.show()
