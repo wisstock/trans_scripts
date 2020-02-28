@@ -120,7 +120,7 @@ def lineSlice(img, angle=1, cntr_coord="center"):
             logging.debug("anglPars done! u")
             return("u", math.radians(angl-90))
 
-        elif angl == 0 or angl == 180:
+        elif angl == 0 or angl == 180 or angl == 360:
             logging.debug("anglPars done! v")
             return("v", 0)
 

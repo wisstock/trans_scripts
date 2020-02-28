@@ -104,7 +104,7 @@ def cellMass(img):
     mass_cntr = msr.center_of_mass(mass_mask)
     mass_coord = [np.int(mass_cntr[1]), np.int(mass_cntr[0])]
 
-    logging.info("Image center of mass coord: %s" % mass_coord)
+    logging.info("Image center of mass: %s" % mass_coord)
 
     return mass_coord
 
