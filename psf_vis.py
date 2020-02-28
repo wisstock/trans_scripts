@@ -30,7 +30,7 @@ plt.rcParams['figure.facecolor'] = '#272b30'
 plt.rcParams['image.cmap'] = 'inferno'
 
 
-rw_args = {'shape': (9, 100),  # number of samples in z and r direction
+rw_args = {'shape': (9, 160),  # number of samples in z and r direction
         'dims': (1, 4),   # size in z and r direction in micrometers
         'ex_wavelen': 488.0,  # excitation wavelength in nanometers
         'em_wavelen': 512.0,  # emission wavelength in nanometers
