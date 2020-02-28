@@ -134,6 +134,38 @@ def backCon(img, edge_lim=50):
 
     return img
 
+def membDet(slc, h=2):
+    """ Finding membrane maxima by membYFP data
+    and calculating full width at set height of maxima
+
+    """
+
+    peak_coord = np.argsort(slc)[-2:]
+    peak_val = slc[peak_coord]
+
+    logging.info('Peaks values %s and coordinate %s' % (peak_val, peak_coord))
+
+    def leftStep(val, coord, h):
+        """ Calculate left shift
+
+        """
+
+        while i > val/h:
+            i = 
+
+    def rightStep(slc, coord, h):
+        """ Calculate right shift
+
+        """
+        pass
+
+    for coord in peak_coord:
+        for  
+        i = 
+        while i >
+
+
+
 
 if __name__=="__main__":
     pass

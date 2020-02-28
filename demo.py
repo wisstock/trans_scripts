@@ -53,11 +53,15 @@ for root, dirs, files in os.walk(wd_path):  # loop over the OIF files
     for file in files:
         if file.endswith('.tif'):
 
-            file_dict = {file.split('_')[1]: img = tifffile.imread(os.path.join(wd_path, file))}
+            img = tifffile.imread(os.path.join(wd_path, file))
+
+            file_dict = {file.split('_')[1]: img[frame,:,:]}
 
             data.update(file_dict)
 
+for ch in data:
+    img = data[key]
 
-
+    
 
 plt.show()

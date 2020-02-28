@@ -62,7 +62,7 @@ slice_list = []  # list of slices over extracted frames
 
 frames = [8, 9, 10]  # indexes of frames
 
-angle = 15
+angle = 90
 band_w = 2
 
 
@@ -73,7 +73,7 @@ for input_file in path_list:
 for img in img_list:
     for frame_num in frames:
         i = img[frame_num,:,:]
-        i = np.true_divide(i, np.max(i))
+        # i = np.true_divide(i, np.max(i))
         frame_list.append(i)
 
 

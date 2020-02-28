@@ -53,36 +53,44 @@ df = df.dropna()
 df = df.reset_index(drop=True)
 
 samp = '20180718-1315-0007'
-
-
-
-df_demo = df.loc[df['sample'] == samp]
-
 angl_list = [] 
+angl_num = 4
+
 [angl_list.append(i) for i in list(df.angl) if i not in angl_list]  # remove duplications and generate angl list
 
 logging.info('Avaliable angles: %s' % angl_list)
+
+
+try:
+	angl_val = angl_list[angl_num]
+except IndexError:
+	print('Angle value NOT avaliable!')
+	sys.exit()
+
+
 
 for angl_slice in angl_list:  # loop over the slices with particular angles
 	pass
 
 
-slice_demo = df.loc[df['angl'] == angl_list[5]]
-
-print(slice_demo)
+df_demo = df.loc[df['sample'] == samp]
+slice_demo = df_demo.loc[df_demo['angl'] == angl_val]
 
 
 ch1 = np.asarray(slice_demo.val[df['channel'] == 'ch1'])
 ch2 = np.asarray(slice_demo.val[df['channel'] == 'ch2'])
 
-logging.info('Slice size, ch 1: %s, ch 2: %s' % (np.shape(ch1)[0], np.shape(ch2)[0]))
-
-ax = plt.subplot()
-ax.plot(ch1, label='HPCA-TFP')
-ax.plot(ch2, label='membYFP', linestyle='dashed')
-ax.legend(loc='upper left')
-
-plt.title('File %s, frame 10' % samp)
+logging.info('Slice angle %s, size %s px' % (angl_list[5], np.shape(ch2)[0]))
 
 
-plt.show()
+memb_loc = ts.membDet(ch2)
+
+# ax = plt.subplot()
+# ax.plot(ch1, label='HPCA-TFP')
+# ax.plot(ch2, label='membYFP', linestyle='dashed')
+# ax.legend(loc='upper left')
+
+# plt.title('File %s, frame 10' % samp)
+
+
+# plt.show()
