@@ -79,8 +79,8 @@ for angl_slice in angl_list:  # loop over the slices with particular angles
 
 samp = '20180718-1315-0007'
 
-df_demo = df.loc[df['sample'] == samp]
-slice_demo = df_demo.loc[df_demo['angl'] == angl_val]
+# df_demo = df.loc[df['sample'] == samp]
+slice_demo = df.loc[df['angl'] == angl_val and df['sample'] == samp]
 
 
 ch1 = np.asarray(slice_demo.val[df['channel'] == 'ch1'])
@@ -91,15 +91,29 @@ logging.info('Slice angle %s, size %s px' % (angl_val, np.shape(ch2)[0]))
 
 memb_loc = ts.membDet(ch2)
 
-print(memb_loc)
 
 
-# ax = plt.subplot()
-# ax.plot(ch1, label='HPCA-TFP')
-# ax.plot(ch2, label='membYFP', linestyle='dashed')
-# ax.legend(loc='upper left')
 
-# plt.title('File %s, frame 10' % samp)
+# A-A-A-A-A-A-A-A, eto uzhasno
+# bar = []  # memb plot by membDet results
+# for i in range(np.shape(ch1)[0]):
+# 	if i <= memb_loc[0][0]:
+# 		bar.append(0)
+# 	elif i > memb_loc[0][0] and i < memb_loc[0][1]:
+# 		bar.append(memb_loc[0][2])
+# 	elif i >= memb_loc[0][1] and i <= memb_loc[1][0]:
+# 		bar.append(0)
+# 	elif i > memb_loc[1][0] and i < memb_loc[1][1]:
+# 		bar.append(memb_loc[1][2])
+# 	elif i >= memb_loc[1][1]:
+# 		bar.append(0)
 
+ax = plt.subplot()
+ax.plot(ch1, label='HPCA-TFP')
+ax.plot(ch2, label='membYFP')  # , linestyle='dashed')
+ax.plot(bar, label='Memb. estimation', linestyle='dashed')
+ax.legend(loc='upper left')
 
-# plt.show()
+plt.title('File %s, frame 10' % samp)
+
+plt.show()

@@ -83,7 +83,7 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
     		logging.info(angl)
 
     		while angl < 360:
-    			xy0, xy1 = slc.lineSlice(frame, angl, cntr)
+    			xy0, xy1 = slc.radiusSlice(frame, angl, cntr)
 
     			band = slc.bandExtract(frame, xy0, xy1, band_w)
 

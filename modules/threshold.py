@@ -134,52 +134,91 @@ def backCon(img, edge_lim=50):
 
     return img
 
-def membDet(slc, h=2):
+def membDet(slc, h=2, mode='rad'):
     """ Finding membrane maxima by membYFP data
     and calculating full width at set height of maxima
+
+    Mode:
+    'rad' for radius slices (radiusSlice fun)
+    'diam' for diameter slices (lineSlice fun)
 
     Split slice to two halfs and find maxima in each half separately
     (left and right)
 
-    Return list of two list, first is coordinate for left peak
-    and second for right
+    Return list of two list, first value is coordinate for left peak
+    second - coordinate for right
+    and third - upper limit.
 
     """
 
-    slc_l, slc_r = np.split(slc, 2)
+    if mode == 'diam':
+        slc_l, slc_r = np.split(slc, 2)
 
-    peak_l = np.int(np.argsort(slc_l)[-1:])
+        peak_l = np.int(np.argsort(slc_l)[-1:])
 
-    peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
+        peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
 
-    peaks = {peak_l: np.int(slc[peak_l]),
-             peak_r: np.int(slc[peak_r])}
+        peaks = {peak_l: np.int(slc[peak_l]),
+                 peak_r: np.int(slc[peak_r])}
 
-    logging.info('Peaks coordinate %s, %s' % (peak_l, peak_r))
+        logging.info('Diam. mode, peaks coordinates %s, %s' % (peak_l, peak_r))
 
-    maxima_int = []
+        maxima_int = []
 
-    for key in peaks:
-        loc = key  # peack index in slice
-        val = peaks[key]
-        lim = peaks[key] / h  # ratio
-        interval = []
+        for key in peaks:
+            loc = key  # peack index in slice 
+            val = peaks[key]
+            lim = val / h
+            interval = []
+            logging.info('Full width at 1/%s of height (%s) for peack %s' %
+                        (h, lim, key))
 
-        logging.info('Full width at %s height for peack %s' % (lim, key))
+            while val > lim:  # left shift
+                val = slc[loc]
+                loc -= 1
+            interval.append(loc)
 
-        while val > lim:    # left shift
+            loc = key
+            val = peaks[key]
+
+            while val > lim:  # right shift
+                val = slc[loc]
+                loc += 1
+            interval.append(loc)
+            interval.append(lim)
+
+            maxima_int.append(interval)
+
+    elif mode == 'rad':
+        peak = np.int(np.argsort(slc)[-1:])
+
+        logging.info('Rad. mode, peaks coordinate %s, %s' % peak_)
+
+        val = slc[peak]
+        lim = val / h
+        loc = peak
+        maxima_int = []
+
+        logging.info('Full width at 1/%s of height (%s) for peack %s' %
+                        (h, lim, peak))
+
+        while val > lim:
             val = slc[loc]
             loc -= 1
-        interval.append(loc)
+        maxima_int.append(loc)
 
-        loc = key
-        val = peaks[key]
-        while val > lim:  # right shift
+        loc = peak
+        val = slc[peak]
+
+        while val > lim:
             val = slc[loc]
             loc += 1
-        interval.append(loc)
+        maxima_int.append(loc)
+        maxima_int.append(lim)
 
-        maxima_int.append(interval)
+    else:
+        logging.warning('Incorrect mode!')
+
 
     return maxima_int
 

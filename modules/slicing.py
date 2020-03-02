@@ -129,10 +129,6 @@ def lineSlice(img, angle=1, cntr_coord="center"):
             return("h", 90)
 
 
-
-
-
-
     x0, y0, x1, y1 = 0, 0, 0, 0  # init line ends coordinates
     img_shape = np.shape(img)
 
