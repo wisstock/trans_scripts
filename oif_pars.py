@@ -2,6 +2,8 @@
 
 """ Copyright © 2020 Borys Olifirov
 
+1-sr script
+
 OIF image data automatic extractions
 to TIF series 
 

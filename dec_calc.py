@@ -2,6 +2,8 @@
 
 """ Copyright © 2020 Borys Olifirov
 
+2-nd script
+
 Deconvolution seq for HEK263 data
 
 """

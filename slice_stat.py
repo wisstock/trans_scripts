@@ -2,6 +2,8 @@
 
 """ Copyright © 2020 Borys Olifirov
 
+4-th script
+
 Stat calc for the results of slicing (slice_*.csv)
 
 """
@@ -43,20 +45,22 @@ logging.basicConfig(level=logging.INFO,
                     # filename="oif_read.log")
 
 
-data_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/')
-img_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/demo_dec/')
+data_path = os.path.join(sys.path[0], 'demo_data')
+img_path = os.path.join(sys.path[0], 'demo_data/dec')
 
-data_name = 'slice_dec_30.csv'
+data_name = 'slice_20.csv'
 
 df = pd.read_csv(os.path.join(data_path, data_name))
 df = df.dropna()
 df = df.reset_index(drop=True)
 
-samp = '20180718-1315-0007'
-angl_list = [] 
+ 
 angl_num = 4
 
+angl_list = []
 [angl_list.append(i) for i in list(df.angl) if i not in angl_list]  # remove duplications and generate angl list
+
+angl_val = angl_list[angl_num]
 
 logging.info('Avaliable angles: %s' % angl_list)
 
@@ -73,6 +77,8 @@ for angl_slice in angl_list:  # loop over the slices with particular angles
 	pass
 
 
+samp = '20180718-1315-0007'
+
 df_demo = df.loc[df['sample'] == samp]
 slice_demo = df_demo.loc[df_demo['angl'] == angl_val]
 
@@ -80,17 +86,19 @@ slice_demo = df_demo.loc[df_demo['angl'] == angl_val]
 ch1 = np.asarray(slice_demo.val[df['channel'] == 'ch1'])
 ch2 = np.asarray(slice_demo.val[df['channel'] == 'ch2'])
 
-logging.info('Slice angle %s, size %s px' % (angl_list[5], np.shape(ch2)[0]))
+logging.info('Slice angle %s, size %s px' % (angl_val, np.shape(ch2)[0]))
 
 
 memb_loc = ts.membDet(ch2)
 
-# ax = plt.subplot()
-# ax.plot(ch1, label='HPCA-TFP')
-# ax.plot(ch2, label='membYFP', linestyle='dashed')
-# ax.legend(loc='upper left')
+print(memb_loc)
 
-# plt.title('File %s, frame 10' % samp)
+ax = plt.subplot()
+ax.plot(ch1, label='HPCA-TFP')
+ax.plot(ch2, label='membYFP', linestyle='dashed')
+ax.legend(loc='upper left')
+
+plt.title('File %s, frame 10' % samp)
 
 
-# plt.show()
+plt.show()

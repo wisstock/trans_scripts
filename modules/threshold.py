@@ -138,32 +138,23 @@ def membDet(slc, h=2):
     """ Finding membrane maxima by membYFP data
     and calculating full width at set height of maxima
 
+    Split slice to two halfs and find maxima in each half separately
+    (left and right)
+
     """
 
-    peak_coord = np.argsort(slc)[-2:]
-    peak_val = slc[peak_coord]
+    slc_l, slc_r = np.split(slc, 2)
 
-    logging.info('Peaks values %s and coordinate %s' % (peak_val, peak_coord))
+    peak_l = np.int(np.argsort(slc_l)[-1:])
 
-    def leftStep(val, coord, h):
-        """ Calculate left shift
+    peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
 
-        """
+    peaks = {peak_l: np.int(slc[peak_l]),
+             peak_r: np.int(slc[peak_r])}
 
-        while i > val/h:
-            i = 
+    logging.info('Peaks coordinate %s, %s' % (peak_l, peak_r))
 
-    def rightStep(slc, coord, h):
-        """ Calculate right shift
-
-        """
-        pass
-
-    for coord in peak_coord:
-        for  
-        i = 
-        while i >
-
+    return peaks
 
 
 

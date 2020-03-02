@@ -2,6 +2,8 @@
 
 """ Copyright © 2020 Borys Olifirov
 
+3-rd script
+
 Slice calc for deconvoluted HEK263 data
 
 """
@@ -42,18 +44,19 @@ logging.basicConfig(level=logging.INFO,
                     # filename="oif_read.log")
                                         
 
-input_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/dec')
-output_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/')
-output_name = 'slice_dec_30.csv'
+input_path = os.path.join(sys.path[0], 'demo_data/dec')
+output_path = os.path.join(sys.path[0], 'demo_data')
+
+slice_num = 20
 
 angl = 0
-angl_increment = 24
+angl_increment = 360/slice_num
 band_w = 2
-
 
 ch1_list = []  # HPCA-TFP
 ch2_list = []  # membYFP
 
+output_name = 'slice_%s.csv' % (slice_num)  # output CSV file name
 with open(os.path.join(output_path, output_name), 'w') as csvfile:  # init CSF output file
     writer = csv.writer(csvfile, delimiter=',',
                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
