@@ -93,12 +93,13 @@ memb_loc = ts.membDet(ch2)
 
 print(memb_loc)
 
-ax = plt.subplot()
-ax.plot(ch1, label='HPCA-TFP')
-ax.plot(ch2, label='membYFP', linestyle='dashed')
-ax.legend(loc='upper left')
 
-plt.title('File %s, frame 10' % samp)
+# ax = plt.subplot()
+# ax.plot(ch1, label='HPCA-TFP')
+# ax.plot(ch2, label='membYFP', linestyle='dashed')
+# ax.legend(loc='upper left')
+
+# plt.title('File %s, frame 10' % samp)
 
 
-plt.show()
+# plt.show()

@@ -141,6 +141,9 @@ def membDet(slc, h=2):
     Split slice to two halfs and find maxima in each half separately
     (left and right)
 
+    Return list of two list, first is coordinate for left peak
+    and second for right
+
     """
 
     slc_l, slc_r = np.split(slc, 2)
@@ -154,7 +157,31 @@ def membDet(slc, h=2):
 
     logging.info('Peaks coordinate %s, %s' % (peak_l, peak_r))
 
-    return peaks
+    maxima_int = []
+
+    for key in peaks:
+        loc = key  # peack index in slice
+        val = peaks[key]
+        lim = peaks[key] / h  # ratio
+        interval = []
+
+        logging.info('Full width at %s height for peack %s' % (lim, key))
+
+        while val > lim:    # left shift
+            val = slc[loc]
+            loc -= 1
+        interval.append(loc)
+
+        loc = key
+        val = peaks[key]
+        while val > lim:  # right shift
+            val = slc[loc]
+            loc += 1
+        interval.append(loc)
+
+        maxima_int.append(interval)
+
+    return maxima_int
 
 
 
