@@ -47,7 +47,7 @@ logging.basicConfig(level=logging.INFO,
 input_path = os.path.join(sys.path[0], 'demo_data/dec')
 output_path = os.path.join(sys.path[0], 'demo_data')
 
-slice_num = 20
+slice_num = 40
 
 angl = 0
 angl_increment = 360/slice_num

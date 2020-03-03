@@ -4,7 +4,7 @@
 
 Functions for cell detecting and ROI extraction.
 Optimysed for confocal images of the individual HEK 293 cells.
-(mYFP-HPCa project).
+(mYFP-HPCA project).
 
 """
 
@@ -192,19 +192,19 @@ def membDet(slc, h=2, mode='rad'):
     elif mode == 'rad':
         peak = np.int(np.argsort(slc)[-1:])
 
-        logging.info('Rad. mode, peaks coordinate %s, %s' % peak_)
+        logging.info('Rad. mode, peak coordinate %s' % peak)
 
         val = slc[peak]
         lim = val / h
         loc = peak
         maxima_int = []
 
-        logging.info('Full width at 1/%s of height (%s) for peack %s' %
+        logging.info('Full width at 1/%s of height (%s) for peak %s' %
                         (h, lim, peak))
 
         while val > lim:
             val = slc[loc]
-            loc -= 1
+            loc += 1
         maxima_int.append(loc)
 
         loc = peak
@@ -216,11 +216,21 @@ def membDet(slc, h=2, mode='rad'):
         maxima_int.append(loc)
         maxima_int.append(lim)
 
+        logging.info('Peak interval %s' % maxima_int[0:2])
+
     else:
         logging.warning('Incorrect mode!')
 
 
     return maxima_int
+
+def slcQual(slc, h=2):
+    """ Slice quality control.
+
+    Slice will be discarded if full width
+    at set height of two maxima doesn't intersect
+
+    """
 
 
 
