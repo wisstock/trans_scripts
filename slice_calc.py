@@ -20,6 +20,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib import transforms
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import pandas as pd
+from timeit import default_timer as timer
 
 from skimage import data
 from skimage import exposure
@@ -45,11 +46,11 @@ logging.basicConfig(level=logging.INFO,
                     # filename="oif_read.log")
                                         
 
-input_path = os.path.join(sys.path[0], 'demo_data/dec/')
+input_path = os.path.join(sys.path[0], 'demo_data/raw/')
 output_path = os.path.join(sys.path[0], 'demo_data')
 
 
-slice_num = 360
+slice_num = 20
 
 angl = 0
 angl_increment = 360/slice_num
@@ -61,20 +62,20 @@ ch2_list = []  # membYFP
 output_name = 'slice_%s.csv' % (slice_num)  # output CSV file name
 data_frame = pd.DataFrame(columns=['sample', 'channel', 'frame', 'angl', 'val'])  # init pandas df
 
-
-for root, dirs, files in os.walk(input_path):  # loop over the membYFP files
+i = 0  # file counter
+start_time = timer()
+for root, dirs, files in os.walk(input_path):
     for file in files:
     	if file.endswith('.tif'):
+    		i += 1
     		priv_file = file
 
-    		logging.info('File %s in work' % file)
+    		logging.debug('File %s in work' % file)
 
     		file_path = os.path.join(root, file)
    
     		img = tifffile.imread(file_path)
-    		frame_num = np.shape(img)[0] // 2 + 1  # frame of interes
-
-    		logging.info('Frame of interes: %s' % frame_num)
+    		frame_num = np.shape(img)[0] // 2 + 1  # frame of interes, middle frame
 
     		frame = img[frame_num,:,:]
     		cntr = ts.cellMass(frame)  # calc center of mass of the frame
@@ -110,3 +111,6 @@ for bad_val in bad_angl:  # delete bad slice in HPCA channel
 
 
 data_frame.to_csv(os.path.join(output_path, output_name), index=False)
+
+end_time = timer()
+logging.info('%s files processed in %d second' % (i, int(end_time - start_time)))

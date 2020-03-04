@@ -194,31 +194,46 @@ def membDet(slc, h=2, mode='rad'):
 
     peak = np.argsort(slc)[-1:]
 
-    val = int(slc[peak])
+    try:
+        val = int(slc[peak])
+    except TypeError:
+        return False
+
+
+    
     lim = val / h
     loc = int(peak)
     maxima_int = []
 
-    logging.info('Peak coordinate %s and height %s' % (loc, val))
+    logging.debug('Peak coordinate %s and height %s' % (loc, val))
 
     while val >= lim:
-        val = slc[loc]
-        loc -= 1
+        try:
+            val = slc[loc]
+            loc -= 1
+        except IndexError:
+            break
+
     maxima_int.append(int(loc))
 
     loc = peak
     val = int(slc[peak])
 
     while val >= lim:
-        val = slc[loc]
-        loc += 1
+        try:
+            val = slc[loc]
+            loc += 1
+        except IndexError:
+            break
+
+        
     maxima_int.append(int(loc))
 
-    logging.info('Peak width %s at 1/%d height \n' % (maxima_int, h))
+    logging.debug('Peak width %s at 1/%d height \n' % (maxima_int, h))
 
     return maxima_int
 
-def badSlc(slc, cutoff_lvl=0.5, n=500):
+def badSlc(slc, cutoff_lvl=0.5, n=800):
     """ Slice quality control.
     Slice will be discarded if it have more than one peak
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum
