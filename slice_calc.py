@@ -49,7 +49,7 @@ input_path = os.path.join(sys.path[0], 'demo_data/dec/')
 output_path = os.path.join(sys.path[0], 'demo_data')
 
 
-slice_num = 20
+slice_num = 360
 
 angl = 0
 angl_increment = 360/slice_num
@@ -101,7 +101,7 @@ for root, dirs, files in os.walk(input_path):  # loop over the membYFP files
 
     			angl += angl_increment
 
-    		logging.info('Bad slices (slice angle) %s' % bad_angl)
+    		logging.info('Bad slices (slice angle) %s \n' % bad_angl)
 
     		angl = 0
 

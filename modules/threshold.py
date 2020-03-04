@@ -218,7 +218,7 @@ def membDet(slc, h=2, mode='rad'):
 
     return maxima_int
 
-def badSlc(slc, cutoff_lvl=0.75, n=500):
+def badSlc(slc, cutoff_lvl=0.5, n=500):
     """ Slice quality control.
     Slice will be discarded if it have more than one peak
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum

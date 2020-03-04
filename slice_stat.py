@@ -48,7 +48,7 @@ logging.basicConfig(level=logging.INFO,
 data_path = os.path.join(sys.path[0], 'demo_data')
 img_path = os.path.join(sys.path[0], 'demo_data/dec')
 
-data_name = 'slice_20.csv'
+data_name = 'slice_360.csv'
 
 df = pd.read_csv(os.path.join(data_path, data_name))
 # df = df.dropna()
@@ -78,6 +78,8 @@ membs_hpca = []
 
 cells_yfp = []
 membs_yfp = []
+rel_hpca = []
+rel_yfp = []
 
 for angl_val in angl_list:  # loop over the all slices in one sample
 	angl_slice = df_demo.query('angl == @angl_val')
@@ -91,20 +93,26 @@ for angl_val in angl_list:  # loop over the all slices in one sample
 
 	cell_hpca = slice_ch1[0: coord[0]]
 	memb_hpca = slice_ch1[coord[0]: coord[1]]
+
+	rel_hpca.append(np.sum(memb_hpca)/np.sum(cell_hpca))
 	cells_hpca.append(np.sum(cell_hpca))
 	membs_hpca.append(np.sum(memb_hpca))
 
 	cell_yfp = slice_ch2[0: coord[0]]
 	memb_yfp = slice_ch2[coord[0]: coord[1]]
+
+	rel_yfp.append(np.sum(cell_yfp)/np.sum(memb_yfp))
 	cells_yfp.append(np.sum(cell_yfp))
 	membs_yfp.append(np.sum(memb_yfp))
 
 
 logging.info('HPCA-TFP cytoplasm: %s, sd %s' % (np.mean(cells_hpca), np.std(cells_hpca)))
 logging.info('HPCA-TFP membrane: %s, sd %s' % (np.mean(membs_hpca), np.std(membs_hpca)))
+logging.info('HPCA-TFP memb/cell ratio: %s, sd %s \n' % (np.mean(rel_hpca), np.std(rel_hpca)))
 
 logging.info('membYFP cytoplasm: %s, sd %s' % (np.mean(cells_yfp), np.std(cells_yfp)))
 logging.info('membYFP membrane: %s, sd %s' % (np.mean(membs_yfp), np.std(membs_yfp)))
+logging.info('membYFP cell/memb ratio: %s, sd %s \n \n' % (np.mean(rel_yfp), np.std(rel_yfp)))
 
 
 # slice_demo = df_demo.loc[df['angl'] == angl_val]  # and df['sample'] == samp]
