@@ -407,7 +407,7 @@ def lineExtract(img, start_coors, end_coord):
 
     logging.debug("X and Y length: %s, %s" % (np.shape(x)[0], np.shape(y)[0]))
 
-    output = img[x.astype(np.int), y.astype(np.int)]
+    output = np.array(img[x.astype(np.int), y.astype(np.int)])
 
     return output
 
@@ -449,15 +449,20 @@ def bandExtract(img, start_coors, end_coord, band_width=2, mode="mean"):
       logging.info("Band side shift: %s px" % band_width)
 
       i = 0
-      output = []
+      res = []
 
       while i < np.shape(x)[0]:
         x_point = np.int(x[i])
         y_point = np.int(y[i])
 
-        output.append(neighborPix(img, [x_point, y_point], band_width))
+        res.append(neighborPix(img, [x_point, y_point], band_width))
 
         i += 1
+
+      np_res = np.array(res)
+      nan_res = np.isnan(np_res)  # removing NaN values (errors on ends)
+      not_nan_res =~ nan_res
+      output = np_res[not_nan_res]
 
       return output
 

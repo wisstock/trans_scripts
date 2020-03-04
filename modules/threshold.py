@@ -20,6 +20,7 @@ from skimage import filters
 from skimage import measure
 
 from scipy.ndimage import measurements as msr
+from scipy import signal
 
 
 def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
@@ -224,13 +225,39 @@ def membDet(slc, h=2, mode='rad'):
 
     return maxima_int
 
-def slcQual(slc, h=2):
+def badSlc(slc, cutoff_lvl=0.75, n=500):
     """ Slice quality control.
+    Slice will be discarded if it have more than one peak
+    with height of more than the certain percentage (cutoff_lvl) of the slice maximum
+    with no interceptions of full width at set height of maxima with others peaks
 
-    Slice will be discarded if full width
-    at set height of two maxima doesn't intersect
+    Slice bad if True
 
     """
+
+    up_cutoff = slc.max()  # upper limit for peak detecting, slice maxima
+    down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima 
+
+    peaks_pos, _ = signal.find_peaks(slc, [down_cutoff, up_cutoff])
+    peaks_val = slc[peaks_pos]
+
+    loc_rel = []
+
+    for peak in peaks_pos:  # peak grouping estimation
+        loc_rel.append([i for i in peaks_pos if i > peak-slc[peak]/n and i < peak+slc[peak]/n])
+
+    loc_div = []
+    [loc_div.append(i) for i in [len(a) for a in loc_rel] if i not in loc_div]
+    print(loc_div)
+
+    if not peaks_pos.any():
+        return True
+    elif len(loc_div) > 1:
+        return True
+    else:
+        return False
+
+
 
 
 

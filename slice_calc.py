@@ -87,6 +87,9 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
 
     			band = slc.bandExtract(frame, xy0, xy1, band_w)
 
+    			if not slcQual(band):  # checking band quality, if it's bad - going to the next one
+    				continue
+
     			for val in band:  # loop over the band slice values to write their to CSV
     			    with open(os.path.join(output_path, output_name), 'a') as csvfile: 
     				    writer = csv.writer(csvfile, delimiter=',',

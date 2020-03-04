@@ -29,39 +29,55 @@ import threshold as ts
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
-# plt.rcParams['image.cmap'] = 'inferno' 
+plt.rcParams['image.cmap'] = 'inferno' 
 
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(level=logging.INFO,
-                    format=FORMAT)
+                    format=FORMAT)  # ,
                     # filemode="w",
-                    # format=FORMAT)  # , filename="demo.log")
+                    # filename="oif_read.log")
+                                        
 
-
-
-wd_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/demo_dec')
-
-logging.info('Dir path: %s' % data_path)
-
-data = {}
+input_path = os.path.join(sys.path[0], 'demo_data/dec')
+raw_file = '20180718-1315-0007_ch2_dec_30.tif'
+data_path = os.path.join(input_path, raw_file) 
 
 frame = 10
-angl = 120
+band_w = 2
 
-for root, dirs, files in os.walk(wd_path):  # loop over the OIF files
-    for file in files:
-        if file.endswith('.tif'):
+angle = 180  # 285
 
-            img = tifffile.imread(os.path.join(wd_path, file))
 
-            file_dict = {file.split('_')[1]: img[frame,:,:]}
+seq = tifffile.imread(data_path)
+img = seq[frame,:,:]
 
-            data.update(file_dict)
+cntr = ts.cellMass(img)
+xy0, xy1 = slc.radiusSlice(img, angle, cntr)
 
-for ch in data:
-    img = data[key]
+band = slc.bandExtract(img, xy0, xy1, band_w)
 
-    
+print(band.max())
+
+
+band_qual = ts.badSlc(band)
+
+print(band_qual)
+
+
+ax = plt.subplot()
+ax.plot(band)
+# ax.axvline(band_qual[0], ymin=0, ymax=band[band_qual[0]], linestyle='dashed')
+# ax.axvline(band_qual[1], ymin=0, ymax=band[band_qual[1]], linestyle='dashed')
+# ax.axvlines(band_qual[2], ymin=0, ymax=band[band_qual[2]], linestyle='dashed')
+
 
 plt.show()
+
+
+
+
+
+
+
+
