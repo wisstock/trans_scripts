@@ -191,6 +191,7 @@ def membDet(slc, h=2, mode='rad'):
             maxima_int.append(interval)
 
     elif mode == 'rad':
+        print(np.argsort(slc)[-1:])
         peak = np.int(np.argsort(slc)[-1:])
 
         logging.info('Rad. mode, peak coordinate %s' % peak)
@@ -231,7 +232,7 @@ def badSlc(slc, cutoff_lvl=0.75, n=500):
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum
     with no interceptions of full width at set height of maxima with others peaks
 
-    Slice bad if True
+    Return True if bad
 
     """
 
@@ -248,7 +249,6 @@ def badSlc(slc, cutoff_lvl=0.75, n=500):
 
     loc_div = []
     [loc_div.append(i) for i in [len(a) for a in loc_rel] if i not in loc_div]
-    print(loc_div)
 
     if not peaks_pos.any():
         return True
@@ -256,9 +256,6 @@ def badSlc(slc, cutoff_lvl=0.75, n=500):
         return True
     else:
         return False
-
-
-
 
 
 if __name__=="__main__":

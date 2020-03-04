@@ -23,9 +23,9 @@ def lineSlice(img, angle=1, cntr_coord="center"):
     """ Returns coordinates of intersection points  for the image edges
     and the line which go through point with set up coordinates
     at the set up angle.
-    Requires cell image mass center coordinates
+    Requires cell image mass center coordinates
     (default set up frame center)
-    and angle value (in degree).
+    and angle value (in degree).
 
 
     Angles annotation:
@@ -392,7 +392,7 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
 
 def lineExtract(img, start_coors, end_coord):
     """ Returns values ​​of pixels intensity along the line
-    with specified ends coordinates.
+    with specified ends coordinates.
 
     Requires cell image, and line ends coordinate (results of lineSlice).
 
@@ -431,7 +431,7 @@ def bandExtract(img, start_coors, end_coord, band_width=2, mode="mean"):
 
       return mean_val
 
-    def parallelPix(img, coord, length, shift):
+    def paralellPix(img, coord, length, shift):
       """ Calculate mean value for points with same indexes in several
       slice lines. Ends coordinates for each line 
       """
@@ -472,3 +472,6 @@ def bandExtract(img, start_coors, end_coord, band_width=2, mode="mean"):
 
 if __name__=="__main__":
   pass
+
+
+# That's all!
