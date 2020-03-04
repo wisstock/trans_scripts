@@ -214,7 +214,7 @@ def membDet(slc, h=2, mode='rad'):
         loc += 1
     maxima_int.append(int(loc))
 
-    logging.info('Peak interval %s \n' % maxima_int)
+    logging.info('Peak width %s at 1/%d height \n' % (maxima_int, h))
 
     return maxima_int
 
@@ -229,7 +229,9 @@ def badSlc(slc, cutoff_lvl=0.5, n=500):
     """
 
     up_cutoff = slc.max()  # upper limit for peak detecting, slice maxima
-    down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima 
+    down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima
+
+    max_pos = int(np.argsort(slc)[-1:])
 
     peaks_pos, _ = signal.find_peaks(slc, [down_cutoff, up_cutoff])
     peaks_val = slc[peaks_pos]
@@ -242,7 +244,9 @@ def badSlc(slc, cutoff_lvl=0.5, n=500):
     loc_div = []
     [loc_div.append(i) for i in [len(a) for a in loc_rel] if i not in loc_div]
 
-    if not peaks_pos.any():
+    print(peaks_pos)
+
+    if not [i for i in peaks_pos if i == max_pos]:  # if maxima is not a peak
         return True
     elif len(loc_div) > 1:
         return True
