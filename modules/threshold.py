@@ -152,76 +152,75 @@ def membDet(slc, h=2, mode='rad'):
 
     """
 
-    if mode == 'diam':
-        slc_l, slc_r = np.split(slc, 2)
+    # if mode == 'diam':
+    #     slc_l, slc_r = np.split(slc, 2)
 
-        peak_l = np.int(np.argsort(slc_l)[-1:])
+    #     peak_l = np.int(np.argsort(slc_l)[-1:])
 
-        peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
+    #     peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
 
-        peaks = {peak_l: np.int(slc[peak_l]),
-                 peak_r: np.int(slc[peak_r])}
+    #     peaks = {peak_l: np.int(slc[peak_l]),
+    #              peak_r: np.int(slc[peak_r])}
 
-        logging.info('Diam. mode, peaks coordinates %s, %s' % (peak_l, peak_r))
+    #     logging.info('Diam. mode, peaks coordinates %s, %s' % (peak_l, peak_r))
 
-        maxima_int = []
+    #     maxima_int = []
 
-        for key in peaks:
-            loc = key  # peack index in slice 
-            val = peaks[key]
-            lim = val / h
-            interval = []
-            logging.info('Full width at 1/%s of height (%s) for peack %s' %
-                        (h, lim, key))
+    #     for key in peaks:
+    #         loc = key  # peack index in slice 
+    #         val = peaks[key]
+    #         lim = val / h
+    #         interval = []
+    #         logging.info('Full width at 1/%s of height (%s) for peack %s' %
+    #                     (h, lim, key))
 
-            while val > lim:  # left shift
-                val = slc[loc]
-                loc -= 1
-            interval.append(loc)
+    #         while val > lim:  # left shift
+    #             val = slc[loc]
+    #             loc -= 1
+    #         interval.append(loc)
 
-            loc = key
-            val = peaks[key]
+    #         loc = key
+    #         val = peaks[key]
 
-            while val > lim:  # right shift
-                val = slc[loc]
-                loc += 1
-            interval.append(loc)
-            interval.append(lim)
+    #         while val > lim:  # right shift
+    #             val = slc[loc]
+    #             loc += 1
+    #         interval.append(loc)
+    #         interval.append(lim)
 
-            maxima_int.append(interval)
+    #         maxima_int.append(interval)
 
-    elif mode == 'rad':
-        print(np.argsort(slc)[-1:])
-        peak = np.int(np.argsort(slc)[-1:])
+    # elif mode == 'rad':
 
-        logging.info('Rad. mode, peak coordinate %s' % peak)
+    print('a')
+    peak = np.argsort(slc)[-1:]
+    print('b')
 
-        val = slc[peak]
-        lim = val / h
-        loc = peak
-        maxima_int = []
+    logging.info('Rad. mode, peak coordinate %s' % peak)
 
-        logging.info('Full width at 1/%s of height (%s) for peak %s' %
-                        (h, lim, peak))
+    val = slc[peak]
+    lim = val / h
+    loc = peak
+    maxima_int = []
 
-        while val > lim:
-            val = slc[loc]
-            loc += 1
-        maxima_int.append(loc)
+    logging.info('Full width at 1/%s of height (%s) for peak %s' %
+                (h, lim, peak))
 
-        loc = peak
-        val = slc[peak]
+    while val > lim:
+        val = slc[loc]
+        loc += 1
+    maxima_int.append(loc)
 
-        while val > lim:
-            val = slc[loc]
-            loc += 1
-        maxima_int.append(loc)
-        maxima_int.append(lim)
+    loc = peak
+    val = slc[peak]
 
-        logging.info('Peak interval %s' % maxima_int[0:2])
+    while val > lim:
+        val = slc[loc]
+        loc += 1
+    maxima_int.append(loc)
+    maxima_int.append(lim)
 
-    else:
-        logging.warning('Incorrect mode!')
+    logging.info('Peak interval %s' % maxima_int[0:2])
 
 
     return maxima_int

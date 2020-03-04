@@ -97,7 +97,7 @@ for root, dirs, files in os.walk(input_path):  # loop over the membYFP files
     				val = band[i]
     				band_df.loc[i] = [file.split('_')[0], file.split('_')[1], frame_num+1, angl, val]
 
-    			data_frame.append(band_df, ignore_index=True)
+    			data_frame = pd.concat([data_frame, band_df])
 
     			angl += angl_increment
 
@@ -105,9 +105,8 @@ for root, dirs, files in os.walk(input_path):  # loop over the membYFP files
 
     		angl = 0
 
+for bad_val in bad_angl:  # delete bad slice in HPCA channel
+	data_frame = data_frame[data_frame.angl != bad_val]
 
 
-
-
-
-data_frame.to_csv(output_name, index=False)
+data_frame.to_csv(os.path.join(output_path, output_name), index=False)

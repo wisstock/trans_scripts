@@ -51,8 +51,8 @@ img_path = os.path.join(sys.path[0], 'demo_data/dec')
 data_name = 'slice_20.csv'
 
 df = pd.read_csv(os.path.join(data_path, data_name))
-df = df.dropna()
-df = df.reset_index(drop=True)
+# df = df.dropna()
+# df = df.reset_index(drop=True)
 
  
 angl_num = 5
@@ -72,8 +72,6 @@ except IndexError:
 samp = '20180718-1315-0007'
 df_demo = df.query('sample == @samp')
 
-print(df_demo.query('angl == 0.0'))
-
 
 cells_hpca = []
 membs_hpca = []
@@ -86,8 +84,10 @@ for angl_val in angl_list:  # loop over the all slices in one sample
 
 	logging.info(angl_val)
 
-	slice_ch1 = np.array(angl_slice.query('channel == ch1'))
-	slice_ch2 = np.array(angl_slice.query('channel == ch2'))
+	slice_ch1 = np.array(angl_slice.query('channel == "ch1"'))
+	slice_ch2 = np.array(angl_slice.query('channel == "ch2"'))
+
+	print(type(slice_ch2))
 
 	coord = ts.membDet(slice_ch2)  # menbrane coord calc
 
