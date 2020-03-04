@@ -82,24 +82,20 @@ membs_yfp = []
 for angl_val in angl_list:  # loop over the all slices in one sample
 	angl_slice = df_demo.query('angl == @angl_val')
 
-	logging.info(angl_val)
+	logging.info('Slice with angle %s in work' % angl_val)
 
-	slice_ch1 = np.array(angl_slice.query('channel == "ch1"'))
-	slice_ch2 = np.array(angl_slice.query('channel == "ch2"'))
-
-	print(type(slice_ch2))
+	slice_ch1 = np.asarray(angl_slice.val[df['channel'] == 'ch1'])
+	slice_ch2 = np.asarray(angl_slice.val[df['channel'] == 'ch2'])
 
 	coord = ts.membDet(slice_ch2)  # menbrane coord calc
 
 	cell_hpca = slice_ch1[0: coord[0]]
 	memb_hpca = slice_ch1[coord[0]: coord[1]]
-
-	cell_yfp = slice_ch2[0: coord[0]]
-	memb_yfp = slice_ch2[coord[0]: coord[1]]
-
 	cells_hpca.append(np.sum(cell_hpca))
 	membs_hpca.append(np.sum(memb_hpca))
 
+	cell_yfp = slice_ch2[0: coord[0]]
+	memb_yfp = slice_ch2[coord[0]: coord[1]]
 	cells_yfp.append(np.sum(cell_yfp))
 	membs_yfp.append(np.sum(memb_yfp))
 
@@ -113,7 +109,7 @@ logging.info('membYFP membrane: %s, sd %s' % (np.mean(membs_yfp), np.std(membs_y
 
 # slice_demo = df_demo.loc[df['angl'] == angl_val]  # and df['sample'] == samp]
 
-# ch1 = np.asarray(slice_demo.val[df['channel'] == 'ch1'])
+# ch1 = np.array(angl_slice.query('channel == "ch1"'))
 # ch2 = np.asarray(slice_demo.val[df['channel'] == 'ch2'])
 
 # logging.info('Slice angle %s, size %s px' % (angl_val, np.shape(ch2)[0]))
@@ -134,12 +130,12 @@ logging.info('membYFP membrane: %s, sd %s' % (np.mean(membs_yfp), np.std(membs_y
 # 	elif i >= memb_loc[1]:
 # 		bar.append(0)
 
-ax = plt.subplot()
-ax.plot(ch1, label='HPCA-TFP')
-ax.plot(ch2, label='membYFP')  # , linestyle='dashed')
-# ax.plot(bar, label='Memb. estimation', linestyle='dashed')
-ax.legend(loc='upper left')
+# ax = plt.subplot()
+# ax.plot(ch1, label='HPCA-TFP')
+# ax.plot(ch2, label='membYFP')  # , linestyle='dashed')
+# # ax.plot(bar, label='Memb. estimation', linestyle='dashed')
+# ax.legend(loc='upper left')
 
-plt.title('File %s, frame 10' % samp)
+# plt.title('File %s, frame 10' % samp)
 
-plt.show()
+# plt.show()

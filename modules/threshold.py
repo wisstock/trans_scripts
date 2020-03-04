@@ -192,36 +192,29 @@ def membDet(slc, h=2, mode='rad'):
 
     # elif mode == 'rad':
 
-    print('a')
     peak = np.argsort(slc)[-1:]
-    print('b')
 
-    logging.info('Rad. mode, peak coordinate %s' % peak)
-
-    val = slc[peak]
+    val = int(slc[peak])
     lim = val / h
-    loc = peak
+    loc = int(peak)
     maxima_int = []
 
-    logging.info('Full width at 1/%s of height (%s) for peak %s' %
-                (h, lim, peak))
+    logging.info('Peak coordinate %s and height %s' % (loc, val))
 
-    while val > lim:
+    while val >= lim:
         val = slc[loc]
-        loc += 1
-    maxima_int.append(loc)
+        loc -= 1
+    maxima_int.append(int(loc))
 
     loc = peak
-    val = slc[peak]
+    val = int(slc[peak])
 
-    while val > lim:
+    while val >= lim:
         val = slc[loc]
         loc += 1
-    maxima_int.append(loc)
-    maxima_int.append(lim)
+    maxima_int.append(int(loc))
 
-    logging.info('Peak interval %s' % maxima_int[0:2])
-
+    logging.info('Peak interval %s \n' % maxima_int)
 
     return maxima_int
 
