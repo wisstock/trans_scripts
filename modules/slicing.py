@@ -317,7 +317,7 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
     indicator = anglPars(angl)
     logging.debug("Square quartile: %s" % indicator)
 
-    logging.info("Frame shape: %s, slice angle: %s" % (img_shape, angl))
+    logging.debug("Frame shape: %s, slice angle: %s" % (img_shape, angl))
 
     if indicator == 'I':
       Bb = np.int(y_cntr * math.tan(math.radians(angl)))

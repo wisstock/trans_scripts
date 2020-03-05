@@ -212,7 +212,7 @@ def membDet(slc, h=2, mode='rad'):
             val = slc[loc]
             loc -= 1
         except IndexError:
-            break
+            return False
 
     maxima_int.append(int(loc))
 
@@ -224,7 +224,7 @@ def membDet(slc, h=2, mode='rad'):
             val = slc[loc]
             loc += 1
         except IndexError:
-            break
+            return False
 
         
     maxima_int.append(int(loc))
@@ -258,8 +258,6 @@ def badSlc(slc, cutoff_lvl=0.5, n=800):
 
     loc_div = []
     [loc_div.append(i) for i in [len(a) for a in loc_rel] if i not in loc_div]
-
-    print(peaks_pos)
 
     if not [i for i in peaks_pos if i == max_pos]:  # if maxima is not a peak
         return True

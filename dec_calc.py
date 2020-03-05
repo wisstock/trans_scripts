@@ -15,8 +15,8 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from timeit import default_timer as timer
-# from skimage import io
-from skimage.external import tifffile
+from skimage import io
+# from skimage.external import tifffile
 
 from flowdec import data as fd_data
 from flowdec import restoration as fd_restoration
@@ -52,9 +52,9 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
     		logger.info('Upload data file "{}"'.format(os.path.join(input_path, file)))
 
     		file_path = os.path.join(root, file)
-    		img = tifffile.imread(file_path)
+    		img = io.imread(file_path)
 
-    		processed_img = ts.backCon(img, np.shape(img)[0] // scaling_factor)  # background extraction
+    		processed_img = ts.backCon(img, np.shape(img)[1] // scaling_factor)  # background extraction
 
     		z_scale = np.shape(processed_img)[0]  # z direcion size for PSF calclation
     		rw_args = {'shape': (z_scale // 2, 160),  # number of samples in z and r direction
@@ -71,8 +71,8 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
 
     		logger.debug('PSF calclation done, z = %s' % z_scale)
 
-    		psf_name = 'psf_z%s' % z_scale
-    		tifffile.imsave(os.path.join(psf_path, psf_name), psf_rw)
+    		psf_name = 'psf_z%s.tiff' % z_scale
+    		io.imsave(os.path.join(psf_path, psf_name), psf_rw)
 
     		acq = fd_data.Acquisition(data=processed_img,
                           kernel=psf_rw)
@@ -83,7 +83,7 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
     		res = algo.run(acq, niter=n_iter)
 
     		output_name = '%s_dec_%s.tif' % (file.split('.')[0], n_iter)
-    		tifffile.imsave(os.path.join(output_path, output_name), res.data)
+    		io.imsave(os.path.join(output_path, output_name), res.data)
 
     		logger.info('Deconvoluted file %s saved' % output_name)
 

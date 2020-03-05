@@ -46,28 +46,28 @@ logging.basicConfig(level=logging.INFO,
                     # filename="oif_read.log")
                                         
 
-input_path = os.path.join(sys.path[0], 'demo_data/raw/')
-output_path = os.path.join(sys.path[0], 'demo_data')
+input_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/dec/cell3')
+output_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/dec/cell3')
 
 
-slice_num = 20
+slice_num = 10
 
 angl = 0
 angl_increment = 360/slice_num
 band_w = 2
+frame_int = 9
 
 ch1_list = []  # HPCA-TFP
 ch2_list = []  # membYFP
 
-output_name = 'slice_%s.csv' % (slice_num)  # output CSV file name
+output_name = 'slice_%s_frame_%s.csv' % (slice_num, frame_int+1)  # output CSV file name
 data_frame = pd.DataFrame(columns=['sample', 'channel', 'frame', 'angl', 'val'])  # init pandas df
 
-i = 0  # file counter
+
 start_time = timer()
 for root, dirs, files in os.walk(input_path):
     for file in files:
     	if file.endswith('.tif'):
-    		i += 1
     		priv_file = file
 
     		logging.debug('File %s in work' % file)
@@ -75,13 +75,14 @@ for root, dirs, files in os.walk(input_path):
     		file_path = os.path.join(root, file)
    
     		img = tifffile.imread(file_path)
-    		frame_num = np.shape(img)[0] // 2 + 1  # frame of interes, middle frame
+    		frame_num = frame_int  # frame of interes, middle frame
 
     		frame = img[frame_num,:,:]
     		cntr = ts.cellMass(frame)  # calc center of mass of the frame
 
 
     		bad_angl = []
+    		i = 0  # file counter
     		while angl < 360:
     			xy0, xy1 = slc.radiusSlice(frame, angl, cntr)
 
@@ -101,6 +102,7 @@ for root, dirs, files in os.walk(input_path):
     			data_frame = pd.concat([data_frame, band_df])
 
     			angl += angl_increment
+    			i += 1
 
     		logging.info('Bad slices (slice angle) %s \n' % bad_angl)
 
@@ -113,4 +115,4 @@ for bad_val in bad_angl:  # delete bad slice in HPCA channel
 data_frame.to_csv(os.path.join(output_path, output_name), index=False)
 
 end_time = timer()
-logging.info('%s files processed in %d second' % (i, int(end_time - start_time)))
+logging.info('%s slices processed in %d second' % (i, int(end_time - start_time)))
