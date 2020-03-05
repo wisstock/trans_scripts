@@ -46,7 +46,7 @@ data_path = os.path.join(input_path, raw_file)
 frame = 10
 band_w = 2
 
-angle = 281  # 285 281
+angle = 2  # bad 285 281  good 90
 
 
 seq = tifffile.imread(data_path)
