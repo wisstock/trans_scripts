@@ -92,7 +92,7 @@ while angl < 360:
 
     yfp_band = slc.bandExtract(yfp_frame, xy0, xy1)
 
-    if ts.badSlc(yfp_band):
+    if ts.badRad(yfp_band):
         bad_angl.append(angl)
         logging.warning('Slice wih angle %s is not so good, it was discarded!' % angl)
         angl += angl_increment

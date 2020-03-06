@@ -233,8 +233,8 @@ def membDet(slc, h=2, mode='rad'):
 
     return maxima_int
 
-def badSlc(slc, cutoff_lvl=0.5, n=800):
-    """ Slice quality control.
+def badRad(slc, cutoff_lvl=0.5, n=800):
+    """ Radial slice quality control.
     Slice will be discarded if it have more than one peak
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum
     with no interceptions of full width at set height of maxima with others peaks
@@ -265,6 +265,24 @@ def badSlc(slc, cutoff_lvl=0.5, n=800):
         return True
     else:
         return False
+
+def badDiam(slc, cutoff_lvl=0.5, n=800):
+    """ Diameter slice quality control.
+    Slice will be discarded if it have more than one peak
+    with height of more than the certain percentage (cutoff_lvl) of the slice maximum
+    with no interceptions of full width at set height of maxima with others peaks
+
+    Return True if bad
+
+    """
+
+    up_cutoff = slc.max()  # upper limit for peak detecting, slice maxima
+    down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima
+
+    max_pos = int(np.argsort(slc)[-2:])
+
+    peaks_pos, _ = signal.find_peaks(slc, [down_cutoff, up_cutoff])
+    peaks_val = slc[peaks_pos]
 
 
 if __name__=="__main__":
