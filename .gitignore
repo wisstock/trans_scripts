@@ -2,6 +2,7 @@
 .temp/
 logs/
 confocal_data/
+motoneuron/
 
 *.log
 *.sublime-project

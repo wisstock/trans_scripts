@@ -36,15 +36,15 @@ logging.basicConfig(level=logging.DEBUG,
                                         # filemode="w"
 
 
-data_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/raw_data')
-output_path =os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/raw_data/cell2_tif')
+data_path = os.path.join(sys.path[0], 'motoneuron/')
+output_path =os.path.join(sys.path[0], 'motoneuron/raw/')
 
 cell = 'Cell2/'
 cell_path = os.path.join(data_path, cell)
 logging.info('Dir path: %s' % cell_path)
 
 
-for root, dirs, files in os.walk(cell_path):  # loop over the OIF files
+for root, dirs, files in os.walk(data_path):  # loop over the OIF files
     for file in files:
     	if file.endswith('.oif'):
     		logging.debug('File %s in work' % file)
