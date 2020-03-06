@@ -21,6 +21,8 @@ from matplotlib import transforms
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import pandas as pd
 
+from timeit import default_timer as timer
+
 from skimage import data
 from skimage import exposure
 from skimage import filters
@@ -45,105 +47,110 @@ logging.basicConfig(level=logging.INFO,
                     # filename="oif_read.log")
 
 
-data_path = os.path.join(sys.path[0], 'demo_data')
-img_path = os.path.join(sys.path[0], 'demo_data/dec')
+data_path = os.path.join(sys.path[0], 'confocal_data/HPCA-YFP/dec/cell3')
 
-data_name = 'slice_360.csv'
+data_name = 'slice_10_frame_10.csv'
+df_samp = pd.read_csv(os.path.join(data_path, data_name))
 
-df = pd.read_csv(os.path.join(data_path, data_name))
-# df = df.dropna()
-# df = df.reset_index(drop=True)
 
- 
-angl_num = 5
 
+stat_name = 'stat_%s.csv' % data_name.split('_')[3]  # output stat CSV file name
+stat_df = pd.DataFrame(columns=['sample', 'prot', 'loc','mean', 'sd'])  # init pandas df for slice data
+
+rel_name = 'rel_%s.csv' % data_name.split('_')[3]  # relative amounts in membrane output file
+rel_df = pd.DataFrame(columns=['sample', 'prot', 'mean', 'sd'])
+
+
+cell_hpca = []
+memb_hpca = []
+rel_memb_hpca = []
+
+cell_yfp = []
+memb_yfp = []
+rel_memb_yfp = []
+
+
+samp_lvl = []
+[samp_lvl.append(i) for i in list(df_samp.loc[:, 'sample']) if i not in samp_lvl]
+samp = samp_lvl[0]
+print(samp_lvl)
+
+# i = 0  # sample counter
+# start_time = timer()
+# for samp in samp_list:
+
+# 	logging.info('Sample %s in work' % samp)
+# 	i +=1
+
+# 	df_samp = df.query('sample == @samp')
+
+start_time = timer()
 angl_list = []
-[angl_list.append(i) for i in list(df.angl) if i not in angl_list]  # remove duplications and generate angl list
-
-logging.info('%s angle values is avaliable: %s' % (len(angl_list), angl_list))
-
-# angl_val = 297
-try:
-	angl_val = angl_list[angl_num]
-except IndexError:
-	sys.exit('Angle value NOT avaliable!')
-
-
-samp = '20180718-1315-0007'
-df_demo = df.query('sample == @samp')
-
-
-cells_hpca = []
-membs_hpca = []
-
-cells_yfp = []
-membs_yfp = []
-rel_hpca = []
-rel_yfp = []
+[angl_list.append(i) for i in list(df_samp.angl) if i not in angl_list]  # generating of avaliable angles list
 
 for angl_val in angl_list:  # loop over the all slices in one sample
-	angl_slice = df_demo.query('angl == @angl_val')
+	angl_slice = df_samp.query('angl == @angl_val')
 
 	logging.info('Slice with angle %s in work' % angl_val)
 
-	slice_ch1 = np.asarray(angl_slice.val[df['channel'] == 'ch1'])
-	slice_ch2 = np.asarray(angl_slice.val[df['channel'] == 'ch2'])
+	slice_ch1 = np.asarray(angl_slice.val[angl_slice['channel'] == 'ch1'])
+	slice_ch2 = np.asarray(angl_slice.val[angl_slice['channel'] == 'ch2'])
 
 	coord = ts.membDet(slice_ch2)  # menbrane coord calc
 
-	cell_hpca = slice_ch1[0: coord[0]]
-	memb_hpca = slice_ch1[coord[0]: coord[1]]
+	if not coord:
+		logging.fatal('In slice %s mebrane NOT detected!' % angl_val)
+		continue
 
-	rel_hpca.append(np.sum(memb_hpca)/np.sum(cell_hpca))
-	cells_hpca.append(np.sum(cell_hpca))
-	membs_hpca.append(np.sum(memb_hpca))
+	c_hpca = slice_ch1[0: coord[0]]
+	m_hpca = slice_ch1[coord[0]: coord[1]]
 
-	cell_yfp = slice_ch2[0: coord[0]]
-	memb_yfp = slice_ch2[coord[0]: coord[1]]
+	rel_memb_hpca.append(np.sum(m_hpca)/(np.sum(m_hpca) + np.sum(c_hpca)))
+	cell_hpca.append(np.sum(c_hpca))
+	memb_hpca.append(np.sum(m_hpca))
 
-	rel_yfp.append(np.sum(cell_yfp)/np.sum(memb_yfp))
-	cells_yfp.append(np.sum(cell_yfp))
-	membs_yfp.append(np.sum(memb_yfp))
+	c_yfp = slice_ch2[0: coord[0]]
+	m_yfp = slice_ch2[coord[0]: coord[1]]
 
+	rel_memb_yfp.append(np.sum(m_yfp)/(np.sum(m_yfp) + np.sum(c_yfp)))
+	cell_yfp.append(np.sum(c_yfp))
+	memb_yfp.append(np.sum(m_yfp))
 
-logging.info('HPCA-TFP cytoplasm: %s, sd %s' % (np.mean(cells_hpca), np.std(cells_hpca)))
-logging.info('HPCA-TFP membrane: %s, sd %s' % (np.mean(membs_hpca), np.std(membs_hpca)))
-logging.info('HPCA-TFP memb/cell ratio: %s, sd %s \n' % (np.mean(rel_hpca), np.std(rel_hpca)))
+logging.info('HPCA-TFP cytoplasm: %s, sd %s' % (np.mean(cell_hpca), np.std(cell_hpca)))
+logging.info('HPCA-TFP membrane: %s, sd %s' % (np.mean(memb_hpca), np.std(memb_hpca)))
+logging.info('HPCA-TFP in membrane: %s, sd %s \n' % (np.mean(rel_memb_hpca), np.std(rel_memb_hpca)))
 
-logging.info('membYFP cytoplasm: %s, sd %s' % (np.mean(cells_yfp), np.std(cells_yfp)))
-logging.info('membYFP membrane: %s, sd %s' % (np.mean(membs_yfp), np.std(membs_yfp)))
-logging.info('membYFP cell/memb ratio: %s, sd %s \n \n' % (np.mean(rel_yfp), np.std(rel_yfp)))
+logging.info('membYFP cytoplasm: %s, sd %s' % (np.mean(cell_yfp), np.std(cell_yfp)))
+logging.info('membYFP membrane: %s, sd %s' % (np.mean(memb_yfp), np.std(memb_yfp)))
+logging.info('membYFP in membrane: %s, sd %s \n' % (np.mean(rel_memb_yfp), np.std(rel_memb_yfp)))
 
+stat_row = [[samp, 'HPCA', 'cyto', np.mean(cell_hpca), np.std(cell_hpca)],
+            [samp, 'HPCA', 'memb', np.mean(memb_hpca), np.std(memb_hpca)],
+            [samp, 'YFP', 'cyto', np.mean(cell_yfp), np.std(cell_yfp)],
+            [samp, 'YFP', 'memb', np.mean(memb_yfp), np.std(memb_yfp)]]
 
-# slice_demo = df_demo.loc[df['angl'] == angl_val]  # and df['sample'] == samp]
-
-# ch1 = np.array(angl_slice.query('channel == "ch1"'))
-# ch2 = np.asarray(slice_demo.val[df['channel'] == 'ch2'])
-
-# logging.info('Slice angle %s, size %s px' % (angl_val, np.shape(ch2)[0]))
-
-
-# memb_loc = ts.membDet(ch2)
-
-# print(memb_loc)
+stat_df = stat_df.append(stat_row, ignore_index=True)
 
 
-# A-A-A-A-A-A-A-A, eto uzhasno
-# bar = []  # memb plot by membDet results
-# for i in range(np.shape(ch1)[0]):
-# 	if i <= memb_loc[0]:
-# 		bar.append(0)
-# 	elif i > memb_loc[0] and i < memb_loc[1]:
-# 		bar.append(memb_loc[2])
-# 	elif i >= memb_loc[1]:
-# 		bar.append(0)
+rel_row = [[samp, 'HPCA', np.mean(rel_memb_hpca), np.std(rel_memb_hpca)],
+           [samp, 'YFP', np.mean(rel_memb_yfp), np.std(rel_memb_yfp)]]
 
-# ax = plt.subplot()
-# ax.plot(ch1, label='HPCA-TFP')
-# ax.plot(ch2, label='membYFP')  # , linestyle='dashed')
-# # ax.plot(bar, label='Memb. estimation', linestyle='dashed')
-# ax.legend(loc='upper left')
+rel_df = rel_df.append(rel_row, ignore_index=True)
 
-# plt.title('File %s, frame 10' % samp)
 
-# plt.show()
+# cell_hpca = []
+# memb_hpca = []
+# rel_memb_hpca = []
+
+# cell_yfp = []
+# memb_yfp = []
+# rel_memb_yfp = []
+
+
+stat_df.to_csv(os.path.join(data_path, stat_name), index=False)
+rel_df.to_csv(os.path.join(data_path, rel_name), index=False)
+
+
+end_time = timer()
+logging.info('%s samples processed in %d second' % (samp, int(end_time - start_time)))
+

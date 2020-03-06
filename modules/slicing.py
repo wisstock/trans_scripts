@@ -305,9 +305,9 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
         cntr_coord = [np.int(x_lim/2),
                       np.int(y_lim/2)]  # [x, y]
 
-        logging.info("Center mode, coord: %s" % cntr_coord)
+        logging.debug("Center mode, coord: %s" % cntr_coord)
     else:
-        logging.info("Custom center, coord: %s" % cntr_coord)
+        logging.debug("Custom center, coord: %s" % cntr_coord)
 
     x0, y0 = 0, 0  # init line ends coordinates
 
@@ -317,7 +317,7 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
     indicator = anglPars(angl)
     logging.debug("Square quartile: %s" % indicator)
 
-    logging.info("Frame shape: %s, slice angle: %s" % (img_shape, angl))
+    logging.debug("Frame shape: %s, slice angle: %s" % (img_shape, angl))
 
     if indicator == 'I':
       Bb = np.int(y_cntr * math.tan(math.radians(angl)))
@@ -445,8 +445,6 @@ def bandExtract(img, start_coors, end_coord, band_width=2, mode="mean"):
     x, y = np.linspace(x0, x1, line_length), np.linspace(y0, y1, line_length)  # calculate projection to axis
 
     if mode == "mean":
-
-      logging.info("Band side shift: %s px" % band_width)
 
       i = 0
       res = []

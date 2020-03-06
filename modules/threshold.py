@@ -194,31 +194,46 @@ def membDet(slc, h=2, mode='rad'):
 
     peak = np.argsort(slc)[-1:]
 
-    val = int(slc[peak])
+    try:
+        val = int(slc[peak])
+    except TypeError:
+        return False
+
+
+    
     lim = val / h
     loc = int(peak)
     maxima_int = []
 
-    logging.info('Peak coordinate %s and height %s' % (loc, val))
+    logging.debug('Peak coordinate %s and height %s' % (loc, val))
 
     while val >= lim:
-        val = slc[loc]
-        loc -= 1
+        try:
+            val = slc[loc]
+            loc -= 1
+        except IndexError:
+            return False
+
     maxima_int.append(int(loc))
 
     loc = peak
     val = int(slc[peak])
 
     while val >= lim:
-        val = slc[loc]
-        loc += 1
+        try:
+            val = slc[loc]
+            loc += 1
+        except IndexError:
+            return False
+
+        
     maxima_int.append(int(loc))
 
-    logging.info('Peak interval %s \n' % maxima_int)
+    logging.debug('Peak width %s at 1/%d height \n' % (maxima_int, h))
 
     return maxima_int
 
-def badSlc(slc, cutoff_lvl=0.5, n=500):
+def badSlc(slc, cutoff_lvl=0.5, n=800):
     """ Slice quality control.
     Slice will be discarded if it have more than one peak
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum
@@ -229,7 +244,9 @@ def badSlc(slc, cutoff_lvl=0.5, n=500):
     """
 
     up_cutoff = slc.max()  # upper limit for peak detecting, slice maxima
-    down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima 
+    down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima
+
+    max_pos = int(np.argsort(slc)[-1:])
 
     peaks_pos, _ = signal.find_peaks(slc, [down_cutoff, up_cutoff])
     peaks_val = slc[peaks_pos]
@@ -242,7 +259,7 @@ def badSlc(slc, cutoff_lvl=0.5, n=500):
     loc_div = []
     [loc_div.append(i) for i in [len(a) for a in loc_rel] if i not in loc_div]
 
-    if not peaks_pos.any():
+    if not [i for i in peaks_pos if i == max_pos]:  # if maxima is not a peak
         return True
     elif len(loc_div) > 1:
         return True
