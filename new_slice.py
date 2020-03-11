@@ -2,9 +2,9 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Slice calc for deconvoluted HEK263 data
+Slice calc for deconvoluted HEK263 data.
 
-New variant (much better)
+New variant (much better) for radial slice statistic computation.
 
 """
 
@@ -31,9 +31,9 @@ import threshold as ts
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(level=logging.INFO,
-                    format=FORMAT,
-                    filemode="w",
-                    filename="results.log")
+                    format=FORMAT)  # ,
+                    # filemode="w",
+                    # filename="results.log")
 
 
 slice_num = 15  # frame of interes num (indexing start from 1)

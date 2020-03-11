@@ -135,7 +135,7 @@ def backCon(img, edge_lim=50):
 
     return img
 
-def membDet(slc, h=2, mode='rad'):
+def membDet(slc, mode='rad', h=2):
     """ Finding membrane maxima by membYFP data
     and calculating full width at set height of maxima
 
@@ -152,82 +152,90 @@ def membDet(slc, h=2, mode='rad'):
 
     """
 
-    # if mode == 'diam':
-    #     slc_l, slc_r = np.split(slc, 2)
+    if mode == 'diam':
+        slc_l, slc_r = np.split(slc, 2)
 
-    #     peak_l = np.int(np.argsort(slc_l)[-1:])
+        peak_l = np.int(np.argsort(slc_l)[-1:])
 
-    #     peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
+        peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
 
-    #     peaks = {peak_l: np.int(slc[peak_l]),
-    #              peak_r: np.int(slc[peak_r])}
+        peaks = {peak_l: np.int(slc[peak_l]),
+                 peak_r: np.int(slc[peak_r])}
 
-    #     logging.info('Diam. mode, peaks coordinates %s, %s' % (peak_l, peak_r))
+        logging.info('Diam. mode, peaks coordinates %s, %s' % (peak_l, peak_r))
 
-    #     maxima_int = []
+        maxima_int = []
 
-    #     for key in peaks:
-    #         loc = key  # peack index in slice 
-    #         val = peaks[key]
-    #         lim = val / h
-    #         interval = []
-    #         logging.info('Full width at 1/%s of height (%s) for peack %s' %
-    #                     (h, lim, key))
+        for key in peaks:
+            loc = key  # peack index in slice 
+            
+            try:
+                val = peaks[key]
+            except TypeError:
+                return False
 
-    #         while val > lim:  # left shift
-    #             val = slc[loc]
-    #             loc -= 1
-    #         interval.append(loc)
+            lim = val / h
+            interval = []
+            logging.info('Full width at 1/%s of height (%s) for peack %s' %
+                        (h, lim, key))
 
-    #         loc = key
-    #         val = peaks[key]
+            while val > lim:  # left shift
+                try:
+                    val = slc[loc]
+                    loc -= 1
+                except IndexError:
+                    return False
+            interval.append(loc)
 
-    #         while val > lim:  # right shift
-    #             val = slc[loc]
-    #             loc += 1
-    #         interval.append(loc)
-    #         interval.append(lim)
+            loc = key
+            val = peaks[key]
 
-    #         maxima_int.append(interval)
+            while val > lim:  # right shift
+                try:
+                    val = slc[loc]
+                    loc += 1
+                except IndexError:
+                    return False                
+            interval.append(loc)
+            # interval.append(lim)
 
-    # elif mode == 'rad':
+            maxima_int.append(interval)
 
-    peak = np.argsort(slc)[-1:]
+    elif mode == 'rad':
+        peak = np.argsort(slc)[-1:]
 
-    try:
+        try:
+            val = int(slc[peak])
+        except TypeError:
+            return False
+
+        lim = val / h
+        loc = int(peak)
+        maxima_int = []
+
+        logging.debug('Peak coordinate %s and height %s' % (loc, val))
+
+        while val >= lim:
+            try:
+                val = slc[loc]
+                loc -= 1
+            except IndexError:
+                return False
+
+        maxima_int.append(int(loc))
+
+        loc = peak
         val = int(slc[peak])
-    except TypeError:
-        return False
 
+        while val >= lim:
+            try:
+                val = slc[loc]
+                loc += 1
+            except IndexError:
+                return False
 
-    
-    lim = val / h
-    loc = int(peak)
-    maxima_int = []
-
-    logging.debug('Peak coordinate %s and height %s' % (loc, val))
-
-    while val >= lim:
-        try:
-            val = slc[loc]
-            loc -= 1
-        except IndexError:
-            return False
-
-    maxima_int.append(int(loc))
-
-    loc = peak
-    val = int(slc[peak])
-
-    while val >= lim:
-        try:
-            val = slc[loc]
-            loc += 1
-        except IndexError:
-            return False
-
-        
-    maxima_int.append(int(loc))
+            
+        maxima_int.append(int(loc))
 
     logging.debug('Peak width %s at 1/%d height \n' % (maxima_int, h))
 
@@ -266,7 +274,7 @@ def badRad(slc, cutoff_lvl=0.5, n=800):
     else:
         return False
 
-def badDiam(slc, cutoff_lvl=0.5, n=800):
+def badDiam(slc, cutoff_lvl=0.2, n=50):
     """ Diameter slice quality control.
     Slice will be discarded if it have more than one peak
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum
@@ -279,10 +287,26 @@ def badDiam(slc, cutoff_lvl=0.5, n=800):
     up_cutoff = slc.max()  # upper limit for peak detecting, slice maxima
     down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima
 
-    max_pos = int(np.argsort(slc)[-2:])
+    max_pos = int(np.argsort(slc)[-1:])
+    print(max_pos)
 
     peaks_pos, _ = signal.find_peaks(slc, [down_cutoff, up_cutoff])
     peaks_val = slc[peaks_pos]
+
+    print(peaks_pos)
+
+    loc_rel = []
+
+    for peak in peaks_pos:
+        loc_rel.append([i for i in peaks_pos if i > peak-slc[peak]/n and i < peak+slc[peak]/n])
+
+    print(loc_rel)
+
+    loc_div = []
+    [loc_div.append(i) for i in [len(a) for a in loc_rel] if i not in loc_div]
+
+    print(loc_div)
+
 
 
 if __name__=="__main__":
