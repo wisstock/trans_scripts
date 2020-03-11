@@ -153,6 +153,9 @@ def membDet(slc, mode='rad', h=2):
     """
 
     if mode == 'diam':
+        if (np.shape(slc)[0] % 2) != 0:  # parity check
+            slc = slc[:-1]
+
         slc_l, slc_r = np.split(slc, 2)
 
         peak_l = np.int(np.argsort(slc_l)[-1:])
@@ -176,8 +179,6 @@ def membDet(slc, mode='rad', h=2):
 
             lim = val / h
             interval = []
-            logging.info('Full width at 1/%s of height (%s) for peack %s' %
-                        (h, lim, key))
 
             while val > lim:  # left shift
                 try:
@@ -237,7 +238,7 @@ def membDet(slc, mode='rad', h=2):
             
         maxima_int.append(int(loc))
 
-    logging.debug('Peak width %s at 1/%d height \n' % (maxima_int, h))
+    logging.info('Peak width %s at 1/%d height \n' % (maxima_int, h))
 
     return maxima_int
 
@@ -274,7 +275,7 @@ def badRad(slc, cutoff_lvl=0.5, n=800):
     else:
         return False
 
-def badDiam(slc, cutoff_lvl=0.2, n=50):
+def badDiam(slc, cutoff_lvl=0.2, d=35, n=50):
     """ Diameter slice quality control.
     Slice will be discarded if it have more than one peak
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum
@@ -288,24 +289,26 @@ def badDiam(slc, cutoff_lvl=0.2, n=50):
     down_cutoff = up_cutoff * cutoff_lvl  # lower limit for peak detecting, percent of maxima
 
     max_pos = int(np.argsort(slc)[-1:])
-    print(max_pos)
 
-    peaks_pos, _ = signal.find_peaks(slc, [down_cutoff, up_cutoff])
-    peaks_val = slc[peaks_pos]
+    peaks_pos, _ = signal.find_peaks(slc,
+                                     height=[down_cutoff, up_cutoff],
+                                     distance=d)
 
-    print(peaks_pos)
+    logging.debug('Detecting peaks positions: {}'.format(peaks_pos))
 
-    loc_rel = []
 
-    for peak in peaks_pos:
-        loc_rel.append([i for i in peaks_pos if i > peak-slc[peak]/n and i < peak+slc[peak]/n])
 
-    print(loc_rel)
+    if not [i for i in peaks_pos if i == max_pos]:
+        logging.warning('Maxima out of peak!\n')
+        return True
+    elif len(peaks_pos) > 2:
+        logging.warning('More then two peaks!\n')
+        return True
+    else:
+        logging.info('Slice is OK')
+        return False
 
-    loc_div = []
-    [loc_div.append(i) for i in [len(a) for a in loc_rel] if i not in loc_div]
 
-    print(loc_div)
 
 
 

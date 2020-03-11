@@ -29,10 +29,10 @@ FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message
 logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
-frame = 10
-angl = 285
+frame = 9
+angl = 144
 
-path = os.path.join(sys.path[0], 'dec/cell3/')
+path = os.path.join(sys.path[0], 'dec/cell2/')
 
 for root, dirs, files in os.walk(path):
     for file in files:
@@ -62,9 +62,8 @@ hpca_band = slc.bandExtract(hpca_frame, xy0, xy1)
 
 
 
-ts.badDiam(yfp_band)
-print(np.shape(yfp_band))
-print(ts.membDet(yfp_band[0], mode='diam'))
+print(ts.badDiam(yfp_band))
+# print(ts.membDet(yfp_band[0], mode='diam'))
 
 
 
