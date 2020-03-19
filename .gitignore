@@ -9,4 +9,5 @@ __pycache__
 *.sublime-project
 *.sublime-workspace
 *.zip
+*.csv
 
