@@ -162,8 +162,10 @@ def membDet(slc, mode='rad', h=2):
 
         peak_r = np.int(np.shape(slc_l)[0] + np.argsort(slc_r)[-1])
 
-        peaks = {peak_l: np.int(slc[peak_l]),
-                 peak_r: np.int(slc[peak_r])}
+        peaks_val = [np.int(slc[peak_l]), np.int(slc[peak_r])]
+
+        peaks = {peak_l: peaks_val[0],
+                 peak_r: peaks_val[1]}
 
         logging.info('Diam. mode, peaks coordinates %s, %s' % (peak_l, peak_r))
 
@@ -207,6 +209,7 @@ def membDet(slc, mode='rad', h=2):
 
         try:
             val = int(slc[peak])
+            peaks_val = [val]
         except TypeError:
             return False
 
@@ -214,7 +217,7 @@ def membDet(slc, mode='rad', h=2):
         loc = int(peak)
         maxima_int = []
 
-        logging.debug('Peak coordinate %s and height %s' % (loc, val))
+        logging.debug('Rad. mode, peak coordinate %s and height %s' % (loc, val))
 
         while val >= lim:
             try:
@@ -240,7 +243,7 @@ def membDet(slc, mode='rad', h=2):
 
     logging.info('Peak width %s at 1/%d height \n' % (maxima_int, h))
 
-    return maxima_int
+    return maxima_int, peaks_val
 
 def badRad(slc, cutoff_lvl=0.5, n=800):
     """ Radial slice quality control.
