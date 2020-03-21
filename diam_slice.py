@@ -28,9 +28,9 @@ sys.path.append('modules')
 import slicing as slc
 import threshold as ts
 
-input_path = os.path.join(sys.path[0], 'dec/cell2/')
+input_path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
 
-frame = 7  # frame of interes num (indexing start from 1)
+frame = 9  # frame of interes num (indexing start from 1)
 slice_num = 10  # number of diameter slices
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"

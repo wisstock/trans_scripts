@@ -37,10 +37,10 @@ n_iter = 30
 scaling_factor = 5  # substraction region part for background calculaion
 
 
-input_path = os.path.join(sys.path[0], 'motoneuron/raw/')
-output_path = os.path.join(sys.path[0], 'motoneuron/raw/')
+input_path = os.path.join(sys.path[0], '.temp/cell4_5/cell5')
+output_path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
 
-psf_path = os.path.join(sys.path[0], 'motoneuron/raw/')
+psf_path = os.path.join(sys.path[0], 'dec/cell4_5')
 
 
 start_time = timer()
@@ -57,7 +57,7 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
     		processed_img = ts.backCon(img, np.shape(img)[1] // scaling_factor)  # background extraction
 
     		z_scale = np.shape(processed_img)[0]  # z direcion size for PSF calclation
-    		rw_args = {'shape': (z_scale // 2, 510),  # number of samples in z and r direction
+    		rw_args = {'shape': (z_scale // 2, 85),  # number of samples in z and r direction
                        'dims': (49, 70),   # size in z and r direction in micrometers
                        'ex_wavelen': 488.0,  # excitation wavelength in nanometers
                        'em_wavelen': 510.0,  # emission wavelength in nanometers
@@ -85,7 +85,7 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
     		output_name = '%s_dec_%s.tif' % (file.split('.')[0], n_iter)
     		io.imsave(os.path.join(output_path, output_name), res.data)
 
-    		logger.info('Deconvoluted file %s saved' % output_name)
+    		logger.info('Deconvoluted file %s saved\n' % output_name)
 
 
 end_time = timer()

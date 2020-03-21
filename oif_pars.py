@@ -36,10 +36,10 @@ logging.basicConfig(level=logging.DEBUG,
                                         # filemode="w"
 
 
-data_path = os.path.join(sys.path[0], 'motoneuron/')
-output_path =os.path.join(sys.path[0], 'motoneuron/raw/')
+data_path = os.path.join(sys.path[0], '.temp/')
+output_path =os.path.join(sys.path[0], '.temp/cell4')
 
-cell = 'Cell2/'
+cell = 'Cell4-5/'
 cell_path = os.path.join(data_path, cell)
 logging.info('Dir path: %s' % cell_path)
 

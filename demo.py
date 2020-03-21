@@ -30,9 +30,9 @@ FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message
 logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
-path = os.path.join(sys.path[0], 'dec/cell2/')
+path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
 
-frame = 8
+frame = 10
 angl = 0
 
 
@@ -57,19 +57,19 @@ yfp_frame = yfp[frame,:,:]
 hpca_frame = hpca[frame,:,:]
 
 
-cntr = ts.cellMass(yfp_frame)
+cntr = [55, 70]  # ts.cellMass(hpca_frame)
 xy0, xy1 = slc.lineSlice(yfp_frame, angl, cntr)
 
 yfp_band = slc.bandExtract(yfp_frame, xy0, xy1)
 
 if ts.badDiam(yfp_band):
     logging.fatal('No peak detected!')
-    sys.exit()
+    # sys.exit()
 
 coord, peak = ts.membDet(yfp_band, mode='diam')  # detecting membrane peak in membYFP slice
 if not coord:
     logging.fatal('No mebrane detected!\n' % angl)
-    sys.exit()
+    # sys.exit()
 
 hpca_band = slc.bandExtract(hpca_frame, xy0, xy1)
 
@@ -109,6 +109,9 @@ for i in range(len(yfp_band)):
     elif i >= coord[1][1]:
         memb_loc.append(0)
 
+# ax0 = plt.subplot()
+# ax0.imshow(yfp_frame)
+# plt.show()
 
 ax = plt.subplot(212)
 ax.plot(yfp_band, label='membYFP')
@@ -132,5 +135,5 @@ cax2 = div2.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slc2, cax=cax2)
 ax2.set_title('HPCA-TFP')
 
-plt.suptitle('Samp {}, frame {}, angle {}'.format(samp, (frame+1), angl))
+plt.suptitle('Samp {}_2, frame {}, angle {}'.format(samp, (frame+1), angl))
 plt.show()
