@@ -30,11 +30,11 @@ FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message
 logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
-path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
+path = os.path.join(sys.path[0], 'data/2/')
 
-frame = 10
-angl = 0
-
+angl = 110
+hoi = 0.75
+scaling_factor = 6
 
 for root, dirs, files in os.walk(path):
     for file in files:
@@ -44,20 +44,24 @@ for root, dirs, files in os.walk(path):
             file_path = os.path.join(root, file)
             img = tifffile.imread(file_path)
 
-            if file.split('_')[1] == 'ch1':
-            	hpca = img
-            elif file.split('_')[1] == 'ch2':
-            	yfp = img
+            if file.split('.')[0] == 'HPCATFP':
+                hpca = img
+                logging.info('HPCA-TFP data uploaded')
+            elif file.split('.')[0] == 'membYFP':
+                yfp = img
+                logging.info('membYFP data uploaded')
             else:
             	logging.error('INCORRECT channels notation!')
             	sys.exit()
 
 
-yfp_frame = yfp[frame,:,:]
-hpca_frame = hpca[frame,:,:]
+# yfp_frame = yfp[frame,:,:]
+# hpca_frame = hpca[frame,:,:]
+hpca_frame = ts.backCon(hpca, edge_lim=np.shape(hpca)[1] // scaling_factor, dim=2)
+yfp_frame = ts.backCon(yfp, edge_lim=np.shape(yfp)[1] // scaling_factor, dim=2)
 
 
-cntr = [55, 70]  # ts.cellMass(hpca_frame)
+cntr = ts.cellMass(hpca_frame)
 xy0, xy1 = slc.lineSlice(yfp_frame, angl, cntr)
 
 yfp_band = slc.bandExtract(yfp_frame, xy0, xy1)
@@ -66,7 +70,8 @@ if ts.badDiam(yfp_band):
     logging.fatal('No peak detected!')
     # sys.exit()
 
-coord, peak = ts.membDet(yfp_band, mode='diam')  # detecting membrane peak in membYFP slice
+coord, peak = ts.membDet(yfp_band, mode='diam', h=hoi)  # detecting membrane peak in membYFP slice
+
 if not coord:
     logging.fatal('No mebrane detected!\n' % angl)
     # sys.exit()
@@ -89,7 +94,7 @@ hpca_total = np.sum(c_hpca) + m_hpca_total
 
 
 logging.info('Sample {}'.format(samp))
-logging.info('Frame num {}'.format(frame+1))
+# logging.info('Frame num {}'.format(frame+1))
 logging.info('Angle {}\n'.format(angl))
 
 logging.info('Relative membrane mYFP {:.3f}'.format((m_yfp_total/yfp_total)*100))
@@ -101,11 +106,11 @@ for i in range(len(yfp_band)):
     if i <= coord[0][0]:
         memb_loc.append(0)
     elif i > coord[0][0] and i < coord[0][1]:
-        memb_loc.append(peak[0]/2)
+        memb_loc.append(peak[0]*hoi)
     elif i >= coord[0][1] and i <= coord[1][0]:
         memb_loc.append(0)
     elif i > coord[1][0] and i < coord[1][1]:
-        memb_loc.append(peak[1]/2)
+        memb_loc.append(peak[1]*hoi)
     elif i >= coord[1][1]:
         memb_loc.append(0)
 
@@ -135,5 +140,5 @@ cax2 = div2.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slc2, cax=cax2)
 ax2.set_title('HPCA-TFP')
 
-plt.suptitle('Samp {}_2, frame {}, angle {}'.format(samp, (frame+1), angl))
+# plt.suptitle('Samp {}_2, frame {}, angle {}'.format(samp, (frame+1), angl))
 plt.show()

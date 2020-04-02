@@ -1,0 +1,44 @@
+2020-04-01 19:30:18,821| INFO [diam_slice.py: -             <module>]  Cell 1
+2020-04-01 19:30:18,821| INFO [diam_slice.py: -             <module>]  13 slices successful complited!
+2020-04-01 19:30:18,821| INFO [diam_slice.py: -             <module>]  Full width at 0.5 of maxima height
+2020-04-01 19:30:18,822| INFO [diam_slice.py: -             <module>]  membYFP relative amount in membrane: 95.325 percent, sd 4.410
+2020-04-01 19:30:18,822| INFO [diam_slice.py: -             <module>]  HPCA-TFP relative amount in membrane: 90.755 percent, sd 7.069
+
+
+2020-04-01 19:29:39,773| INFO [diam_slice.py: -             <module>]  Cell 1
+2020-04-01 19:29:39,773| INFO [diam_slice.py: -             <module>]  13 slices successful complited!
+2020-04-01 19:29:39,773| INFO [diam_slice.py: -             <module>]  Full width at 0.75 of maxima height
+2020-04-01 19:29:39,773| INFO [diam_slice.py: -             <module>]  membYFP relative amount in membrane: 82.994 percent, sd 10.004
+2020-04-01 19:29:39,773| INFO [diam_slice.py: -             <module>]  HPCA-TFP relative amount in membrane: 73.535 percent, sd 11.832
+
+======================================================================================================================================
+
+2020-04-01 19:34:43,262| INFO [diam_slice.py: -             <module>]  Cell 2
+2020-04-01 19:34:43,263| INFO [diam_slice.py: -             <module>]  13 slices successful complited!
+2020-04-01 19:34:43,263| INFO [diam_slice.py: -             <module>]  Full width at 0.5 of maxima height
+2020-04-01 19:34:43,263| INFO [diam_slice.py: -             <module>]  membYFP relative amount in membrane: 98.194 percent, sd 2.339
+2020-04-01 19:34:43,263| INFO [diam_slice.py: -             <module>]  HPCA-TFP relative amount in membrane: 97.588 percent, sd 3.130
+
+
+2020-04-01 19:35:52,235| INFO [diam_slice.py: -             <module>]  Cell 2
+2020-04-01 19:35:52,235| INFO [diam_slice.py: -             <module>]  13 slices successful complited!
+2020-04-01 19:35:52,235| INFO [diam_slice.py: -             <module>]  Full width at 0.75 of maxima height
+2020-04-01 19:35:52,235| INFO [diam_slice.py: -             <module>]  membYFP relative amount in membrane: 57.449 percent, sd 28.843
+2020-04-01 19:35:52,236| INFO [diam_slice.py: -             <module>]  HPCA-TFP relative amount in membrane: 49.282 percent, sd 34.687
+
+======================================================================================================================================
+
+2020-04-01 19:36:37,055| INFO [diam_slice.py: -             <module>]  Cell 3
+2020-04-01 19:36:37,055| INFO [diam_slice.py: -             <module>]  66 slices successful complited!
+2020-04-01 19:36:37,055| INFO [diam_slice.py: -             <module>]  Full width at 0.5 of maxima height
+2020-04-01 19:36:37,056| INFO [diam_slice.py: -             <module>]  membYFP relative amount in membrane: 53.040 percent, sd 5.526
+2020-04-01 19:36:37,056| INFO [diam_slice.py: -             <module>]  HPCA-TFP relative amount in membrane: 13.017 percent, sd 3.222
+
+
+2020-04-01 19:37:00,228| INFO [diam_slice.py: -             <module>]  Cell 3
+2020-04-01 19:37:00,228| INFO [diam_slice.py: -             <module>]  66 slices successful complited!
+2020-04-01 19:37:00,228| INFO [diam_slice.py: -             <module>]  Full width at 0.75 of maxima height
+2020-04-01 19:37:00,228| INFO [diam_slice.py: -             <module>]  membYFP relative amount in membrane: 43.375 percent, sd 4.819
+2020-04-01 19:37:00,228| INFO [diam_slice.py: -             <module>]  HPCA-TFP relative amount in membrane: 8.699 percent, sd 1.942
+
+

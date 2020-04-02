@@ -46,11 +46,11 @@ logging.basicConfig(level=logging.INFO,
 
 
 wd_path = os.path.join(sys.path[0], '.temp/cell4_5')  # os.path.join(sys.path[0], '.temp/data/cell1.tif')
-dec_path = os.path.join(sys.path[0], 'dec/cell4_5')
+dec_path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
 
 # raw_file = '20180718-1323-0010_ch2.tif'  # '20180718-1316-0008_ch1.tif'
-yfp_file = '20180718-1323-0010_ch2_dec_50.tif'
-hpca_file = '20180718-1323-0010_ch1_dec_50.tif'
+yfp_file = '20180718-1323-0010_ch2_5_dec_30.tif'
+hpca_file = '20180718-1323-0010_ch1_5_dec_30.tif'
 
 # data_path = os.path.join(wd_path, raw_file)
 data_path = os.path.join(dec_path, yfp_file)
@@ -63,9 +63,9 @@ img_list = []  # list of read TIF files as np arrays
 frame_list = []  # list of separete frames
 slice_list = []  # list of slices over extracted frames
 
-frames = [9, 11, 13]  # indexes of frames
+frames = [10, 11, 12]  # indexes of frames
 
-angle = 115
+angle = 15
 band_w = 2
 
 
@@ -99,7 +99,7 @@ for i in range(len(frame_list)//2):
     ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]])
     slc1 = ax1.imshow(frame_list[i])
     div1 = make_axes_locatable(ax1)
-    cax1 = div1.append_axes('right', size='3%', pad=0.1)
+    cax1 = div1.append_axes('right', size='5%', pad=0.1)
     plt.colorbar(slc1, cax=cax1)
     ax1.set_title('membYFP, frame %s' % (frames[i]+1))
 
@@ -112,11 +112,11 @@ for i in range(len(frame_list)//2):
     ax2.set_title('HPCA-TFP, frame %s' % (frames[i]+1))
 
     ax3 = plt.subplot(3, 3, i+7)
-    ax3.plot(slice_list[i], label='Raw')
-    ax3.plot(slice_list[i+3], label='Dec.', linestyle='dashed')
+    ax3.plot(slice_list[i], label='mYFP')
+    ax3.plot(slice_list[i+3], label='HCPA-TFP', linestyle='dashed')
     ax3.legend(loc='upper left')
 
     i += 1 
 
-# plt.suptitle('Raw file %s' % raw_file.split('.')[0])
+plt.suptitle('Raw file %s' % yfp_file.split('_')[0])
 plt.show()

@@ -28,10 +28,13 @@ sys.path.append('modules')
 import slicing as slc
 import threshold as ts
 
-input_path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
+input_path = os.path.join(sys.path[0], 'data/3')
 
-frame = 9  # frame of interes num (indexing start from 1)
-slice_num = 10  # number of diameter slices
+# frame = 9  # frame of interes num (indexing start from 1)
+cell = 3
+slice_num = 100  # number of diameter slices
+hoi=0.75
+scaling_factor = 6
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(level=logging.INFO,
@@ -45,26 +48,28 @@ for root, dirs, files in os.walk(input_path):
     for file in files:
     	if file.endswith('.tif'):
 
-            samp = file.split('_')[0]
+            # samp = file.split('_')[0]
             file_path = os.path.join(root, file)
             img = tifffile.imread(file_path)
 
-            if file.split('_')[1] == 'ch1':
+            if file.split('.')[0] == 'HPCATFP':
             	hpca = img
-            elif file.split('_')[1] == 'ch2':
+            elif file.split('.')[0] == 'membYFP':
             	yfp = img
             else:
             	logging.error('INCORRECT channels notation!')
             	sys.exit()
 
-cntr = ts.cellMass(hpca[frame,:,:])  # calc center of mass of the frame
+hpca_frame = ts.backCon(hpca, edge_lim=np.shape(hpca)[1] // scaling_factor, dim=2)
+yfp_frame = ts.backCon(yfp, edge_lim=np.shape(yfp)[1] // scaling_factor, dim=2)
+
+cntr = ts.cellMass(hpca_frame)  # calc center of mass of the frame
 
 angl = 0  # slice angle starting value
 angl_increment = 180/slice_num
 
-
-yfp_frame = yfp[frame,:,:]  # slices of membYFP channel
-hpca_frame = hpca[frame,:,:]  # slice of HPCA-TFP channel
+# yfp_frame = yfp[frame,:,:]  # slices of membYFP channel
+# hpca_frame = hpca[frame,:,:]  # slice of HPCA-TFP channel
 
 cell_hpca, memb_hpca, rel_memb_hpca = [], [], []
 cell_yfp, memb_yfp, rel_memb_yfp = [], [], []
@@ -85,7 +90,7 @@ while angl < 180:
 
     hpca_band = slc.bandExtract(hpca_frame, xy0, xy1)
 
-    coord,_ = ts.membDet(yfp_band, mode='diam')  # detecting membrane peak in membYFP slice
+    coord,_ = ts.membDet(yfp_band, mode='diam', h=hoi)  # detecting membrane peak in membYFP slice
     if not coord:
         logging.error('In slice with angle %s mebrane NOT detected!\n' % angl)
         bad_memb.append(angl)
@@ -120,8 +125,10 @@ if bad_angl:
 if bad_memb:
     logging.warning('Slices with angles %s discarded, no membrane detected!\n' % (bad_memb))
 
-logging.info('{} slices successful complited!\n'.format(slice_num-(len(bad_memb)+len(bad_angl))))
 
-logging.info('Sample {}, frame {}'.format(samp, (frame+1)))
+
+logging.info('Cell {}'.format(cell))
+logging.info('{} slices successful complited!\n'.format(slice_num-(len(bad_memb)+len(bad_angl))))
+logging.info('Full width at {} of maxima height'.format(hoi))
 logging.info('membYFP relative amount in membrane: {:.3f} percent, sd {:.3f}'.format(np.mean(rel_memb_yfp)*100, np.std(rel_memb_yfp)*100))
 logging.info('HPCA-TFP relative amount in membrane: {:.3f} percent, sd {:.3f}'.format(np.mean(rel_memb_hpca)*100, np.std(rel_memb_hpca)*100))
