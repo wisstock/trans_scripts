@@ -2,9 +2,8 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Functions for cell detecting and ROI extraction.
-Optimysed for confocal images of the individual HEK 293 cells.
-(mYFP-HPCA project).
+Functions for slices quality control, membrane detection
+and membrane regions extraction.
 
 """
 
@@ -24,15 +23,15 @@ from scipy import signal
 
 
 def membMaxDet(slc, mode='rad', h=0.5):
-    """ Finding membrane maxima by membYFP data
+    """ Finding membrane maxima in membYFP data
     and calculating full width at set height of maxima
     for identification membrane regions.
 
     Mode:
-    'rad' for radius slices (radiusSlice fun)
-    'diam' for diameter slices (lineSlice fun)
+    'rad' for radius slices (radiusSlice fun from slicing module)
+    'diam' for diameter slices (lineSlice fun from slicing module)
 
-    Split slice to two halfs and find maxima in each half separately
+    In diam mode we split slice to two halves and find maxima in each half separately
     (left and right).
 
     Return list of two list, first value is coordinate for left peak
@@ -134,16 +133,123 @@ def membMaxDet(slc, mode='rad', h=0.5):
 
     return maxima_int, peaks_val
 
-def membOutDet(slc):
+def membOutDet(input_slc, cell_mask=10, outer_mask=30, det_cutoff=0.75):
     """ Detection of mYFP maxima in the line of interest.
     Algorithm is going from outside to inside cell
     and finding first outer maxima of the membrane.
+
+    "cell_mask" - option for hiding inner cell region
+    for ignoring possible cytoplasmic artefacts of fluorescence,
+    number of pixels to be given to zero.
+
+    "outer_mask" - option for hiding extracellular artefacts of fluorescence,
+    numbers of pexels
 
     Working with diam slice only!
 
     Returns two indexes of membrane maxima.
 
     """
+
+    slc = np.copy(input_slc)
+
+    if (np.shape(slc)[0] % 2) != 0:  # parity check for correct splitting slice by two half
+    	slc = slc[:-1]
+
+    slc_left, slc_right = np.split(slc, 2)
+    # slc_right = np.flip(slc_right)
+
+    logging.info('Slice splitted!')
+
+    slc_left[-cell_mask:] = 0   # mask cellular space
+    slc_right[:cell_mask] = 0  #
+
+    slc_left[:outer_mask] = 0   # mask extracellular space
+    slc_right[-outer_mask:] = 0  #
+
+    left_peak, _ = signal.find_peaks(slc_left,
+                                     height=[slc_left.max()*det_cutoff,
+                                             slc_left.max()],
+                                     distance=10)
+
+    right_peak, _ = signal.find_peaks(slc_right,
+                                      height=[slc_right.max()*det_cutoff,
+                                              slc_right.max()],
+                                      distance=10)
+    memb_peaks = []
+
+    try:
+    	memb_peaks.append(left_peak[0])
+    except IndexError:
+    	logging.error('LEFT membrane peak NOT DETECTED!')
+    	memb_peaks.append(0)
+
+    try:
+    	memb_peaks.append(int(len(slc)/2+right_peak[0]))
+    except IndexError:
+    	logging.error('RIGHT membrane peak NOT DETECTED!')
+    	memb_peaks.append(0)
+
+    logging.info('L {}, R {}'.format(memb_peaks[0], memb_peaks[1]))
+
+    output_slc = np.concatenate((slc_left, slc_right))
+
+    return output_slc, memb_peaks
+
+def membExtract(slc, memb_loc, cutoff_sd=2, noise_region=15, noise_dist=25, roi_val=False):
+	""" Base on exact locatiom of the mebrane peak (membYFP channel data)
+	this function estimate mebrane fraction of the HPCA-TFP.
+
+	Return summ of mebrane fraction
+	and summ of cytoplasm fraction (from peak to peak region).
+
+	For diam slice only!
+
+	"""
+
+	memb_left = memb_loc[0]
+	memb_right = memb_loc[1]
+
+	print(type(memb_right))
+
+
+	left_noise_roi = slc[memb_left-noise_region-noise_dist \
+	                     :memb_left-noise_dist]
+	left_noise = np.std(left_noise_roi)
+	left_cutoff = left_noise * cutoff_sd
+
+	logging.info('Left side LOI noise {}, left cutoff {}'.format(left_noise, left_cutoff))
+
+	left_lim = memb_left
+	while slc[left_lim] >= left_cutoff:
+		left_lim -= 1
+
+
+	right_noise_roi = slc[memb_right+noise_dist \
+	                      :memb_right+noise_dist+noise_region]
+	right_noise = np.std(right_noise_roi)
+	right_cutoff = right_noise * cutoff_sd
+
+	logging.info('Right side LOI noise {}, right cutoff {}'.format(right_noise, right_cutoff))
+
+	right_lim = memb_right
+	while slc[right_lim] >= right_cutoff:
+		right_lim += 1
+
+
+	memb_frac = np.sum(slc[left_lim:memb_left])*2 + np.sum(slc[memb_right:right_lim])*2
+
+	if roi_val:
+		logging.info('External mean cytoplasm pixel value uploaded!')
+		cell_frac = roi_val * (memb_right - memb_left)
+	else:
+		logging.info('cytoplasm fraction extracted!')
+		cell_frac = np.sum(slc[memb_left:memb_right])
+
+	return(cell_frac, memb_frac, [left_lim, right_lim])
+
+
+
 
 
 
