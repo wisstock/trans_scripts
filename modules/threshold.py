@@ -23,41 +23,6 @@ from scipy.ndimage import measurements as msr
 from scipy import signal
 
 
-def getTiff(file_name, channel=0, frame_number=0, camera_offset=250):
-    """ Function returns individual frame from image series and
-    apply compensation of camera offset value for this frame.
-    Separate two fluorecent channels (first start from 0, second - from 1).
-    For Dual View system data.
-
-    """
-
-    path = os.getcwd() + '/temp/data/' + file_name
-
-    tiff_tensor = tifffile.imread(path)
-    # print(tiff_tensor.shape, np.max(tiff_tensor))
-
-    channel_one = tiff_tensor[0::2, :, :]
-    channel_two = tiff_tensor[1::2, :, :]
-    # print(channel_one.shape)
-    # print(channel_two.shape)
-
-    if channel == 0:
-        frame_amount = channel_one.shape
-        try:
-            img = channel_one[frame_number] - camera_offset
-            return(img)
-        except ValueError:
-            if frame_number > frame_amount[0]:
-                print("Frame number out of range!")
-    else:
-        frame_amount = channel_two.shape
-        try:
-            img = channel_two[frame_number] - camera_offset
-            return(img)
-        except ValueError:
-            if frame_number > frame_amount[0]:
-                print("Frame number out of range!")
-
 def cellMask(img, threshold_method="triangle", percent=90):
     """ Extract cells using symple mask.
 
@@ -117,7 +82,7 @@ def cellEdge(img):
     
     return output
 
-def backCon(img, edge_lim=50, dim=3):
+def backCon(img, edge_lim=20, dim=3):
     """ Background extraction in TIFF series
 
     For confocal Z-stacks only!
@@ -126,7 +91,7 @@ def backCon(img, edge_lim=50, dim=3):
     """
 
     if dim == 3:
-        edge_stack = img[:,0:edge_lim,0:edge_lim]
+        edge_stack = img[:,:edge_lim,:edge_lim]
         mean_back = np.mean(edge_stack)
 
         logging.info('Mean background, %s px region: %s' % (edge_lim, mean_back))
@@ -137,7 +102,7 @@ def backCon(img, edge_lim=50, dim=3):
 
         return img
     elif dim == 2:
-        edge_fragment = img[0:edge_lim,0:edge_lim]
+        edge_fragment = img[:edge_lim,:edge_lim]
         mean_back = np.mean(edge_fragment)
 
         logging.info('Mean background, %s px region: %s' % (edge_lim, mean_back))

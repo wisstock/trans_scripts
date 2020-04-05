@@ -248,12 +248,6 @@ def membExtract(slc, memb_loc, cutoff_sd=2, noise_region=15, noise_dist=25, roi_
 
 	return(cell_frac, memb_frac, [left_lim, right_lim])
 
-
-
-
-
-
-
 def badRad(slc, cutoff_lvl=0.5, n=800):
     """ Radial slice quality control.
     Slice will be discarded if it have more than one peak
@@ -319,6 +313,7 @@ def badDiam(slc, cutoff_lvl=0.2, d=35, n=50):
     else:
         logging.info('Slice is OK')
         return False
+
 
 if __name__=="__main__":
     pass
