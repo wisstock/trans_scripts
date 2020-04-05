@@ -23,7 +23,7 @@ from scipy.ndimage import measurements as msr
 from scipy import signal
 
 
-def cellMask(img, threshold_method="triangle", percent=90):
+def cellMask(img, method="triangle", percent=90):
     """ Extract cells using symple mask.
 
     Treshold methods:
@@ -32,7 +32,7 @@ def cellMask(img, threshold_method="triangle", percent=90):
 
 	"""
 
-    if threshold_method == "triangle":
+    if method == "triangle":
         thresh_out = filters.threshold_triangle(img)
         positive_mask = img > thresh_out  # create negative threshold mask
         threshold_mask = positive_mask * -1  # inversion threshold mask
@@ -42,7 +42,7 @@ def cellMask(img, threshold_method="triangle", percent=90):
 
         return output_img 
 
-    elif threshold_method == "percent":
+    elif method == "percent":
         percentile = np.percentile(img, percent)
         output_img = np.copy(img)
         output_img[output_img < percentile] = 0
@@ -74,11 +74,14 @@ def cellMass(img):
 
     return mass_coord
 
-def cellEdge(img):
+def cellEdge(img, sigmas=[8,20,1]):
     """ Returns the cell edge mask generating by modifyed Hessian filter.
 
     """
-    output = filters.hessian(img, sigmas=range(10, 28, 1))
+    output = filters.hessian(img,
+                             sigmas=range(sigmas[0],
+                                          sigmas[1],
+                                          sigmas[2]))
     
     return output
 

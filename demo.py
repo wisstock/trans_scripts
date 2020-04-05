@@ -16,8 +16,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.mplot3d import Axes3D
 
 from skimage.exposure import histogram
+from skimage.morphology import skeletonize
+from skimage.feature import canny
+
 
 sys.path.append('modules')
 import threshold as ts
@@ -36,6 +40,7 @@ logging.basicConfig(level=logging.INFO,
 path = os.path.join(sys.path[0], 'raw_data/3/')
 
 frame = 10
+sigma = [25,28,1]
 
 yfp, hpca = rd.readZ(path)  # for raw data
 
@@ -43,28 +48,47 @@ yfp, hpca = rd.readZ(path)  # for raw data
 # yfp = yfp_stack[frame,:,:]              # for dec data
 # hpca = hpca_stack[frame,:,:]            #
 
-yfp = ts.backCon(yfp, dim=2)
-hpca = ts.backCon(hpca, dim=2)
-
-yfp_hist = histogram(yfp)
-hpca_hist = histogram(hpca)
+# yfp = ts.backCon(yfp, dim=2)
+# hpca = ts.backCon(hpca, dim=2)
 
 
-ax0 = plt.subplot(121)
-ax0.hist(yfp.ravel(),
-	     bins=512)
-	     # range=(2000.0, 12000.0))
-# ax0.hist(hpca.ravel(),
-# 	     bins=256,
-# 	     range=(0.0, 1000.0),
-# 	     label='HPCA-TFP')
+raw0 = yfp
+edge0 = ts.cellEdge(raw0)
+skeleton0 = skeletonize(edge0)
 
-ax1 = plt.subplot(122)
-slc1 = ax1.imshow(yfp)
-div1 = make_axes_locatable(ax1)
-cax1 = div1.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc1, cax=cax1)
-ax1.set_title('membYFP')
+raw1 = hpca
+edge1 = ts.cellEdge(raw1)
+skeleton1 = skeletonize(edge1)
+
+
+
+# xx, yy = np.mgrid[0:raw.shape[0], 0:raw.shape[1]]
+# fig = plt.figure(figsize=(15,15))
+# ax = fig.gca(projection='3d')
+# ax.plot_surface(xx, yy, raw,
+# 	            rstride=1, cstride=1,
+# 	            cmap='inferno',
+# 	            linewidth=2)
+# ax.view_init(60, 10)
+# plt.show()
+
+
+ax0 = plt.subplot(131)
+slc0 = ax0.imshow(raw0)
+div0 = make_axes_locatable(ax0)
+cax0 = div0.append_axes('right', size='3%', pad=0.1)
+plt.colorbar(slc0, cax=cax0)
+ax0.set_title('membYFP')
+
+ax1 = plt.subplot(132)
+ax1.imshow(edge0)
+ax1.set_title('Hessian mask')
+
+ax2 = plt.subplot(133)
+ax2.imshow(raw1)
+ax2.imshow(skeleton0, alpha=0.4)
+# ax2.imshow(skeleton1)
+ax2.set_title('yfp_skeleton')
 
 plt.show()
 
