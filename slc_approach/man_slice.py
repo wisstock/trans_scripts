@@ -2,7 +2,7 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Prototyping script
+Manual diam slice stat calculationg
 
 """
 
@@ -32,16 +32,35 @@ FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message
 logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
-path = os.path.join(sys.path[0], 'data/1/')
+path = os.path.join(sys.path[0], 'data/2/')
 
-angl = 0
-cell_px = 10
-extra_px = 40
+angl = 175
+# cell_px = 28
+extra_px = 1
 peal_cutoff = 0.85
 
-roi_start = [130, 190]
-roi_x_lim = 30
-roi_y_lim = 30
+# cell_px = 45            #
+# roi_start = [140, 200]  # cell 1 options
+# roi_x_lim = 20          #
+# roi_y_lim = 20          #
+
+cell_px = 20
+roi_start = [145, 160]  # cell 2 options
+roi_x_lim = 20          #
+roi_y_lim = 20          #
+
+# roi_start = [165, 150]  # cell 3 options
+# roi_x_lim = 20          #
+# roi_y_lim = 20          #
+
+# roi_start = [70, 150]   # cell 4 options
+# roi_x_lim = 20          #
+# roi_y_lim = 20          #
+
+# roi_start = [50, 100]   # cell 5 options
+# roi_x_lim = 20          #
+# roi_y_lim = 20          #
+
 
 # hoi = 0.75
 scaling = 6
@@ -69,7 +88,12 @@ hpca_frame = ts.backCon(hpca, edge_lim=np.shape(hpca)[1] // scaling, dim=2)
 yfp_frame = ts.backCon(yfp, edge_lim=np.shape(yfp)[1] // scaling, dim=2)
 
 
-cntr = ts.cellMass(hpca_frame)
+# hpca_frame = hpca_frame[:195,:]  # for cell 5
+# yfp_frame = yfp_frame[:195,:]    #
+# cntr = [55, 100]                 #
+
+cntr = ts.cellMass(yfp_frame)
+
 xy0, xy1 = slc.lineSlice(yfp_frame, angl, cntr)
 
 yfp_band = slc.bandExtract(yfp_frame, xy0, xy1)
