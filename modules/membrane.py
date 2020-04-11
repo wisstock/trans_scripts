@@ -210,7 +210,10 @@ def membExtract(slc, memb_loc, cutoff_sd=2, noise_region=15, noise_dist=25, roi_
 	memb_left = memb_loc[0]
 	memb_right = memb_loc[1]
 
+    
+
 	print(type(memb_right))
+    # logging.info('Membrane interval {}px'.format(memb_left-memb_right))
 
 
 	left_noise_roi = slc[memb_left-noise_region-noise_dist \
@@ -236,14 +239,13 @@ def membExtract(slc, memb_loc, cutoff_sd=2, noise_region=15, noise_dist=25, roi_
 	while slc[right_lim] >= right_cutoff:
 		right_lim += 1
 
-
 	memb_frac = np.sum(slc[left_lim:memb_left])*2 + np.sum(slc[memb_right:right_lim])*2
 
 	if roi_val:
-		logging.info('External mean cytoplasm pixel value uploaded!')
+		logging.info('Membrane interval {}px'.format(memb_right - memb_left))
 		cell_frac = roi_val * (memb_right - memb_left)
 	else:
-		logging.info('cytoplasm fraction extracted!')
+		logging.info('Cytoplasm fraction extracted!')
 		cell_frac = np.sum(slc[memb_left:memb_right])
 
 	return(cell_frac, memb_frac, [left_lim, right_lim])

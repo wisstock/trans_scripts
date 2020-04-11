@@ -62,10 +62,10 @@ skeleton1 = skeletonize(edge1)
 
 
 
-# xx, yy = np.mgrid[0:raw.shape[0], 0:raw.shape[1]]
+# xx, yy = np.mgrid[0:raw0.shape[0], 0:raw0.shape[1]]
 # fig = plt.figure(figsize=(15,15))
 # ax = fig.gca(projection='3d')
-# ax.plot_surface(xx, yy, raw,
+# ax.plot_surface(xx, yy, raw0,
 # 	            rstride=1, cstride=1,
 # 	            cmap='inferno',
 # 	            linewidth=2)

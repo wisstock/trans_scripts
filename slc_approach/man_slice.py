@@ -32,11 +32,9 @@ FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message
 logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
-path = os.path.join(sys.path[0], 'data/2/')
+path = os.path.join(sys.path[0], 'raw_data/3/')
 
-angl = 175
-# cell_px = 28
-extra_px = 1
+angl = 150
 peal_cutoff = 0.85
 
 # cell_px = 45            #
@@ -44,14 +42,16 @@ peal_cutoff = 0.85
 # roi_x_lim = 20          #
 # roi_y_lim = 20          #
 
-cell_px = 20
-roi_start = [145, 160]  # cell 2 options
-roi_x_lim = 20          #
-roi_y_lim = 20          #
-
-# roi_start = [165, 150]  # cell 3 options
+# cell_px = 20
+# roi_start = [145, 160]  # cell 2 options
 # roi_x_lim = 20          #
 # roi_y_lim = 20          #
+
+cell_px = 55
+extra_px = 80
+roi_start = [165, 150]  # cell 3 options
+roi_x_lim = 20          #
+roi_y_lim = 20          #
 
 # roi_start = [70, 150]   # cell 4 options
 # roi_x_lim = 20          #
@@ -122,7 +122,7 @@ test_band, peak = memb.membOutDet(yfp_band,
 hpca_band = slc.bandExtract(hpca_frame, xy0, xy1)
 
 
-hpca_roi = np.mean(hpca[roi_start[0]:roi_start[0]+roi_x_lim, \
+hpca_roi = np.mean(hpca_frame[roi_start[0]:roi_start[0]+roi_x_lim, \
                    roi_start[1]:roi_start[1]+roi_y_lim])
 
 logging.info('HPCA-TFP ROI mean value: {:.3f}'.format(hpca_roi))
