@@ -66,7 +66,7 @@ def cellMass(img):
 
     """
 
-    mass_mask = filters.hessian(img, sigmas=range(10, 28, 1))
+    mass_mask = filters.hessian(img, sigmas=range(20, 28, 1))
     mass_cntr = msr.center_of_mass(mass_mask)
     mass_coord = [np.int(mass_cntr[1]), np.int(mass_cntr[0])]
 
@@ -115,6 +115,11 @@ def backCon(img, edge_lim=20, dim=3):
         img[img < 0] = 0
 
         return img
+
+def cellRegion(img):
+    """ Detection of cell region.
+    
+    """
 
 
 if __name__=="__main__":

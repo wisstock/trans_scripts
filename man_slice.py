@@ -24,9 +24,9 @@ import slicing as slc
 import threshold as ts
 import membrane as memb
 
-plt.style.use('dark_background')
-plt.rcParams['figure.facecolor'] = '#272b30'
-plt.rcParams['image.cmap'] = 'inferno'
+# plt.style.use('dark_background')
+# plt.rcParams['figure.facecolor'] = '#272b30'
+plt.rcParams['image.cmap'] = 'gray'
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(level=logging.INFO,
@@ -172,41 +172,94 @@ logging.info('Relative membrane count {:.3f}'.format(memb/(cell+memb)))
 roi = patches.Rectangle((roi_start[0],roi_start[1]),
                         roi_y_lim,
                         roi_x_lim,
-                        linewidth=1,
-                        edgecolor='b',
+                        linewidth=2,
+                        edgecolor='w',
                         facecolor='none')
 
+# x = np.array(range(len(hpca_band)))
+# px = x[np.logical_and(x>=memb_lim[0], x<=peak[0])]
 
-ax = plt.subplot(212)
-ax.plot(yfp_band, label='membYFP')
-ax.plot(hpca_band, label='HPCA-TFP')
-ax.plot(test_band, linestyle='dashed')
-ax.axvline(peak[0], 0, 1000)
-ax.axvline(peak[1], 0, 1000)
-ax.axvline(memb_lim[0], 0, 1000,
-           linestyle='dashed')
-ax.axvline(memb_lim[1], 0, 1000,
-           linestyle='dashed')
-# ax.plot(memb_loc, label='Memb. loc.', linestyle='dashed')
-ax.legend(loc='upper left')
+# ax = plt.subplot()  # 212)
+# # ax.plot(yfp_band,
+# #         linestyle='-',
+# #         label='Вихідний\nпереріз',
+# #         color='k',
+# #         linewidth=2)
+# ax.plot(hpca_band,
+#         linestyle='-',
+#         color='k',
+#         linewidth=2)
+# # ax.plot(test_band,
+# #         linestyle='--',
+# #         label='Замаскований\nпереріз',
+# #         color='k',
+# #         linewidth=2)
+# ax.axvline(peak[0], 0, 1000,
+#            color='k',
+#            linewidth=1.5,
+#            linestyle='-')
+# ax.axvline(peak[1], 0, 1000,
+#            color='k',
+#            linewidth=1.5,
+#            linestyle='-')
+# ax.axvline(memb_lim[0], 0, 1000,
+#            linestyle='--',
+#            color='k',
+#            linewidth=1.5)
+# ax.axvline(memb_lim[1], 0, 1000,
+#            linestyle='--',
+#            color='k',
+#            linewidth=1.5)
+# ax.set_xlabel('Позиція у перерізі (пікселі)',
+#               fontweight='bold')
+# ax.set_ylabel('Інтенсивність',
+#               fontweight='bold')
 
-ax1 = plt.subplot(221)
-ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]])
-slc1 = ax1.imshow(yfp_frame)
-div1 = make_axes_locatable(ax1)
-cax1 = div1.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc1, cax=cax1)
-ax1.set_title('membYFP')
-ax1.add_patch(roi)
+# ax.fill_between(x, hpca_band, 
+#                 where= (x>=memb_lim[0]) & (x<=peak[0]),
+#                 facecolor="none",
+#                 hatch="\\\\\\////",
+#                 edgecolor="k")
+# ax.fill_between(x, hpca_band, 
+#                 where= (x<=memb_lim[1]) & (x>=peak[1]),
+#                 facecolor="none",
+#                 hatch="\\\\\\////",
+#                 edgecolor="k")
 
-ax2 = plt.subplot(222)
-ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]])
+# legend_properties = {'weight':'bold'}
+# plt.legend(loc='upper right',
+#             prop=legend_properties)
+
+# ax1 = plt.subplot()  # 221)
+# ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]],
+#          color='w',
+#          linewidth=2)
+# ax1.plot(cntr[0], cntr[1], 'ro',
+#          color='w',
+#          linewidth=2)
+# slc1 = ax1.imshow(yfp_frame)
+# div1 = make_axes_locatable(ax1)
+# cax1 = div1.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc1, cax=cax1)
+# ax1.set_title('membYFP')
+# ax1.axes.xaxis.set_visible(False)
+# ax1.axes.yaxis.set_visible(False)
+
+ax2 = plt.subplot()  # 222)
+ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]],
+         color='w',
+         linewidth=2)
+ax2.plot(cntr[0], cntr[1], 'ro',
+         color='w',
+         linewidth=2)
 slc2 = ax2.imshow(hpca_frame)
 div2 = make_axes_locatable(ax2)
 cax2 = div2.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slc2, cax=cax2)
-ax2.set_title('HPCA-TFP')
-# ax2.add_patch(roi)
+# ax2.set_title('HPCA-TFP')
+ax2.add_patch(roi)
+ax2.axes.xaxis.set_visible(False)
+ax2.axes.yaxis.set_visible(False)
 
 # plt.suptitle('Samp {}_2, frame {}, angle {}'.format(samp, (frame+1), angl))
 plt.show()
