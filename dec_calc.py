@@ -33,14 +33,14 @@ logging.basicConfig(format=FORMAT,
 logger = logging.getLogger('DeconvolutionCLI')
 
 
-n_iter = 30
+n_iter = 32
 scaling_factor = 5  # substraction region part for background calculaion
 
 
-input_path = os.path.join(sys.path[0], '.temp/cell4_5/cell5')
-output_path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
+input_path = os.path.join(sys.path[0], 'data')
+output_path = os.path.join(sys.path[0], 'data')
 
-psf_path = os.path.join(sys.path[0], 'dec/cell4_5')
+psf_path = os.path.join(sys.path[0], 'data')
 
 
 start_time = timer()
@@ -57,14 +57,14 @@ for root, dirs, files in os.walk(input_path):  # loop over the OIF files
     		processed_img = ts.backCon(img, np.shape(img)[1] // scaling_factor)  # background extraction
 
     		z_scale = np.shape(processed_img)[0]  # z direcion size for PSF calclation
-    		rw_args = {'shape': (z_scale // 2, 85),  # number of samples in z and r direction
-                       'dims': (49, 70),   # size in z and r direction in micrometers
-                       'ex_wavelen': 488.0,  # excitation wavelength in nanometers
-                       'em_wavelen': 510.0,  # emission wavelength in nanometers
-                       'num_aperture': 0.9,
+    		rw_args = {'shape': (z_scale // 2, 159),  # number of samples in z and r direction
+                       'dims': (11, 16),   # size in z and r direction in micrometers
+                       'ex_wavelen': 515.0,  # excitation wavelength in nanometers
+                       'em_wavelen': 527.0,  # emission wavelength in nanometers
+                       'num_aperture': 1.0,
                        'refr_index': 1.333,
                        'magnification': 60.0,
-                       'pinhole_radius': 0.12,  # in mm
+                       'pinhole_radius': 0.250,  # in mm
                        'pinhole_shape': 'round'}
 
     		psf_rw = psf.psfRiWo(rw_args)  # calcilating PSF

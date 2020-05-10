@@ -26,7 +26,7 @@ import membrane as memb
 
 # plt.style.use('dark_background')
 # plt.rcParams['figure.facecolor'] = '#272b30'
-plt.rcParams['image.cmap'] = 'gray'
+plt.rcParams['image.cmap'] = 'magma'
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(level=logging.INFO,
@@ -169,6 +169,106 @@ logging.info('Relative membrane count {:.3f}'.format(memb/(cell+memb)))
 #     elif i >= coord[1][1]:
 #         memb_loc.append(0)
 
+
+
+# ### HPCA-TFP plot with filled membrane areas
+# ## style settings
+# plot_col = '0.3'
+# memb_col = 'r'
+# edge_col = 'r'
+
+# memb_line = '-'
+# edge_line = '--'
+
+# size = 2
+
+
+# x = np.array(range(len(hpca_band)))
+# px = x[np.logical_and(x>=memb_lim[0], x<=peak[0])]
+
+# ax = plt.subplot()  # 212)
+# ax.plot(hpca_band,
+#         linestyle='-',
+#         color=plot_col,
+#         linewidth=2.3)
+# ax.axvline(peak[0], 0, 1000,  # lefp memb peak
+#            color=memb_col,
+#            linewidth=size,
+#            linestyle=memb_line)
+# ax.axvline(peak[1], 0, 1000,  # right memb peak
+#            color=memb_col,
+#            linewidth=size,
+#            linestyle=memb_line)
+# ax.axvline(memb_lim[0], 0, 1000,  # left cell edge
+#            color=edge_col,
+#            linestyle=edge_line,
+#            linewidth=size)
+# ax.axvline(memb_lim[1], 0, 1000,  # right memnb edge
+#            color=edge_col,
+#            linestyle=edge_line,
+#            linewidth=size)
+# ax.set_xlabel('Позиція у перерізі (пікселі)',
+#               fontweight='bold')
+# ax.set_ylabel('Інтенсивність',
+#               fontweight='bold')
+
+# ax.fill_between(x, hpca_band,  # left memb area filling
+#                 where= (x>=memb_lim[0]) & (x<=peak[0]),
+#                 facecolor=memb_col,
+#                 # hatch="\\\\\\////",
+#                 edgecolor=memb_col,
+#                 alpha=.5)
+# ax.fill_between(x, hpca_band,  # right memb area filling
+#                 where= (x<=memb_lim[1]) & (x>=peak[1]),
+#                 facecolor=memb_col,
+#                 # hatch="\\\\\\////",
+#                 edgecolor=memb_col,
+#                 alpha=.5)
+
+
+
+# ### membYFP plot with masked slice regions
+# ## style settings
+# plot_col = '0.3'
+# memb_col = 'r'
+# test_col = 'y'
+
+# memb_line = '-'
+# test_line = '--'
+
+# size = 2
+
+# ax = plt.subplot()  # 212)
+# ax.plot(test_band,
+#         linestyle=test_line,
+#         label='Замаскований\nпереріз',
+#         color=test_col,
+#         linewidth=2)
+# ax.plot(yfp_band,
+#         linestyle='-',
+#         label='Вихідний\nпереріз',
+#         color=plot_col,
+#         linewidth=2.3)
+# ax.axvline(peak[0], 0, 1000,  # lefp memb peak
+#            color=memb_col,
+#            linewidth=size,
+#            linestyle=memb_line)
+# ax.axvline(peak[1], 0, 1000,  # right memb peak
+#            color=memb_col,
+#            linewidth=size,
+#            linestyle=memb_line)
+# ax.set_xlabel('Позиція у перерізі (пікселі)',
+#               fontweight='bold')
+# ax.set_ylabel('Інтенсивність',
+#               fontweight='bold')
+
+# legend_properties = {'weight':'bold'}
+# plt.legend(loc='upper right',
+#             prop=legend_properties)
+
+
+### slice vis
+# image with ROI
 roi = patches.Rectangle((roi_start[0],roi_start[1]),
                         roi_y_lim,
                         roi_x_lim,
@@ -176,61 +276,8 @@ roi = patches.Rectangle((roi_start[0],roi_start[1]),
                         edgecolor='w',
                         facecolor='none')
 
-# x = np.array(range(len(hpca_band)))
-# px = x[np.logical_and(x>=memb_lim[0], x<=peak[0])]
 
-# ax = plt.subplot()  # 212)
-# # ax.plot(yfp_band,
-# #         linestyle='-',
-# #         label='Вихідний\nпереріз',
-# #         color='k',
-# #         linewidth=2)
-# ax.plot(hpca_band,
-#         linestyle='-',
-#         color='k',
-#         linewidth=2)
-# # ax.plot(test_band,
-# #         linestyle='--',
-# #         label='Замаскований\nпереріз',
-# #         color='k',
-# #         linewidth=2)
-# ax.axvline(peak[0], 0, 1000,
-#            color='k',
-#            linewidth=1.5,
-#            linestyle='-')
-# ax.axvline(peak[1], 0, 1000,
-#            color='k',
-#            linewidth=1.5,
-#            linestyle='-')
-# ax.axvline(memb_lim[0], 0, 1000,
-#            linestyle='--',
-#            color='k',
-#            linewidth=1.5)
-# ax.axvline(memb_lim[1], 0, 1000,
-#            linestyle='--',
-#            color='k',
-#            linewidth=1.5)
-# ax.set_xlabel('Позиція у перерізі (пікселі)',
-#               fontweight='bold')
-# ax.set_ylabel('Інтенсивність',
-#               fontweight='bold')
-
-# ax.fill_between(x, hpca_band, 
-#                 where= (x>=memb_lim[0]) & (x<=peak[0]),
-#                 facecolor="none",
-#                 hatch="\\\\\\////",
-#                 edgecolor="k")
-# ax.fill_between(x, hpca_band, 
-#                 where= (x<=memb_lim[1]) & (x>=peak[1]),
-#                 facecolor="none",
-#                 hatch="\\\\\\////",
-#                 edgecolor="k")
-
-# legend_properties = {'weight':'bold'}
-# plt.legend(loc='upper right',
-#             prop=legend_properties)
-
-# ax1 = plt.subplot()  # 221)
+# ax1 = plt.subplot()  # 121)
 # ax1.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]],
 #          color='w',
 #          linewidth=2)
@@ -241,11 +288,11 @@ roi = patches.Rectangle((roi_start[0],roi_start[1]),
 # div1 = make_axes_locatable(ax1)
 # cax1 = div1.append_axes('right', size='3%', pad=0.1)
 # plt.colorbar(slc1, cax=cax1)
-# ax1.set_title('membYFP')
+# # ax1.set_title('membYFP')
 # ax1.axes.xaxis.set_visible(False)
 # ax1.axes.yaxis.set_visible(False)
 
-ax2 = plt.subplot()  # 222)
+ax2 = plt.subplot()  # 122)
 ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]],
          color='w',
          linewidth=2)

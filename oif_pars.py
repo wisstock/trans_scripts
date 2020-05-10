@@ -36,12 +36,12 @@ logging.basicConfig(level=logging.DEBUG,
                                         # filemode="w"
 
 
-data_path = os.path.join(sys.path[0], '.temp/')
-output_path =os.path.join(sys.path[0], '.temp/cell4')
+data_path = os.path.join(sys.path[0], '.temp/data/Cell3')
+output_path =os.path.join(sys.path[0], '.temp/data/')
 
-cell = 'Cell4-5/'
-cell_path = os.path.join(data_path, cell)
-logging.info('Dir path: %s' % cell_path)
+# cell = '20180718-1316-0008.oif.files/'
+# cell_path = os.path.join(data_path, cell)
+# logging.info('Dir path: %s' % cell_path)
 
 
 for root, dirs, files in os.walk(data_path):  # loop over the OIF files

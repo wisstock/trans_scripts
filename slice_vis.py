@@ -45,7 +45,7 @@ logging.basicConfig(level=logging.INFO,
 
 
 
-wd_path = os.path.join(sys.path[0], '.temp/cell4_5')  # os.path.join(sys.path[0], '.temp/data/cell1.tif')
+wd_path = os.path.join(sys.path[0], '.temp/data')  # os.path.join(sys.path[0], '.temp/data/cell1.tif')
 dec_path = os.path.join(sys.path[0], 'dec/cell4_5/cell5')
 
 # raw_file = '20180718-1323-0010_ch2.tif'  # '20180718-1316-0008_ch1.tif'
