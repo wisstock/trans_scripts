@@ -1,0 +1,10 @@
+    		z_scale = np.shape(processed_img)[0]  # z direcion size for PSF calclation
+    		rw_args = {'shape': (z_scale // 2, 159),  # number of samples in z and r direction
+                       'dims': (10, 32),   # size in z and r direction in micrometers
+                       'ex_wavelen': 513.0,  # excitation wavelength in nanometers
+                       'em_wavelen': 527.0,  # emission wavelength in nanometers
+                       'num_aperture': 1.0,
+                       'refr_index': 1.333,
+                       'magnification': 60.0,
+                       'pinhole_radius': 0.250,  # in mm
+                       'pinhole_shape': 'round'}

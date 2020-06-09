@@ -44,17 +44,15 @@ plt.rcParams['image.cmap'] = 'inferno'
 
 
 
-data_path = os.path.join(sys.path[0], '.temp/data/cell1.tif')  # "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
-output_path = os.path.join(sys.path[0], '.temp/data/dec_rw_30_rb.tif')  # "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/dec_gl_300.tif"
+raw_path = os.path.join(sys.path[0], 'data/yfp/yfp.tif')  # "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/cell1.tif"
+dec_path = os.path.join(sys.path[0], 'data/yfp_dec_128.tif')  # "/home/astria/Bio/Lab/scripts/trans_scripts/.temp/data/dec_gl_300.tif"
 
-print(data_path)
 frame_1 = 3
 frame_2 = 10
 frame_3 = 17
 
-
-raw = tifffile.imread(data_path)
-dec = tifffile.imread(output_path)
+raw = tifffile.imread(raw_path)
+dec = tifffile.imread(dec_path)
 
 
 img_raw_1 = raw[frame_1,:,:]
@@ -81,7 +79,7 @@ slice_1 = ax1.imshow(img_dec_1)
 divider_1 = make_axes_locatable(ax1)
 cax = divider_1.append_axes("right", size="3%", pad=0.1)
 plt.colorbar(slice_1, cax=cax)
-ax1.set_title('Deconvoluted, frame %s' % frame_1)
+ax1.set_title('Deconvolved, frame %s' % frame_1)
 
 ax2 = plt.subplot(232)
 slice_2 = ax2.imshow(img_raw_2)
@@ -97,7 +95,7 @@ slice_3 = ax3.imshow(img_dec_2)
 divider_3 = make_axes_locatable(ax3)
 cax = divider_3.append_axes("right", size="3%", pad=0.1)
 plt.colorbar(slice_3, cax=cax)
-ax3.set_title('Deconvoluted, frame %s' % frame_2)
+ax3.set_title('Deconvolved, frame %s' % frame_2)
 
 ax4 = plt.subplot(233)
 slice_4 = ax4.imshow(img_raw_3)
@@ -113,6 +111,6 @@ slice_5 = ax5.imshow(img_dec_3)
 divider_5 = make_axes_locatable(ax5)
 cax = divider_5.append_axes("right", size="3%", pad=0.1)
 plt.colorbar(slice_5, cax=cax)
-ax5.set_title('Deconvoluted, frame %s' % frame_3)
+ax5.set_title('Deconvolved, frame %s' % frame_3)
 
 plt.show()
