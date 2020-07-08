@@ -172,10 +172,15 @@ def membOutDet(input_slc, cell_mask=10, outer_mask=30, det_cutoff=0.75):
                                              slc_left.max()],
                                      distance=10)
 
+    logging.info('Left peak val {:.2f}'.format(slc_left[left_peak[0]]))
+
     right_peak, _ = signal.find_peaks(slc_right,
                                       height=[slc_right.max()*det_cutoff,
                                               slc_right.max()],
                                       distance=10)
+
+    logging.info('Right peak val {:.2f}'.format(slc_right[right_peak[0]]))
+
     memb_peaks = []
 
     try:

@@ -2,7 +2,7 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Manual diam slice stat calculationg
+Manual diam slice stat calculation
 
 """
 
@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.INFO,
 
 path = os.path.join(sys.path[0], 'raw_data/3/')
 
-angl = 150
+angl = 200
 peal_cutoff = 0.85
 
 # cell_px = 45            #
@@ -65,24 +65,29 @@ roi_y_lim = 20          #
 # hoi = 0.75
 scaling = 6
 
-for root, dirs, files in os.walk(path):
-    for file in files:
-    	if file.endswith('.tif'):
+# for root, dirs, files in os.walk(path):
+#     for file in files:
+#     	if file.endswith('.tif'):
 
-            samp = file.split('_')[0]
-            file_path = os.path.join(root, file)
-            img = tifffile.imread(file_path)
+#             samp = file.split('_')[0]
+#             file_path = os.path.join(root, file)
+#             img = tifffile.imread(file_path)
 
-            if file.split('.')[0] == 'HPCATFP':
-                hpca = img
-                logging.info('HPCA-TFP data uploaded')
-            elif file.split('.')[0] == 'membYFP':
-                yfp = img
-                logging.info('membYFP data uploaded')
-            else:
-            	logging.error('INCORRECT channels notation!')
-            	sys.exit()
+#             if file.split('.')[0] == 'HPCATFP':
+#                 hpca = img
+#                 logging.info('HPCA-TFP data uploaded')
+#             elif file.split('.')[0] == 'membYFP':
+#                 yfp = img
+#                 logging.info('membYFP data uploaded')
+#             else:
+#             	logging.error('INCORRECT channels notation!')
+#             	sys.exit()
 
+hpca_stack = tifffile.imread(os.path.join(sys.path[0], 'data/hpca/hpca.tif'))
+yfp_stack = tifffile.imread(os.path.join(sys.path[0], 'data/yfp/yfp.tif'))
+
+hpca = hpca_stack[12,:,:]
+yfp = yfp_stack[10,:,:]
 
 hpca_frame = ts.backCon(hpca, edge_lim=np.shape(hpca)[1] // scaling, dim=2)
 yfp_frame = ts.backCon(yfp, edge_lim=np.shape(yfp)[1] // scaling, dim=2)
@@ -97,6 +102,7 @@ cntr = ts.cellMass(yfp_frame)
 xy0, xy1 = slc.lineSlice(yfp_frame, angl, cntr)
 
 yfp_band = slc.bandExtract(yfp_frame, xy0, xy1)
+
 
 test_band, peak = memb.membOutDet(yfp_band,
                                    cell_mask=cell_px,
@@ -268,13 +274,13 @@ logging.info('Relative membrane count {:.3f}'.format(memb/(cell+memb)))
 
 
 ### slice vis
-# image with ROI
-roi = patches.Rectangle((roi_start[0],roi_start[1]),
-                        roi_y_lim,
-                        roi_x_lim,
-                        linewidth=2,
-                        edgecolor='w',
-                        facecolor='none')
+# # image with ROI
+# roi = patches.Rectangle((roi_start[0],roi_start[1]),
+#                         roi_y_lim,
+#                         roi_x_lim,
+#                         linewidth=2,
+#                         edgecolor='w',
+#                         facecolor='none')
 
 
 # ax1 = plt.subplot()  # 121)
@@ -292,21 +298,21 @@ roi = patches.Rectangle((roi_start[0],roi_start[1]),
 # ax1.axes.xaxis.set_visible(False)
 # ax1.axes.yaxis.set_visible(False)
 
-ax2 = plt.subplot()  # 122)
-ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]],
-         color='w',
-         linewidth=2)
-ax2.plot(cntr[0], cntr[1], 'ro',
-         color='w',
-         linewidth=2)
-slc2 = ax2.imshow(hpca_frame)
-div2 = make_axes_locatable(ax2)
-cax2 = div2.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc2, cax=cax2)
-# ax2.set_title('HPCA-TFP')
-ax2.add_patch(roi)
-ax2.axes.xaxis.set_visible(False)
-ax2.axes.yaxis.set_visible(False)
+# ax2 = plt.subplot()  # 122)
+# ax2.plot([xy0[0], xy1[0]], [xy0[1], xy1[1]],
+#          color='w',
+#          linewidth=2)
+# ax2.plot(cntr[0], cntr[1], 'ro',
+#          color='w',
+#          linewidth=2)
+# slc2 = ax2.imshow(hpca_frame)
+# div2 = make_axes_locatable(ax2)
+# cax2 = div2.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc2, cax=cax2)
+# # ax2.set_title('HPCA-TFP')
+# ax2.add_patch(roi)
+# ax2.axes.xaxis.set_visible(False)
+# ax2.axes.yaxis.set_visible(False)
 
-# plt.suptitle('Samp {}_2, frame {}, angle {}'.format(samp, (frame+1), angl))
-plt.show()
+# # plt.suptitle('Samp {}_2, frame {}, angle {}'.format(samp, (frame+1), angl))
+# plt.show()

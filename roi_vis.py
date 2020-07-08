@@ -34,7 +34,7 @@ plt.rcParams['figure.facecolor'] = '#272b30'
 plt.rcParams['image.cmap'] = 'inferno'
 
 
-data_path = os.path.join(sys.path[0], 'data/hpca_dec_16.tif')
+data_path = os.path.join(sys.path[0], 'data/hpca_dec_4.tif')
 # data_path = os.path.join(sys.path[0], 'data/hpca/hpca.tif')
 
 

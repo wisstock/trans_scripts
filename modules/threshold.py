@@ -97,13 +97,13 @@ def backCon(img, edge_lim=20, dim=3):
         edge_stack = img[:,:edge_lim,:edge_lim]
         mean_back = np.mean(edge_stack)
 
-        logging.info('Mean background, %s px region: %s' % (edge_lim, mean_back))
+        logging.info('Mean background, {} px region: {:.3f}'.format(edge_lim, mean_back))
 
-        img = np.copy(img)
-        img = img - mean_back
-        img[img < 0] = 0
+        img_out = np.copy(img)
+        img_out = img_out - mean_back
+        img_out[img_out < 0] = 0
 
-        return img
+        return img_out
     elif dim == 2:
         edge_fragment = img[:edge_lim,:edge_lim]
         mean_back = np.mean(edge_fragment)
