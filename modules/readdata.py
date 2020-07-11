@@ -11,13 +11,11 @@ import os
 import sys
 import logging
 
-# import matplotlib
-# import matplotlib.pyplot as plt
 import numpy as np
-
 from skimage.external import tifffile
-
 from skimage.filters import scharr
+
+import oiffile as oif
 
 
 def oneTiff(file_name, channel=0, frame_number=0, camera_offset=250):
@@ -115,6 +113,30 @@ def readZ(path):
                     sys.exit()
 
     return(yfp, hpca)
+
+
+def OIFpars(data_path, ouput_path):
+    """ OIF image data automatic extractions to TIF series.
+
+    """
+
+    for root, dirs, files in os.walk(data_path):  # loop over the OIF files
+    for file in files:
+        if file.endswith('.oif'):
+            logging.debug('File %s in work' % file)
+
+            file_path = os.path.join(root, file)
+   
+            oif_raw = oif.OibImread(file_path)
+            logging.debug(np.shape(oif_raw))
+
+            for i in range(np.shape(oif_raw)[0]):
+                tif_name = '%s_ch%s.tif' % (file.split('.')[0], i+1)
+                tifffile.imsave(os.path.join(output_path, tif_name), oif_raw[i,:,:,:])
+
+                logging.info('File %s, channel %s saved' % (tif_name, i+1))
+
+
 
 
 if __name__=="__main__":
