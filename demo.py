@@ -74,7 +74,7 @@ roi_lim = 30
 
 
 img_0 = yfp_raw_stack[frame,:,:]
-img_gauss = filters.gaussian(img_0, sigma=1)
+img_gauss = filters.gaussian(img_0, sigma=3)
 
 
 noise_sd = np.std(img_gauss[:20,:20])
@@ -85,33 +85,45 @@ roi_cyto = np.mean(img_gauss[roi_start[0]:roi_start[0]+roi_lim,\
                    roi_start[1]:roi_start[1]+roi_lim])
 logging.info('Cytoplasm ROI mean value {:.3f}'.format(roi_cyto))
 
-mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
-                                           low=0.1*np.max(img_gauss),
-                                           high=0.8*np.max(img_gauss))
+low_memb = 0.38
+low_cell = 0.27
+hyst_memb = filters.apply_hysteresis_threshold(img_gauss,
+                                           low=low_memb*np.max(img_gauss),  # 0.07
+                                           high=0.8*np.max(img_gauss))  # 0.8
+hyst_cell = filters.apply_hysteresis_threshold(img_gauss,
+                                           low=low_cell*np.max(img_gauss),  # 0.07
+                                           high=0.8*np.max(img_gauss))  # 0.8
 
-gauss_sd_masked = ma.masked_greater(img_gauss, 2*noise_sd)
-gauss_cyto_masked = ma.masked_greater(img_gauss, roi_cyto)
+hyst_cell_masked = ma.masked_where(~hyst_cell, img_0)
+hyst_memb_masked = ma.masked_where(~hyst_memb, img_0)
 
-raw_hyst_masked = ma.masked_where(~mask_hyst, img_0)
-raw_sd_masked = ma.masked_greater(img_0, 2*noise_sd)
-hyst_sd_masked = ma.masked_greater(raw_hyst_masked, 2*noise_sd)
+raw_sd_masked = ma.masked_greater_equal(img_0, 2*noise_sd)
 raw_cyto_masked = ma.masked_greater(img_0, roi_cyto)
 
+hyst_memb_cyto = ma.masked_where(~hyst_memb, raw_cyto_masked)
+hyst_cell_sd = ma.masked_where(~hyst_cell, raw_sd_masked)
 
 
-img_1 = img_gauss
-img_2 = mask_hyst
-img_4 = gauss_sd_masked  # raw_sd_masked
-img_5 = hyst_sd_masked
-img_6 = gauss_cyto_masked  # raw_cyto_masked
 
 
-ax0 = plt.subplot(231)
+
+img_1 = hyst_cell_masked
+img_2 = hyst_memb_masked
+
+img_3 = raw_cyto_masked
+img_4 = raw_sd_masked
+
+img_5 = hyst_cell_sd
+img_6 = hyst_memb_cyto
+
+
+
+ax0 = plt.subplot()  # 231)
 slc0 = ax0.imshow(img_0)
 div0 = make_axes_locatable(ax0)
 cax0 = div0.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slc0, cax=cax0)
-ax0.set_title('IMG')
+ax0.set_title('CYTO ROI')
 ax0.add_patch(patches.Rectangle((roi_start[0], roi_start[1]),
               roi_lim,
               roi_lim,
@@ -119,32 +131,31 @@ ax0.add_patch(patches.Rectangle((roi_start[0], roi_start[1]),
               edgecolor='w',
               facecolor='none'))
 
-ax2 = plt.subplot(232)
-slc2 = ax2.imshow(img_4)
-div2 = make_axes_locatable(ax2)
-cax2 = div2.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc2, cax=cax2)
-# ax2.plot(init[:, 1], init[:, 0], '--r', lw=3)
-# ax2.plot(img_6[:, 1], img_6[:, 0], '-b', lw=3)
-ax2.set_title('<2SD, sd={:.2f}'.format(noise_sd))
+# ax2 = plt.subplot(234)
+# slc2 = ax2.imshow(img_4)
+# div2 = make_axes_locatable(ax2)
+# cax2 = div2.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc2, cax=cax2)
+# ax2.set_title('2SD')
 
-ax5 = plt.subplot(233)
-slc5 = ax5.imshow(img_6)
-div5 = make_axes_locatable(ax5)
-cax5 = div5.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc5, cax=cax5)
-ax5.set_title('<CYTO, mean={:.2f}'.format(roi_cyto))
+# ax5 = plt.subplot(235)
+# slc5 = ax5.imshow(img_5)
+# div5 = make_axes_locatable(ax5)
+# cax5 = div5.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc5, cax=cax5)
+# ax5.set_title('2SD+HYST (low={})'.format(low_cell))
 
-ax1 = plt.subplot(234)
-ax1.imshow(img_2)  # cmap=plt.cm.gray)
-ax1.set_title('HYST MASK')
+# ax1 = plt.subplot(133)  # 234)
+# ax1.imshow(hyst_memb)  # cmap=plt.cm.gray)
+# ax1.imshow(hyst_cell, alpha=0.3)
+# ax1.set_title('HYST MASK')
 
-ax3 = plt.subplot(235)
-slc3 = ax3.imshow(img_5)
-div3 = make_axes_locatable(ax3)
-cax3 = div3.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc3, cax=cax3)
-ax3.set_title('2SD+HYST')
+# ax3 = plt.subplot(232)
+# slc3 = ax3.imshow(img_6)
+# div3 = make_axes_locatable(ax3)
+# cax3 = div3.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc3, cax=cax3)
+# ax3.set_title('CYTO+HYST (low={})'.format(low_memb))
 
 # ax4 = plt.subplot(236)
 # slc4 = ax4.imshow(img_3)
