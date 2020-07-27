@@ -76,18 +76,6 @@ def cellMass(img):
     return mass_coord
 
 
-def cellEdge(img, sigmas=[8,20,1]):
-    """ Returns the cell edge mask generating by modifyed Hessian filter.
-
-    """
-    output = filters.hessian(img,
-                             sigmas=range(sigmas[0],
-                                          sigmas[1],
-                                          sigmas[2]))
-    
-    return output
-
-
 def backCon(img, edge_lim=20, dim=3):
     """ Background extraction in TIFF series
 
@@ -100,7 +88,7 @@ def backCon(img, edge_lim=20, dim=3):
         edge_stack = img[:,:edge_lim,:edge_lim]
         mean_back = np.mean(edge_stack)
 
-        logging.info('Mean background, {} px region: {:.3f}'.format(edge_lim, mean_back))
+        logging.debug('Mean background, {} px region: {:.3f}'.format(edge_lim, mean_back))
 
         img_out = np.copy(img)
         img_out = img_out - mean_back
@@ -111,7 +99,7 @@ def backCon(img, edge_lim=20, dim=3):
         edge_fragment = img[:edge_lim,:edge_lim]
         mean_back = np.mean(edge_fragment)
 
-        logging.info('Mean background, %s px region: %s' % (edge_lim, mean_back))
+        logging.debug('Mean background, %s px region: %s' % (edge_lim, mean_back))
 
         img = np.copy(img)
         img = img - mean_back

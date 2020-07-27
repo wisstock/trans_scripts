@@ -11,10 +11,15 @@ import os
 import logging
 
 import numpy as np
+import numpy.ma as ma
 import yaml
 import pandas as pd
+from skimage import filters
+from skimage import measure
 
 import oiffile as oif
+import edge
+
 
 def WDPars(wd_path, mode='fluo'):
     """ Parser for data dirrectory and YAML methadata file
@@ -45,7 +50,9 @@ def WDPars(wd_path, mode='fluo'):
 
                 if data_name in data_metha.keys():
                     data_path = os.path.join(root, file)
-                    fluo_list.append(FluoData(data_path, data_metha[data_name]))
+                    fluo_list.append(FluoData(data_path, cycles=data_metha[data_name]))
+
+                    logging.info('File {} uploaded!'.format(data_path))
 
     return fluo_list
 
@@ -55,7 +62,6 @@ class OifPars(oif.OifFile):
     of the OfFice class. Methods for extracting file metadata.
 
     """
-
     @property
     def geometry(self):
         """Return linear size in um from mainfile"""
@@ -114,16 +120,33 @@ class FluoData:
     """ Time series in NP-EGTA + Fluo-4 test experiment series
 
     """
-    def __init__(self, oif_input, exposure, cycles=1, max_frame=25):
+    def __init__(self, oif_input, exposure=10, cycles=1, max_frame=24, background_rm=True):
+        self.img_series = oif.OibImread(oif_input)[0,:,:,:]  # z-stack frames series
 
-        logging.debug('File {} uploaded!'.format(oif_input))
+        if background_rm:  # background remove option
+            for frame in range(0, np.shape(self.img_series)[0]):
+                self.img_series[frame] = edge.backCon(self.img_series[frame],
+                                                      edge_lim=10,
+                                                      dim=2)
+            logging.info('Background removed!')
 
+        self.max_frame = self.img_series[max_frame,:,:]      # first frame after 405 nm exposure (max intensity)
+        self.exposure = exposure                             # exposure of 405 nm
+        self.cycles = cycles                            # exposures cucles number
 
-        self.img_series = oif.OibImread(oif_input)[0,:,:,:]
-        self.stimilus_frame = self.img_series[max_frame,:,:]
-        self.exposure = exposure
-        self.stim_cycles = cycles
+    def relInt(self, low_lim=0.1, high_lim=0.8, sigma=3, mask=False):
+        self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)
 
+        self.cell_mask = filters.apply_hysteresis_threshold(self.max_frame,
+                                                            low=low_lim*np.max(self.max_frame),
+                                                            high=high_lim*np.max(self.max_frame))
+
+        rel_int = [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3)
+                   for img in self.img_series]
+
+        if mask:
+            return self.cell_mask
+        return rel_int
 
 # class FRETData:
 #   """ One registation in co-transfected cell after uncaging
