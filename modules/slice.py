@@ -243,6 +243,7 @@ def lineSlice(img, angle=1, cntr_coord="center"):
 
     return([x0, y0], [x1, y1])
 
+
 def radiusSlice(img, angl=1, cntr_coord="center"):
     """ Returns coordinates of intersection points for the image edges
     and the line starting from center point at the set up angle. 
@@ -390,6 +391,7 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
 
     return([x_cntr, y_cntr], [x0, y0])
 
+
 def lineExtract(img, start_coors, end_coord):
     """ Returns values ​​of pixels intensity along the line
     with specified ends coordinates.
@@ -410,6 +412,7 @@ def lineExtract(img, start_coors, end_coord):
     output = np.array(img[x.astype(np.int), y.astype(np.int)])
 
     return output
+
 
 def bandExtract(img, start_coors, end_coord, band_width=2, mode="mean"):
     """ Returns values ​​of pixels intensity in fixed neighborhood (in pixels)

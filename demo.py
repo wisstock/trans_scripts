@@ -29,8 +29,8 @@ from skimage.util import compare_images
 
 
 sys.path.append('modules')
-import threshold as ts
-import membrane as memb
+import edge
+# import membrane as memb
 # import readdata as rd
 
 
@@ -56,10 +56,10 @@ hpca_dec_stack = hpca_dec_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi
 
 a = 1
 if a:
-    yfp_raw_stack = ts.backCon(yfp_raw_stack)
-    yfp_dec_stack = ts.backCon(yfp_dec_stack)
-    hpca_raw_stack = ts.backCon(hpca_raw_stack)
-    hpca_dec_stack = ts.backCon(hpca_dec_stack)
+    yfp_raw_stack = edge.backCon(yfp_raw_stack)
+    yfp_dec_stack = edge.backCon(yfp_dec_stack)
+    hpca_raw_stack = edge.backCon(hpca_raw_stack)
+    hpca_dec_stack = edge.backCon(hpca_dec_stack)
 
 yfp_raw_sd = np.std(yfp_raw_stack[:,:20,:20])
 yfp_dec_sd = np.std(yfp_dec_stack[:,:20,:20])
@@ -81,88 +81,92 @@ noise_sd = np.std(img_gauss[:20,:20])
 logging.info('Noise SD={:.3f}'.format(noise_sd))
 
 
-roi_cyto = np.mean(img_gauss[roi_start[0]:roi_start[0]+roi_lim,\
+roi_cyto = np.mean(img_0[roi_start[0]:roi_start[0]+roi_lim,\
                    roi_start[1]:roi_start[1]+roi_lim])
 logging.info('Cytoplasm ROI mean value {:.3f}'.format(roi_cyto))
 
-low_memb = 0.38
-low_cell = 0.27
-hyst_memb = filters.apply_hysteresis_threshold(img_gauss,
-                                           low=low_memb*np.max(img_gauss),  # 0.07
+low_mean = 0.45
+low_2sd = 0.1
+hyst_2sd = filters.apply_hysteresis_threshold(img_gauss,
+                                           low=low_2sd*np.max(img_gauss),  # 0.07
                                            high=0.8*np.max(img_gauss))  # 0.8
-hyst_cell = filters.apply_hysteresis_threshold(img_gauss,
-                                           low=low_cell*np.max(img_gauss),  # 0.07
+hyst_mean = filters.apply_hysteresis_threshold(img_gauss,
+                                           low=low_mean*np.max(img_gauss),  # 0.07
                                            high=0.8*np.max(img_gauss))  # 0.8
 
-hyst_cell_masked = ma.masked_where(~hyst_cell, img_0)
-hyst_memb_masked = ma.masked_where(~hyst_memb, img_0)
 
-raw_sd_masked = ma.masked_greater_equal(img_0, 2*noise_sd)
-raw_cyto_masked = ma.masked_greater(img_0, roi_cyto)
+hyst_mean_masked = ma.masked_where(~hyst_mean, img_0)
+hyst_2sd_masked = ma.masked_where(~hyst_2sd, img_0)
 
-hyst_memb_cyto = ma.masked_where(~hyst_memb, raw_cyto_masked)
-hyst_cell_sd = ma.masked_where(~hyst_cell, raw_sd_masked)
+raw_2sd_masked = ma.masked_greater_equal(img_0, 2*noise_sd)
+raw_mean_masked = ma.masked_greater(img_0, roi_cyto)
 
-
-
-
-
-img_1 = hyst_cell_masked
-img_2 = hyst_memb_masked
-
-img_3 = raw_cyto_masked
-img_4 = raw_sd_masked
-
-img_5 = hyst_cell_sd
-img_6 = hyst_memb_cyto
+hyst_2sd_2sd = ma.masked_where(~hyst_2sd, raw_2sd_masked)
+hyst_mean_mean = ma.masked_where(~hyst_mean, raw_mean_masked)
 
 
 
-ax0 = plt.subplot()  # 231)
-slc0 = ax0.imshow(img_0)
-div0 = make_axes_locatable(ax0)
-cax0 = div0.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc0, cax=cax0)
-ax0.set_title('CYTO ROI')
-ax0.add_patch(patches.Rectangle((roi_start[0], roi_start[1]),
-              roi_lim,
-              roi_lim,
-              linewidth=2,
-              edgecolor='w',
-              facecolor='none'))
 
-# ax2 = plt.subplot(234)
-# slc2 = ax2.imshow(img_4)
-# div2 = make_axes_locatable(ax2)
-# cax2 = div2.append_axes('right', size='3%', pad=0.1)
-# plt.colorbar(slc2, cax=cax2)
-# ax2.set_title('2SD')
+# demo[demo > 0] = 1
+# demo = (hyst_mean_mean > 0).astype(int)
 
-# ax5 = plt.subplot(235)
-# slc5 = ax5.imshow(img_5)
-# div5 = make_axes_locatable(ax5)
-# cax5 = div5.append_axes('right', size='3%', pad=0.1)
-# plt.colorbar(slc5, cax=cax5)
-# ax5.set_title('2SD+HYST (low={})'.format(low_cell))
 
-# ax1 = plt.subplot(133)  # 234)
-# ax1.imshow(hyst_memb)  # cmap=plt.cm.gray)
-# ax1.imshow(hyst_cell, alpha=0.3)
-# ax1.set_title('HYST MASK')
 
-# ax3 = plt.subplot(232)
-# slc3 = ax3.imshow(img_6)
-# div3 = make_axes_locatable(ax3)
-# cax3 = div3.append_axes('right', size='3%', pad=0.1)
-# plt.colorbar(slc3, cax=cax3)
-# ax3.set_title('CYTO+HYST (low={})'.format(low_memb))
 
-# ax4 = plt.subplot(236)
-# slc4 = ax4.imshow(img_3)
-# div4 = make_axes_locatable(ax4)
-# cax4 = div4.append_axes('right', size='3%', pad=0.1)
-# plt.colorbar(slc4, cax=cax4)
-# ax4.set_title('2SD HYST IN')
+
+img_1 = raw_2sd_masked
+img_2 = raw_mean_masked
+
+img_3 = hyst_2sd_2sd
+img_4 = hyst_mean_mean
+
+demo = np.copy(img_2)  # raw_mean_masked)
+
+
+
+# ax0 = plt.subplot(231)
+# slc0 = ax0.imshow(img_0)
+# div0 = make_axes_locatable(ax0)
+# cax0 = div0.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc0, cax=cax0)
+# ax0.set_title('CYTO ROI')
+# ax0.add_patch(patches.Rectangle((roi_start[0], roi_start[1]),
+#               roi_lim,
+#               roi_lim,
+#               linewidth=2,
+#               edgecolor='w',
+#               facecolor='none'))
+
+ax2 = plt.subplot(323)
+slc2 = ax2.imshow(img_4)
+div2 = make_axes_locatable(ax2)
+cax2 = div2.append_axes('right', size='3%', pad=0.1)
+plt.colorbar(slc2, cax=cax2)
+ax2.set_title('MEAN+HYST (low={})'.format(low_mean))
+
+ax5 = plt.subplot(324)
+slc5 = ax5.imshow(img_3)
+div5 = make_axes_locatable(ax5)
+cax5 = div5.append_axes('right', size='3%', pad=0.1)
+plt.colorbar(slc5, cax=cax5)
+ax5.set_title('2SD+HYST (low={})'.format(low_2sd))
+
+ax1 = plt.subplot(325)
+ax1.imshow(demo)  # cmap=plt.cm.gray)
+
+ax3 = plt.subplot(321)
+slc3 = ax3.imshow(img_2)
+div3 = make_axes_locatable(ax3)
+cax3 = div3.append_axes('right', size='3%', pad=0.1)
+plt.colorbar(slc3, cax=cax3)
+ax3.set_title('MEAN')
+
+ax4 = plt.subplot(322)
+slc4 = ax4.imshow(img_1)
+div4 = make_axes_locatable(ax4)
+cax4 = div4.append_axes('right', size='3%', pad=0.1)
+plt.colorbar(slc4, cax=cax4)
+ax4.set_title('2SD')
 
 # ax2 = plt.subplot(212)
 # ax2.plot (np.arange(0, np.shape(img_0)[1]), np.sum(img_0, axis=0),
