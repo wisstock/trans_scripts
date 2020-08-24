@@ -77,7 +77,7 @@ img_0 = yfp_raw_stack[frame,:,:]
 img_gauss = filters.gaussian(img_0, sigma=3)
 
 
-noise_sd = np.std(img_gauss[:20,:20])
+noise_sd = np.std(img_0[:20,:20])
 logging.info('Noise SD={:.3f}'.format(noise_sd))
 
 
@@ -105,7 +105,7 @@ hyst_2sd_2sd = ma.masked_where(~hyst_2sd, raw_2sd_masked)
 hyst_mean_mean = ma.masked_where(~hyst_mean, raw_mean_masked)
 
 
-
+edge_test = edge.hystMemb(img_0, roi_center=[100, 100])
 
 # demo[demo > 0] = 1
 # demo = (hyst_mean_mean > 0).astype(int)

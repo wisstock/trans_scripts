@@ -6,7 +6,6 @@ Functions for cell detecting and ROI extraction.
 Functions for slices quality control, membrane detection
 and membrane regions extraction.
 Optimysed for confocal images of the individual HEK 293 cells.
-(mYFP-HPCA project).
 
 """
 
@@ -30,7 +29,7 @@ from scipy import signal
 #     triangle - threshold_triangle;
 #     percent - extract pixels abowe fix percentile value.
 
-# 	"""
+#   """
 
 #     if method == "triangle":
 #         thresh_out = filters.threshold_triangle(img)
@@ -120,24 +119,41 @@ def hystCell(img, low_lim=0.05, high_lim=0.8, sigma=3):
                                               high=high_lim*np.max(img_gauss))
 
 
-def hystMemb(img, roi_center, roi_size=10, noise_size=20,
-    sd_low=0.1, mean_low=0.45, both_high=0.8, sigma=3):
+def hystMemb(img, roi_center, roi_size=30, noise_size=20,
+    sd_low=0.1, mean_low=0.45, gen_high=0.8, sigma=3):
     """ Function for membrane region detection with hysteresis threshold algorithm.
 
     img - imput z-stack frame;
-    roi_ccenter - coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
-    roi_size - cutoplasmic ROI side size in px (ROI is a square area);
-    noize_size - size in px of region for noise sd calculation (square area witf start in 0,0 coordinates);
-    sd_low - hysteresis algorithm lower threshold for outside cell edge detection,
+    roi_center - list of int [x, y], coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
+    roi_size - int, cutoplasmic ROI side size in px (ROI is a square area);
+    noise_size - int, size in px of region for noise sd calculation (square area witf start in 0,0 coordinates);
+    sd_low - float, hysteresis algorithm lower threshold for outside cell edge detection,
              > 2sd of noise (percentage of maximum frame intensity);
-    mean_low - hysteresis algorithm lower threshold for inside cell edge detection,
+    mean_low - float, hysteresis algorithm lower threshold for inside cell edge detection,
              > cytoplasmic ROI mean intensity (percentage of maximum frame intensity);
-    both_high - general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
-    sigma - sd for gaussian filter.
+    gen_high - float,  general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
+    sigma - int, sd for gaussian filter.
 
     Returts membrane region boolean mask for input frame.
 
     """
+    img = backCon(img, dim=2)
+
+    img_gauss = filters.gaussian(img, sigma=sigma)
+
+    noise_sd = np.std(img[:noise_size, :noise_size])
+    logging.info('Frame noise SD={:.3f}'.format(noise_sd))
+
+    roi_mean = np.mean(img[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
+                           roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])  # cutoplasmic ROI mean celculation
+    logging.info('Cytoplasm ROI mean intensity {:.3f}'.format(roi_mean))
+
+    mask_2sd = filters.apply_hysteresis_threshold(img_gauss,
+                                                  low=sd_low*np.max(img_gauss),
+                                                  high=gen_high*np.max(img_gauss))
+    mask_roi_mean = filters.apply_hysteresis_threshold(img_gauss,
+                                                      low=mean_low*np.max(img_gauss),
+                                                      high=gen_high*np.max(img_gauss))
 
 
 def membMaxDet(slc, mode='rad', h=0.5):
