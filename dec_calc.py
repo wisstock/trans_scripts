@@ -4,7 +4,7 @@
 
 2-nd script
 
-Deconvolution seq for HEK263 data
+Deconvolution seq for HEK 293 data
 
 """
 

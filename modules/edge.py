@@ -23,34 +23,34 @@ from scipy.ndimage import measurements as msr
 from scipy import signal
 
 
-def cellMask(img, method="triangle", percent=90):
-    """ Extract cells using symple mask.
+# def cellMask(img, method="triangle", percent=90):
+#     """ Extract cells using symple mask.
 
-    Treshold methods:
-    triangle - threshold_triangle;
-    percent - extract pixels abowe fix percentile value.
+#     Treshold methods:
+#     triangle - threshold_triangle;
+#     percent - extract pixels abowe fix percentile value.
 
-	"""
+# 	"""
 
-    if method == "triangle":
-        thresh_out = filters.threshold_triangle(img)
-        positive_mask = img > thresh_out  # create negative threshold mask
-        threshold_mask = positive_mask * -1  # inversion threshold mask
+#     if method == "triangle":
+#         thresh_out = filters.threshold_triangle(img)
+#         positive_mask = img > thresh_out  # create negative threshold mask
+#         threshold_mask = positive_mask * -1  # inversion threshold mask
 
-        output_img = np.copy(img)
-        output_img[threshold_mask] = 0
+#         output_img = np.copy(img)
+#         output_img[threshold_mask] = 0
 
-        return output_img 
+#         return output_img 
 
-    elif method == "percent":
-        percentile = np.percentile(img, percent)
-        output_img = np.copy(img)
-        output_img[output_img < percentile] = 0
+#     elif method == "percent":
+#         percentile = np.percentile(img, percent)
+#         output_img = np.copy(img)
+#         output_img[output_img < percentile] = 0
 
-        return output_img
+#         return output_img
 
-    else:
-        logging.warning("Incorrect treshold method!")
+#     else:
+#         logging.warning("Incorrect treshold method!")
 
 
 def cellMass(img):
@@ -120,6 +120,26 @@ def hystCell(img, low_lim=0.05, high_lim=0.8, sigma=3):
                                               high=high_lim*np.max(img_gauss))
 
 
+def hystMemb(img, roi_center, roi_size=10, noise_size=20,
+    sd_low=0.1, mean_low=0.45, both_high=0.8, sigma=3):
+    """ Function for membrane region detection with hysteresis threshold algorithm.
+
+    img - imput z-stack frame;
+    roi_ccenter - coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
+    roi_size - cutoplasmic ROI side size in px (ROI is a square area);
+    noize_size - size in px of region for noise sd calculation (square area witf start in 0,0 coordinates);
+    sd_low - hysteresis algorithm lower threshold for outside cell edge detection,
+             > 2sd of noise (percentage of maximum frame intensity);
+    mean_low - hysteresis algorithm lower threshold for inside cell edge detection,
+             > cytoplasmic ROI mean intensity (percentage of maximum frame intensity);
+    both_high - general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
+    sigma - sd for gaussian filter.
+
+    Returts membrane region boolean mask for input frame.
+
+    """
+
+
 def membMaxDet(slc, mode='rad', h=0.5):
     """ Finding membrane maxima in membYFP data
     and calculating full width at set height of maxima
@@ -132,7 +152,7 @@ def membMaxDet(slc, mode='rad', h=0.5):
     In diam mode we split slice to two halves and find maxima in each half separately
     (left and right).
 
-    Return list of two list, first value is coordinate for left peak
+    Returns list of two list, first value is coordinate for left peak
     second - coordinate for right
     and third - upper limit.
 
@@ -396,7 +416,7 @@ def badDiam(slc, cutoff_lvl=0.2, d=35, n=50):
     with height of more than the certain percentage (cutoff_lvl) of the slice maximum
     with no interceptions of full width at set height of maxima with others peaks
 
-    Return True if bad
+    Returns True if bad
 
     """
 
