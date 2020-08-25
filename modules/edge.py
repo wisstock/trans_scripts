@@ -122,6 +122,8 @@ def hystCell(img, low_lim=0.05, high_lim=0.8, sigma=3):
 def hystMemb(img, roi_center, roi_size=30, noise_size=20,
     sd_low=0.1, mean_low=0.45, gen_high=0.8, sigma=3):
     """ Function for membrane region detection with hysteresis threshold algorithm.
+    Outdide edge - >= 2sd noise
+    Inside edge - >= cytoplasm mean intensity
 
     img - imput z-stack frame;
     roi_center - list of int [x, y], coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
@@ -154,6 +156,24 @@ def hystMemb(img, roi_center, roi_size=30, noise_size=20,
     mask_roi_mean = filters.apply_hysteresis_threshold(img_gauss,
                                                       low=mean_low*np.max(img_gauss),
                                                       high=gen_high*np.max(img_gauss))
+    # splitting cyto mean mask for to sides before filling
+    sides_mask_mean = [mask_roi_mean[:,:np.shape(mask_roi_mean)[1] // 2], \
+                      np.flip(mask_roi_mean[:,np.shape(mask_roi_mean)[1] // 2:], axis=1)]
+    # outside filling
+    for side in sides_mask_mean:
+        for row in side:
+            for i  in range(len(row)):
+                if not row[i]:
+                    row[i] = True
+                else:
+                    continue 
+    # filled cyto mean mask reassembly
+    mask_roi_mean_filled = np.hstack((sides_mask_mean[0], np.flip(sides_mask_mean[1], axis=1)))
+    logging.info(np.shape(mask_roi_mean_filled))
+
+
+
+    return mask_roi_mean_filled
 
 
 def membMaxDet(slc, mode='rad', h=0.5):

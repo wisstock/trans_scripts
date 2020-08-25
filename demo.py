@@ -47,80 +47,103 @@ yfp_dec_stack = tifffile.imread(os.path.join(sys.path[0], 'data/yfp_dec_32.tif')
 hpca_raw_stack = tifffile.imread(os.path.join(sys.path[0], 'data/hpca.tif'))
 hpca_dec_stack = tifffile.imread(os.path.join(sys.path[0], 'data/hpca_dec_32.tif'))
 
-cell_roi = [70, 260, 70, 250]
+cell_roi = [70, 250, 70, 250]
 
 yfp_raw_stack = yfp_raw_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
 yfp_dec_stack = yfp_dec_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
 hpca_raw_stack = hpca_raw_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
 hpca_dec_stack = hpca_dec_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
 
-a = 1
-if a:
-    yfp_raw_stack = edge.backCon(yfp_raw_stack)
-    yfp_dec_stack = edge.backCon(yfp_dec_stack)
-    hpca_raw_stack = edge.backCon(hpca_raw_stack)
-    hpca_dec_stack = edge.backCon(hpca_dec_stack)
-
-yfp_raw_sd = np.std(yfp_raw_stack[:,:20,:20])
-yfp_dec_sd = np.std(yfp_dec_stack[:,:20,:20])
-hpca_raw_sd = np.std(hpca_raw_stack[:,:20,:20])
-hpca_dec_sd = np.std(hpca_dec_stack[:,:20,:20])
-
-
 
 frame = 14
 roi_start = [85, 85]
-roi_lim = 30          
+roi_lim = 30    
 
 
-img_0 = yfp_raw_stack[frame,:,:]
-img_gauss = filters.gaussian(img_0, sigma=3)
+# a = 1
+# if a:
+#     yfp_raw_stack = edge.backCon(yfp_raw_stack)
+#     yfp_dec_stack = edge.backCon(yfp_dec_stack)
+#     hpca_raw_stack = edge.backCon(hpca_raw_stack)
+#     hpca_dec_stack = edge.backCon(hpca_dec_stack)
+
+# yfp_raw_sd = np.std(yfp_raw_stack[:,:20,:20])
+# yfp_dec_sd = np.std(yfp_dec_stack[:,:20,:20])
+# hpca_raw_sd = np.std(hpca_raw_stack[:,:20,:20])
+# hpca_dec_sd = np.std(hpca_dec_stack[:,:20,:20])
 
 
-noise_sd = np.std(img_0[:20,:20])
-logging.info('Noise SD={:.3f}'.format(noise_sd))
+# img_0 = yfp_raw_stack[frame,:,:]
+# img_gauss = filters.gaussian(img_0, sigma=3)
 
 
-roi_cyto = np.mean(img_0[roi_start[0]:roi_start[0]+roi_lim,\
-                   roi_start[1]:roi_start[1]+roi_lim])
-logging.info('Cytoplasm ROI mean value {:.3f}'.format(roi_cyto))
-
-low_mean = 0.45
-low_2sd = 0.1
-hyst_2sd = filters.apply_hysteresis_threshold(img_gauss,
-                                           low=low_2sd*np.max(img_gauss),  # 0.07
-                                           high=0.8*np.max(img_gauss))  # 0.8
-hyst_mean = filters.apply_hysteresis_threshold(img_gauss,
-                                           low=low_mean*np.max(img_gauss),  # 0.07
-                                           high=0.8*np.max(img_gauss))  # 0.8
+# noise_sd = np.std(img_0[:20,:20])
+# logging.info('Noise SD={:.3f}'.format(noise_sd))
 
 
-hyst_mean_masked = ma.masked_where(~hyst_mean, img_0)
-hyst_2sd_masked = ma.masked_where(~hyst_2sd, img_0)
+# roi_cyto = np.mean(img_0[roi_start[0]:roi_start[0]+roi_lim,\
+#                    roi_start[1]:roi_start[1]+roi_lim])
+# logging.info('Cytoplasm ROI mean value {:.3f}'.format(roi_cyto))
 
-raw_2sd_masked = ma.masked_greater_equal(img_0, 2*noise_sd)
-raw_mean_masked = ma.masked_greater(img_0, roi_cyto)
-
-hyst_2sd_2sd = ma.masked_where(~hyst_2sd, raw_2sd_masked)
-hyst_mean_mean = ma.masked_where(~hyst_mean, raw_mean_masked)
-
-
-edge_test = edge.hystMemb(img_0, roi_center=[100, 100])
-
-# demo[demo > 0] = 1
-# demo = (hyst_mean_mean > 0).astype(int)
+# low_mean = 0.45
+# low_2sd = 0.1
+# hyst_2sd = filters.apply_hysteresis_threshold(img_gauss,
+#                                            low=low_2sd*np.max(img_gauss),  # 0.07
+#                                            high=0.8*np.max(img_gauss))  # 0.8
+# hyst_mean = filters.apply_hysteresis_threshold(img_gauss,
+#                                            low=low_mean*np.max(img_gauss),  # 0.07
+#                                            high=0.8*np.max(img_gauss))  # 0.8
 
 
+# hyst_mean_masked = ma.masked_where(~hyst_mean, img_0)
+# hyst_2sd_masked = ma.masked_where(~hyst_2sd, img_0)
+
+# raw_2sd_masked = ma.masked_greater_equal(img_0, 2*noise_sd)
+# raw_mean_masked = ma.masked_greater(img_0, roi_cyto)
+
+# hyst_2sd_2sd = ma.masked_where(~hyst_2sd, raw_2sd_masked)
+# hyst_mean_mean = ma.masked_where(~hyst_mean, raw_mean_masked)
+
+
+# img_1 = raw_2sd_masked
+# img_2 = raw_mean_masked
+
+# img_3 = hyst_2sd_2sd
+# img_4 = hyst_mean_mean
 
 
 
-img_1 = raw_2sd_masked
-img_2 = raw_mean_masked
 
-img_3 = hyst_2sd_2sd
-img_4 = hyst_mean_mean
 
-demo = np.copy(img_2)  # raw_mean_masked)
+# demo = edge.hystMemb(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  # raw_mean_masked
+
+
+demo_mask = np.array([[False, False, False, False, False, False],
+                      [False,  True,  True,  True,  True, False],
+                      [False,  True, False, False,  True, False],
+                      [False,  True, False, False,  True, False],
+                      [False,  True,  True,  True,  True, False],
+                      [False, False, False, False, False, False]])
+
+# splitting cyto mean mask for to sides before filling
+sides_mask_mean = [demo_mask[:,:np.shape(demo_mask)[1] // 2], \
+                  np.flip(demo_mask[:,np.shape(demo_mask)[1] // 2:], axis=1)]
+
+# outside filling
+for side in sides_mask_mean:
+    print(side)
+    for row in side:
+        print(row)
+        for i  in range(len(row)):
+            print(row[i])
+            if row[i]:
+                row[i] = True
+            else:
+                continue 
+
+# filled cyto mean mask reassembly
+demo = np.hstack((sides_mask_mean[0], np.flip(sides_mask_mean[1], axis=1)))
+
 
 
 
@@ -137,36 +160,39 @@ demo = np.copy(img_2)  # raw_mean_masked)
 #               edgecolor='w',
 #               facecolor='none'))
 
-ax2 = plt.subplot(323)
-slc2 = ax2.imshow(img_4)
-div2 = make_axes_locatable(ax2)
-cax2 = div2.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc2, cax=cax2)
-ax2.set_title('MEAN+HYST (low={})'.format(low_mean))
+# ax2 = plt.subplot(323)
+# slc2 = ax2.imshow(img_4)
+# div2 = make_axes_locatable(ax2)
+# cax2 = div2.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc2, cax=cax2)
+# ax2.set_title('MEAN+HYST (low={})'.format(low_mean))
 
-ax5 = plt.subplot(324)
-slc5 = ax5.imshow(img_3)
-div5 = make_axes_locatable(ax5)
-cax5 = div5.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc5, cax=cax5)
-ax5.set_title('2SD+HYST (low={})'.format(low_2sd))
+# ax5 = plt.subplot(324)
+# slc5 = ax5.imshow(img_3)
+# div5 = make_axes_locatable(ax5)
+# cax5 = div5.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc5, cax=cax5)
+# ax5.set_title('2SD+HYST (low={})'.format(low_2sd))
 
-ax1 = plt.subplot(325)
+# ax3 = plt.subplot(321)
+# slc3 = ax3.imshow(img_2)
+# div3 = make_axes_locatable(ax3)
+# cax3 = div3.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc3, cax=cax3)
+# ax3.set_title('MEAN')
+
+# ax4 = plt.subplot(322)
+# slc4 = ax4.imshow(img_1)
+# div4 = make_axes_locatable(ax4)
+# cax4 = div4.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc4, cax=cax4)
+# ax4.set_title('2SD')
+
+
+
+
+ax1 = plt.subplot()
 ax1.imshow(demo)  # cmap=plt.cm.gray)
-
-ax3 = plt.subplot(321)
-slc3 = ax3.imshow(img_2)
-div3 = make_axes_locatable(ax3)
-cax3 = div3.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc3, cax=cax3)
-ax3.set_title('MEAN')
-
-ax4 = plt.subplot(322)
-slc4 = ax4.imshow(img_1)
-div4 = make_axes_locatable(ax4)
-cax4 = div4.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc4, cax=cax4)
-ax4.set_title('2SD')
 
 # ax2 = plt.subplot(212)
 # ax2.plot (np.arange(0, np.shape(img_0)[1]), np.sum(img_0, axis=0),
