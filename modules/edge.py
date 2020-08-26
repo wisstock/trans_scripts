@@ -24,36 +24,6 @@ from scipy.ndimage import measurements as msr
 from scipy import signal
 
 
-# def cellMask(img, method="triangle", percent=90):
-#     """ Extract cells using symple mask.
-
-#     Treshold methods:
-#     triangle - threshold_triangle;
-#     percent - extract pixels abowe fix percentile value.
-
-#   """
-
-#     if method == "triangle":
-#         thresh_out = filters.threshold_triangle(img)
-#         positive_mask = img > thresh_out  # create negative threshold mask
-#         threshold_mask = positive_mask * -1  # inversion threshold mask
-
-#         output_img = np.copy(img)
-#         output_img[threshold_mask] = 0
-
-#         return output_img 
-
-#     elif method == "percent":
-#         percentile = np.percentile(img, percent)
-#         output_img = np.copy(img)
-#         output_img[output_img < percentile] = 0
-
-#         return output_img
-
-#     else:
-#         logging.warning("Incorrect treshold method!")
-
-
 def cellMass(img):
     """ Calculating of the center of mass coordinate using threshold mask
     for already detected cell.
@@ -109,16 +79,48 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def hystCell(img, low_lim=0.05, high_lim=0.8, sigma=3):
-    """ Detection of cell  membrane using hysteresis threshold method.
-    
-    """
+def hystLow(img, roi_center, roi_size=30, noise_size=20,\
+    diff=40, delta_diff=10, init_low=0.08, gen_high=0.8, sigma=3):
+    """ Low treshold calculation for hysteresis membrane detection function hystMemb.
 
+    diff - int, difference (in px number) between hysteresis mask and img without greater values
+    delta_diff - int, tolerance level (in px number) for diff value
+    gen_high, sigma - see hystMemb
+
+    """
+    img = backCon(img, dim=2)
     img_gauss = filters.gaussian(img, sigma=sigma)
 
-    return filters.apply_hysteresis_threshold(img_gauss,
-                                              low=low_lim*np.max(img_gauss),
-                                              high=high_lim*np.max(img_gauss))
+    noise_sd = np.std(img[:noise_size, :noise_size])
+    logging.info('Frame noise SD={:.3f}'.format(noise_sd))
+
+    roi_mean = np.mean(img[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
+                           roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])  # cutoplasmic ROI mean celculation
+    logging.info('Cytoplasm ROI mean intensity {:.3f}'.format(roi_mean))
+
+    img_2sd = ma.masked_greater_equal(img, 2*noise_sd)
+    img_mean = ma.masked_greater(img, roi_mean)
+
+    diff_mask = diff + delta_diff*4
+    logging.info('Initial matrix difference {}'.format(diff_mask))
+
+    while diff_mask >= diff: #   + delta_diff or diff_mask >= diff - delta_diff:
+        mask_2sd = filters.apply_hysteresis_threshold(img_gauss,
+                                                      low=init_low*np.max(img_gauss),
+                                                      high=gen_high*np.max(img_gauss))
+        diff_mask = np.sum(ma.masked_where(~mask_2sd, img_2sd) > 0)
+        logging.info('Mask difference {}'.format(diff_mask))
+
+        # if diff_mask < diff: #  - delta_diff:
+        #     logging.error('Initial lower threshold {} is to low!'.format(init_low))
+        #     return 0
+
+        init_low += 0.01
+
+    
+    return img_2sd, mask_2sd, ma.masked_where(~mask_2sd, img_2sd)
+
+
 
 
 def hystMemb(img, roi_center, roi_size=30, noise_size=20,
@@ -142,7 +144,6 @@ def hystMemb(img, roi_center, roi_size=30, noise_size=20,
 
     """
     img = backCon(img, dim=2)
-
     img_gauss = filters.gaussian(img, sigma=sigma)
 
     noise_sd = np.std(img[:noise_size, :noise_size])
@@ -151,6 +152,8 @@ def hystMemb(img, roi_center, roi_size=30, noise_size=20,
     roi_mean = np.mean(img[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
                            roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])  # cutoplasmic ROI mean celculation
     logging.info('Cytoplasm ROI mean intensity {:.3f}'.format(roi_mean))
+
+    # place hystLow here!
 
     mask_2sd = filters.apply_hysteresis_threshold(img_gauss,
                                                   low=sd_low*np.max(img_gauss),
@@ -161,7 +164,7 @@ def hystMemb(img, roi_center, roi_size=30, noise_size=20,
     # filling external space and create cytoplasmic mask 
     mask_cytoplasm = mask_roi_mean + segmentation.flood(mask_roi_mean, (0, 0))
 
-    return mask_roi_mean, mask_cytoplasm, ma.masked_where(~mask_cytoplasm, mask_2sd)
+    return ma.masked_where(~mask_cytoplasm, mask_2sd)
 
 
 def membMaxDet(slc, mode='rad', h=0.5):

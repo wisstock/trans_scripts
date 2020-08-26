@@ -115,39 +115,7 @@ roi_lim = 30
 
 
 
-sd, mean, res = edge.hystMemb(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  # raw_mean_masked
-
-
-
-# # filling demo
-# demo_mask = np.array([[0, 0, 0, 0, 0, 0],
-#                       [0, 1, 1, 1, 1, 0],
-#                       [0, 1, 0, 0, 1, 0],
-#                       [0, 1, 0, 0, 1, 0],
-#                       [0, 1, 1, 1, 1, 0],
-#                       [0, 0, 0, 0, 0, 0]])
-
-# # splitting cyto mean mask for to sides before filling
-# sides_mask_mean = [demo_mask[:,:np.shape(demo_mask)[1] // 2], \
-#                   np.flip(demo_mask[:,np.shape(demo_mask)[1] // 2:], axis=1)]
-
-# # outside filling
-# for side in sides_mask_mean:
-#     print(side)
-#     for row in side:
-#         print(row)
-#         for i  in range(len(row)):
-#             print(row[i])
-#             if not row[i]:
-#                 row[i] = True
-#             else:
-#                 break 
-
-# # filled cyto mean mask reassembly
-# demo = np.hstack((sides_mask_mean[0], np.flip(sides_mask_mean[1], axis=1)))
-
-# print(demo)
-
+sd, mean, res = edge.hystLow(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  # raw_mean_masked
 
 
 
