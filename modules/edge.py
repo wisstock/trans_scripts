@@ -13,10 +13,12 @@ import os
 import logging
 
 import numpy as np
+import numpy.ma as ma
 
 from skimage.external import tifffile
 from skimage import filters
 from skimage import measure
+from skimage import segmentation
 
 from scipy.ndimage import measurements as msr
 from scipy import signal
@@ -156,24 +158,10 @@ def hystMemb(img, roi_center, roi_size=30, noise_size=20,
     mask_roi_mean = filters.apply_hysteresis_threshold(img_gauss,
                                                       low=mean_low*np.max(img_gauss),
                                                       high=gen_high*np.max(img_gauss))
-    # splitting cyto mean mask for to sides before filling
-    sides_mask_mean = [mask_roi_mean[:,:np.shape(mask_roi_mean)[1] // 2], \
-                      np.flip(mask_roi_mean[:,np.shape(mask_roi_mean)[1] // 2:], axis=1)]
-    # outside filling
-    for side in sides_mask_mean:
-        for row in side:
-            for i  in range(len(row)):
-                if not row[i]:
-                    row[i] = True
-                else:
-                    continue 
-    # filled cyto mean mask reassembly
-    mask_roi_mean_filled = np.hstack((sides_mask_mean[0], np.flip(sides_mask_mean[1], axis=1)))
-    logging.info(np.shape(mask_roi_mean_filled))
+    # filling external space and create cytoplasmic mask 
+    mask_cytoplasm = mask_roi_mean + segmentation.flood(mask_roi_mean, (0, 0))
 
-
-
-    return mask_roi_mean_filled
+    return mask_roi_mean, mask_cytoplasm, ma.masked_where(~mask_cytoplasm, mask_2sd)
 
 
 def membMaxDet(slc, mode='rad', h=0.5):
