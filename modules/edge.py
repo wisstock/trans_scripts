@@ -91,6 +91,7 @@ def hystLow(img, img_gauss, sd, mean, diff=40, init_low=0.05, gen_high=0.8):
              'mean': ma.masked_greater(img, mean)}         # values greater then mean cytoplasm intensity
     
     low_val = {}
+    control_diff = False
     for mask_name in masks:
         mask_img = masks[mask_name]
 
@@ -108,18 +109,27 @@ def hystLow(img, img_gauss, sd, mean, diff=40, init_low=0.05, gen_high=0.8):
         low = init_low
 
         i = 0
-        while diff_mask >= diff: #   + delta_diff or diff_mask >= diff - delta_diff:
+        control_diff = 1
+        while diff_mask >= diff:
             mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
                                                           low=low*np.max(img_gauss),
                                                           high=gen_high*np.max(img_gauss))
             diff_mask = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
-            
+
             low += 0.01
 
             i += 1
-            if i == 5000:
-                logging.fatal(low)
-                raise ValueError('Infinite cycle! Matrix difference value {} is too low!'.format(diff))
+            if i == 75:  # is cytoplasm mean mask at initial lower threshold value closed? prevent infinit cycle
+                logging.fatal('Lower treshold for {} mask {:.2f}, control difference {}px'.format(mask_name, low, control_diff))
+                raise RuntimeError('Membrane in mean mask doesn`t detected at initial lower threshold value!')
+    
+
+        # is cytoplasm mask at setted up difference value closed?
+        if mask_name == 'mean':
+            control_diff = np.all((segmentation.flood(mask_hyst, (0, 0)) + mask_hyst))
+            if control_diff == True:
+                logging.fatal('Lower treshold for {} mask {:.2f}, masks difference {}px'.format(mask_name, low, diff_mask))
+                raise ValueError('Membrane in mean mask doesn`t closed, mebrane unlocated at this diff value (too low)!')
 
         low_val.update({mask_name : low})
     logging.info('Lower tresholds {}'.format(low_val))

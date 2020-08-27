@@ -55,49 +55,36 @@ hpca_raw_stack = hpca_raw_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi
 hpca_dec_stack = hpca_dec_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
 
 
-frame = 14
+frame = 15
 roi_start = [85, 85]
 roi_lim = 30    
 
 img = yfp_raw_stack[frame,:,:]
+# img = edge.backCon(img, dim=2)
 
 
-# a = 1
-# if a:
-#     yfp_raw_stack = edge.backCon(yfp_raw_stack)
-#     yfp_dec_stack = edge.backCon(yfp_dec_stack)
-#     hpca_raw_stack = edge.backCon(hpca_raw_stack)
-#     hpca_dec_stack = edge.backCon(hpca_dec_stack)
-
-# yfp_raw_sd = np.std(yfp_raw_stack[:,:20,:20])
-# yfp_dec_sd = np.std(yfp_dec_stack[:,:20,:20])
-# hpca_raw_sd = np.std(hpca_raw_stack[:,:20,:20])
-# hpca_dec_sd = np.std(hpca_dec_stack[:,:20,:20])
+# img_gauss = filters.gaussian(img, sigma=3)
 
 
-# img_0 = yfp_raw_stack[frame,:,:]
-# img_gauss = filters.gaussian(img_0, sigma=3)
-
-
-# noise_sd = np.std(img_0[:20,:20])
+# noise_sd = np.std(img[:20,:20])
 # logging.info('Noise SD={:.3f}'.format(noise_sd))
 
 
-# roi_cyto = np.mean(img_0[roi_start[0]:roi_start[0]+roi_lim,\
+# roi_cyto = np.mean(img[roi_start[0]:roi_start[0]+roi_lim,\
 #                    roi_start[1]:roi_start[1]+roi_lim])
 # logging.info('Cytoplasm ROI mean value {:.3f}'.format(roi_cyto))
 
-# low_mean = 0.45
-# low_2sd = 0.1
-# hyst_2sd = filters.apply_hysteresis_threshold(img_gauss,
-#                                            low=low_2sd*np.max(img_gauss),  # 0.07
-#                                            high=0.8*np.max(img_gauss))  # 0.8
-# hyst_mean = filters.apply_hysteresis_threshold(img_gauss,
-#                                            low=low_mean*np.max(img_gauss),  # 0.07
+# # low_mean = 0.45
+# # low_2sd = 0.1
+# # hyst_2sd = filters.apply_hysteresis_threshold(img_gauss,
+# #                                            low=low_2sd*np.max(img_gauss),  # 0.07
+# #                                            high=0.8*np.max(img_gauss))  # 0.8
+# mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
+#                                            low=0.60*np.max(img_gauss),  # 0.07
 #                                            high=0.8*np.max(img_gauss))  # 0.8
 
 
-# hyst_mean_masked = ma.masked_where(~hyst_mean, img_0)
+# # hyst_mean_masked = ma.masked_where(~hyst_mean, img_0)
 # hyst_2sd_masked = ma.masked_where(~hyst_2sd, img_0)
 
 # raw_2sd_masked = ma.masked_greater_equal(img_0, 2*noise_sd)
@@ -118,6 +105,12 @@ img = yfp_raw_stack[frame,:,:]
 
 
 sd, mean, res = edge.hystMemb(img, roi_center=[100, 100], low_diff=100)  # raw_mean_masked
+
+# sd = mask_hyst
+# mean = segmentation.flood(mask_hyst, (0, 0)) + sd
+# res = mean*-1
+
+# print(np.all(mean))
 
 
 
