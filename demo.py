@@ -115,7 +115,8 @@ roi_lim = 30
 
 
 
-sd, mean, res = edge.hystLow(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  # raw_mean_masked
+# sd, mean, res = 
+edge.hystLow(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  # raw_mean_masked
 
 
 
@@ -160,23 +161,14 @@ sd, mean, res = edge.hystLow(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  #
 # plt.colorbar(slc4, cax=cax4)
 # ax4.set_title('2SD')
 
-ax1 = plt.subplot(131)
-ax1.imshow(sd)
-ax2 = plt.subplot(132)
-ax2.imshow(mean)
-ax3 = plt.subplot(133)
-ax3.imshow(res)
 
 
-# ax2 = plt.subplot(212)
-# ax2.plot (np.arange(0, np.shape(img_0)[1]), np.sum(img_0, axis=0),
-#           label='X')
-# ax2.plot (np.arange(0, np.shape(img_0)[0]), np.sum(img_0, axis=1),
-#           label='Y')
-# ax2.set(xlabel='px', ylabel='I')
-# legend_properties = {'weight':'bold'}
-# plt.legend(loc='upper right',
-#             prop=legend_properties)
+# ax1 = plt.subplot(131)
+# ax1.imshow(sd)
+# ax2 = plt.subplot(132)
+# ax2.imshow(mean)
+# ax3 = plt.subplot(133)
+# ax3.imshow(res)
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
