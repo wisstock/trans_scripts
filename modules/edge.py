@@ -79,27 +79,16 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def hystLow(img, roi_center, roi_size=30, noise_size=20,\
-    diff=40, delta_diff=10, init_low=0.08, gen_high=0.8, sigma=3):
+def hystLow(img, img_gauss, sd, mean, diff=40, init_low=0.05, gen_high=0.8):
     """ Lower treshold calculations for hysteresis membrane detection function hystMemb.
 
     diff - int, difference (in px number) between hysteresis mask and img without greater values
     delta_diff - int, tolerance level (in px number) for diff value
-    gen_high, sigma - see hystMemb
+    gen_high, sd, mean - see hystMemb
 
     """
-    img = backCon(img, dim=2)
-    img_gauss = filters.gaussian(img, sigma=sigma)
-
-    noise_sd = np.std(img[:noise_size, :noise_size])
-    logging.info('Frame noise SD={:.3f}'.format(noise_sd))
-
-    roi_mean = np.mean(img[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
-                           roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])  # cutoplasmic ROI mean celculation
-    logging.info('Cytoplasm ROI mean intensity {:.3f}'.format(roi_mean))
-
-    masks = {'2sd': ma.masked_greater_equal(img, 2*noise_sd),  # values greater then 2 noise sd 
-             'mean': ma.masked_greater(img, roi_mean)}         # values greater then mean cytoplasm intensity
+    masks = {'2sd': ma.masked_greater_equal(img, 2*sd),  # values greater then 2 noise sd 
+             'mean': ma.masked_greater(img, mean)}         # values greater then mean cytoplasm intensity
     
     low_val = {}
     for mask_name in masks:
@@ -118,25 +107,28 @@ def hystLow(img, roi_center, roi_size=30, noise_size=20,\
 
         low = init_low
 
+        i = 0
         while diff_mask >= diff: #   + delta_diff or diff_mask >= diff - delta_diff:
             mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
                                                           low=low*np.max(img_gauss),
                                                           high=gen_high*np.max(img_gauss))
             diff_mask = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
-            logging.info('Masks difference {}'.format(diff_mask))
+            
             low += 0.01
 
-        low_val.update({mask_name : low})
+            i += 1
+            if i == 5000:
+                logging.fatal(low)
+                raise ValueError('Infinite cycle! Matrix difference value {} is too low!'.format(diff))
 
+        low_val.update({mask_name : low})
+    logging.info('Lower tresholds {}'.format(low_val))
     print(low_val)
 
-    # return img_2sd, mask_2sd, ma.masked_where(~mask_2sd, img_2sd)
+    return low_val
 
 
-
-
-def hystMemb(img, roi_center, roi_size=30, noise_size=20,
-    sd_low=0.1, mean_low=0.45, gen_high=0.8, sigma=3):
+def hystMemb(img, roi_center, roi_size=30, noise_size=20, low_diff=40, gen_high=0.8, sigma=3):
     """ Function for membrane region detection with hysteresis threshold algorithm.
     Outdide edge - >= 2sd noise
     Inside edge - >= cytoplasm mean intensity
@@ -167,18 +159,18 @@ def hystMemb(img, roi_center, roi_size=30, noise_size=20,
                            roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])  # cutoplasmic ROI mean celculation
     logging.info('Cytoplasm ROI mean intensity {:.3f}'.format(roi_mean))
 
-    # place hystLow here!
+    low_val = hystLow(img, img_gauss, sd=noise_sd, mean=roi_mean, diff=low_diff, gen_high=gen_high)
 
     mask_2sd = filters.apply_hysteresis_threshold(img_gauss,
-                                                  low=sd_low*np.max(img_gauss),
+                                                  low=low_val['2sd']*np.max(img_gauss),
                                                   high=gen_high*np.max(img_gauss))
     mask_roi_mean = filters.apply_hysteresis_threshold(img_gauss,
-                                                      low=mean_low*np.max(img_gauss),
+                                                      low=low_val['mean']*np.max(img_gauss),
                                                       high=gen_high*np.max(img_gauss))
     # filling external space and create cytoplasmic mask 
     mask_cytoplasm = mask_roi_mean + segmentation.flood(mask_roi_mean, (0, 0))
 
-    return ma.masked_where(~mask_cytoplasm, mask_2sd)
+    return mask_2sd, mask_roi_mean, ma.masked_where(~mask_cytoplasm, mask_2sd)
 
 
 def membMaxDet(slc, mode='rad', h=0.5):

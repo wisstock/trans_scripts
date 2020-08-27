@@ -59,6 +59,8 @@ frame = 14
 roi_start = [85, 85]
 roi_lim = 30    
 
+img = yfp_raw_stack[frame,:,:]
+
 
 # a = 1
 # if a:
@@ -115,8 +117,7 @@ roi_lim = 30
 
 
 
-# sd, mean, res = 
-edge.hystLow(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  # raw_mean_masked
+sd, mean, res = edge.hystMemb(img, roi_center=[100, 100], low_diff=100)  # raw_mean_masked
 
 
 
@@ -163,12 +164,17 @@ edge.hystLow(yfp_raw_stack[frame,:,:], roi_center=[100, 100])  # raw_mean_masked
 
 
 
-# ax1 = plt.subplot(131)
-# ax1.imshow(sd)
-# ax2 = plt.subplot(132)
-# ax2.imshow(mean)
-# ax3 = plt.subplot(133)
-# ax3.imshow(res)
+ax1 = plt.subplot(231)
+ax1.imshow(sd)
+ax2 = plt.subplot(232)
+ax2.imshow(mean)
+ax3 = plt.subplot(233)
+ax3.imshow(res)
 
-# plt.tight_layout()
-# plt.show()
+ax4 = plt.subplot(223)
+ax4.imshow(img)
+ax5 = plt.subplot(224)
+ax5.imshow(ma.masked_where(~res, img))
+
+plt.tight_layout()
+plt.show()
