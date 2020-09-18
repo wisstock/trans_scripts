@@ -79,17 +79,22 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def hystLow(img, img_gauss, sd, mean, diff=40, init_low=0.05, gen_high=0.8):
+def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, mode='memb'):
     """ Lower treshold calculations for hysteresis membrane detection function hystMemb.
 
     diff - int, difference (in px number) between hysteresis mask and img without greater values
     delta_diff - int, tolerance level (in px number) for diff value
     gen_high, sd, mean - see hystMemb
 
+    mode - 'cell': only sd treshold calc, 'memb': both tresholds calc
+
     """
-    masks = {'2sd': ma.masked_greater_equal(img, 2*sd),  # values greater then 2 noise sd 
-             'mean': ma.masked_greater(img, mean)}         # values greater then mean cytoplasm intensity
-    
+    if mode == 'memb':
+        masks = {'2sd': ma.masked_greater_equal(img, 2*sd),  # values greater then 2 noise sd 
+                 'mean': ma.masked_greater(img, mean)}         # values greater then mean cytoplasm intensity
+    elif mode == 'cell':
+        masks = {'2sd': ma.masked_greater_equal(img, 2*sd)}
+
     low_val = {}
     control_diff = False
     for mask_name in masks:
@@ -119,7 +124,8 @@ def hystLow(img, img_gauss, sd, mean, diff=40, init_low=0.05, gen_high=0.8):
             low += 0.01
 
             i += 1
-            if i == 75:  # is cytoplasm mean mask at initial lower threshold value closed? prevent infinit cycle
+            # is cytoplasm mean mask at initial lower threshold value closed? prevent infinit cycle
+            if i == 75:
                 logging.fatal('Lower treshold for {} mask {:.2f}, control difference {}px'.format(mask_name, low, control_diff))
                 raise RuntimeError('Membrane in mean mask doesn`t detected at initial lower threshold value!')
     

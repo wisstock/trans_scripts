@@ -50,7 +50,7 @@ def WDPars(wd_path, mode='fluo'):
 
                 if data_name in data_metha.keys():
                     data_path = os.path.join(root, file)
-                    fluo_list.append(FluoData(data_path, cycles=data_metha[data_name]))
+                    fluo_list.append(FluoData(data_path, img_name=data_name, load=data_metha[data_name]))
 
                     logging.info('File {} uploaded!'.format(data_path))
 
@@ -120,7 +120,7 @@ class FluoData:
     """ Time series in NP-EGTA + Fluo-4 test experiment series
 
     """
-    def __init__(self, oif_input, exposure=10, cycles=1, max_frame=24, background_rm=True):
+    def __init__(self, oif_input, img_name, exposure=10, cycles=1, max_frame=23, load=1, background_rm=True):
         self.img_series = oif.OibImread(oif_input)[0,:,:,:]  # z-stack frames series
 
         if background_rm:  # background remove option
@@ -129,23 +129,27 @@ class FluoData:
                                                       edge_lim=10,
                                                       dim=2)
             logging.info('Background removed!')
-
+        
+        self.img_name = img_name                             # file name
         self.max_frame = self.img_series[max_frame,:,:]      # first frame after 405 nm exposure (max intensity)
         self.exposure = exposure                             # exposure of 405 nm
-        self.cycles = cycles                            # exposures cucles number
+        self.cycles = cycles                                 # exposures cucles number
+        self.load = load                                     # loading method (1 - no PA, 2 - with PA)
 
-    def relInt(self, low_lim=0.1, high_lim=0.8, sigma=3, mask=False):
+    def relInt(self, high_lim=0.8, init_low=0.05, mask_diff=50, sigma=3, noise_size=40):
+        self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])  # calc noise sd in max imtensity frame in square region
         self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)
 
-        self.cell_mask = filters.apply_hysteresis_threshold(self.max_frame,
-                                                            low=low_lim*np.max(self.max_frame),
-                                                            high=high_lim*np.max(self.max_frame))
+        low_lim = edge.hystLow(self.max_frame, self.max_gauss, sd=self.noise_sd,
+                               mode='cell', diff=mask_diff, init_low=init_low, gen_high=high_lim)
+
+        self.cell_mask = filters.apply_hysteresis_threshold(self.max_gauss,
+                                                            low=low_lim['2sd']*np.max(self.max_gauss),
+                                                            high=high_lim*np.max(self.max_gauss))
 
         rel_int = [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3)
                    for img in self.img_series]
 
-        if mask:
-            return self.cell_mask
         return rel_int
 
 # class FRETData:

@@ -39,33 +39,65 @@ logging.basicConfig(level=logging.INFO,
 data_path = os.path.join(sys.path[0], 'fluo_data')
 
 all_cells = op.WDPars(data_path)
-one_cell = 6
+one_cell = 4
+
+# # Fluo-4 bleachin experiment
+# df = pd.DataFrame(columns=['cell', 'exp', 'cycl', 'time', 'int'])
+# for cell_num in range(0, len(all_cells)):
+#     cell = all_cells[cell_num]
+#     series_int = cell.relInt()
+#     for single_num in range(len(series_int)):
+#         single_int = series_int[single_num]
+#         df = df.append(pd.Series([int(cell_num+1), cell.exposure, cell.cycles, int(single_num+1), single_int],
+#                        index=df.columns),
+#                        ignore_index=True)
 
 
-df = pd.DataFrame(columns=['cell', 'exp', 'cycl', 'time', 'int'])
+# PA in loading solution experiment (1 - no PA, 2 - with PA)
+df = pd.DataFrame(columns=['cell', 'PA', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
-    series_int = cell.relInt()
+    logging.info('Image {} in progress'.format(cell.img_name))
+
+    try:                            # register exceptions from lowHyst function
+    	series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=100, sigma=3, noise_size=40)
+    except RuntimeError:
+    	logging.fatal('For image {} relative intensity DON`T calculated!\n'.format(cell.img_name))
+    	continue
+    except ValueError:
+    	logging.fatal('For image {} relative intensity DON`T calculated!\n'.format(cell.img_name))
+    	continue
+
+    loading_type = cell.load
     for single_num in range(len(series_int)):
         single_int = series_int[single_num]
-        df = df.append(pd.Series([int(cell_num+1), cell.exposure, cell.cycles, int(single_num+1), single_int],
+        df = df.append(pd.Series([int(cell_num+1), loading_type, int(single_num+1), single_int],
                        index=df.columns),
                        ignore_index=True)
 
-df.to_csv('bleaching.csv', index=False)
+df.to_csv('results.csv', index=False)
 
 
-ax0 = plt.subplot(121)
+ax0 = plt.subplot(131)
 slc0 = ax0.imshow(all_cells[one_cell].max_frame)
 slc0.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
 div0 = make_axes_locatable(ax0)
 cax0 = div0.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slc0, cax=cax0)
-ax0.set_title('0 s')
+ax0.set_title(all_cells[one_cell].img_name)
 
-ax1 = plt.subplot(122)
-ax1.imshow(all_cells[one_cell].relInt(mask=True))
+ax1 = plt.subplot(133)
+ax1.imshow(all_cells[one_cell].cell_mask)
 ax1.set_title('mask')
+
+ax2 = plt.subplot(132)
+slc2 = ax2.imshow(all_cells[one_cell].max_gauss)
+# slc2.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
+div2 = make_axes_locatable(ax2)
+cax2 = div2.append_axes('right', size='3%', pad=0.1)
+plt.colorbar(slc2, cax=cax2)
+ax2.set_title('gauss')
+
 
 plt.tight_layout()
 plt.show()
