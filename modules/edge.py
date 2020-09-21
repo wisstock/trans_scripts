@@ -91,9 +91,11 @@ def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, 
     """
     if mode == 'memb':
         masks = {'2sd': ma.masked_greater_equal(img, 2*sd),  # values greater then 2 noise sd 
-                 'mean': ma.masked_greater(img, mean)}         # values greater then mean cytoplasm intensity
+                 'mean': ma.masked_greater(img, mean)}       # values greater then mean cytoplasm intensity
     elif mode == 'cell':
         masks = {'2sd': ma.masked_greater_equal(img, 2*sd)}
+
+    logging.info('masks: {}'.format(masks.keys()))
 
     low_val = {}
     control_diff = False
@@ -135,11 +137,10 @@ def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, 
             control_diff = np.all((segmentation.flood(mask_hyst, (0, 0)) + mask_hyst))
             if control_diff == True:
                 logging.fatal('Lower treshold for {} mask {:.2f}, masks difference {}px'.format(mask_name, low, diff_mask))
-                raise ValueError('Membrane in mean mask doesn`t closed, mebrane unlocated at this diff value (too low)!')
+                raise ValueError('Membrane in {} mask doesn`t closed, mebrane unlocated at this diff value (too low)!'.format(mask_name))
 
         low_val.update({mask_name : low})
-    logging.info('Lower tresholds {}'.format(low_val))
-    print(low_val)
+    logging.info('Lower tresholds {}\n'.format(low_val))
 
     return low_val
 

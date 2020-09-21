@@ -39,7 +39,7 @@ logging.basicConfig(level=logging.INFO,
 data_path = os.path.join(sys.path[0], 'fluo_data')
 
 all_cells = op.WDPars(data_path)
-one_cell = 4
+one_cell = 2
 
 # # Fluo-4 bleachin experiment
 # df = pd.DataFrame(columns=['cell', 'exp', 'cycl', 'time', 'int'])
@@ -59,14 +59,16 @@ for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
 
-    try:                            # register exceptions from lowHyst function
-    	series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=100, sigma=3, noise_size=40)
-    except RuntimeError:
-    	logging.fatal('For image {} relative intensity DON`T calculated!\n'.format(cell.img_name))
-    	continue
-    except ValueError:
-    	logging.fatal('For image {} relative intensity DON`T calculated!\n'.format(cell.img_name))
-    	continue
+    series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=40, sigma=3, noise_size=40)
+
+    # try:                            # register exceptions from lowHyst function
+    # 	series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=40, sigma=3, noise_size=40)
+    # except RuntimeError:
+    # 	logging.fatal('For image {} relative intensity DON`T calculated, RE!\n'.format(cell.img_name))
+    # 	continue
+    # except ValueError:
+    # 	logging.fatal('For image {} relative intensity DON`T calculated, VE!\n'.format(cell.img_name))
+    # 	continue
 
     loading_type = cell.load
     for single_num in range(len(series_int)):

@@ -52,7 +52,7 @@ def WDPars(wd_path, mode='fluo'):
                     data_path = os.path.join(root, file)
                     fluo_list.append(FluoData(data_path, img_name=data_name, load=data_metha[data_name]))
 
-                    logging.info('File {} uploaded!'.format(data_path))
+                    logging.info('File {} uploaded!\n'.format(data_path))
 
     return fluo_list
 
@@ -147,10 +147,10 @@ class FluoData:
                                                             low=low_lim['2sd']*np.max(self.max_gauss),
                                                             high=high_lim*np.max(self.max_gauss))
 
-        rel_int = [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3)
-                   for img in self.img_series]
+        self.rel_int = [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3)
+                        for img in self.img_series]
 
-        return rel_int
+        return self.rel_int, self.cell_mask, self.max_gauss 
 
 # class FRETData:
 #   """ One registation in co-transfected cell after uncaging
