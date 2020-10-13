@@ -42,17 +42,11 @@ FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message
 logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
-yfp_raw_stack = tifffile.imread(os.path.join(sys.path[0], 'data/yfp.tif'))
-yfp_dec_stack = tifffile.imread(os.path.join(sys.path[0], 'data/yfp_dec_32.tif'))
-hpca_raw_stack = tifffile.imread(os.path.join(sys.path[0], 'data/hpca.tif'))
-hpca_dec_stack = tifffile.imread(os.path.join(sys.path[0], 'data/hpca_dec_32.tif'))
+yfp_raw_stack = tifffile.imread(os.path.join(sys.path[0], 'demo_data/yfp.tif'))
 
 cell_roi = [70, 250, 70, 250]
 
 yfp_raw_stack = yfp_raw_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
-yfp_dec_stack = yfp_dec_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
-hpca_raw_stack = hpca_raw_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
-hpca_dec_stack = hpca_dec_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
 
 
 frame = 15
