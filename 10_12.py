@@ -39,7 +39,7 @@ logging.basicConfig(level=logging.INFO,
 data_path = os.path.join(sys.path[0], 'fluo_data')
 
 all_cells = op.WDPars(data_path)
-one_cell = 2
+one_cell = 0
 
 # # Fluo-4 bleachin experiment
 # df = pd.DataFrame(columns=['cell', 'exp', 'cycl', 'time', 'int'])
@@ -77,10 +77,10 @@ for cell_num in range(0, len(all_cells)):
                        index=df.columns),
                        ignore_index=True)
 
-df.to_csv('results.csv', index=False)
+df.to_csv('results_1-2.csv', index=False)
 
 
-ax0 = plt.subplot(131)
+ax0 = plt.subplot(231)
 slc0 = ax0.imshow(all_cells[one_cell].max_frame)
 slc0.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
 div0 = make_axes_locatable(ax0)
@@ -88,17 +88,20 @@ cax0 = div0.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slc0, cax=cax0)
 ax0.set_title(all_cells[one_cell].img_name)
 
-ax1 = plt.subplot(133)
+ax1 = plt.subplot(233)
 ax1.imshow(all_cells[one_cell].cell_mask)
 ax1.set_title('mask')
 
-ax2 = plt.subplot(132)
+ax2 = plt.subplot(232)
 slc2 = ax2.imshow(all_cells[one_cell].max_gauss)
 # slc2.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
 div2 = make_axes_locatable(ax2)
 cax2 = div2.append_axes('right', size='3%', pad=0.1)
 plt.colorbar(slc2, cax=cax2)
 ax2.set_title('gauss')
+
+# int_curve = plt.plot(212)
+
 
 
 plt.tight_layout()
