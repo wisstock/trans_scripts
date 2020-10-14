@@ -2,8 +2,8 @@
 
 """ Copyright © 2020 Borys Olifirov
 
-Test experiment with NP-EGTA + Fluo-4 in new HEK cells.
-24-27,07.2020
+Test experiment with NP-EGTA + Fluo-4 in old HEK cells.
+12-14.10.2020
 
 """
 
@@ -54,7 +54,7 @@ one_cell = 2
 
 
 # PA in loading solution experiment (1 - no PA, 2 - with PA)
-df = pd.DataFrame(columns=['cell', 'PA', 'time', 'int'])
+df = pd.DataFrame(columns=['cell', 'area', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
@@ -70,10 +70,10 @@ for cell_num in range(0, len(all_cells)):
     # 	logging.fatal('For image {} relative intensity DON`T calculated, VE!\n'.format(cell.img_name))
     # 	continue
 
-    loading_type = cell.load
+    feature = cell.feature
     for single_num in range(len(series_int)):
         single_int = series_int[single_num]
-        df = df.append(pd.Series([int(cell_num+1), loading_type, int(single_num+1), single_int],
+        df = df.append(pd.Series([int(cell_num+1), feature, int(single_num+1), single_int],
                        index=df.columns),
                        ignore_index=True)
 

@@ -21,7 +21,7 @@ import oiffile as oif
 import edge
 
 
-def WDPars(wd_path, mode='fluo'):
+def WDPars(wd_path, mode='fluo', **kwargs):
     """ Parser for data dirrectory and YAML methadata file
 
     """
@@ -50,7 +50,10 @@ def WDPars(wd_path, mode='fluo'):
 
                 if data_name in data_metha.keys():
                     data_path = os.path.join(root, file)
-                    fluo_list.append(FluoData(data_path, img_name=data_name, load=data_metha[data_name]))
+                    fluo_list.append(FluoData(data_path,
+                                              img_name=data_name,
+                                              feature=data_metha[data_name],
+                                              max_frame=6))
 
                     logging.info('File {} uploaded!\n'.format(data_path))
 
@@ -120,7 +123,7 @@ class FluoData:
     """ Time series in NP-EGTA + Fluo-4 test experiment series
 
     """
-    def __init__(self, oif_input, img_name, exposure=10, cycles=1, max_frame=23, load=1, background_rm=True):
+    def __init__(self, oif_input, img_name, exposure=10, cycles=1, max_frame=23, feature=0, background_rm=True):
         self.img_series = oif.OibImread(oif_input)[0,:,:,:]  # z-stack frames series
 
         if background_rm:  # background remove option
@@ -134,7 +137,7 @@ class FluoData:
         self.max_frame = self.img_series[max_frame,:,:]      # first frame after 405 nm exposure (max intensity)
         self.exposure = exposure                             # exposure of 405 nm
         self.cycles = cycles                                 # exposures cucles number
-        self.load = load                                     # loading method (1 - no PA, 2 - with PA)
+        self.feature = feature                               # variable parameter value from YAML file (loading type, stimulation area et. al)
 
     def relInt(self, high_lim=0.8, init_low=0.05, mask_diff=50, sigma=3, noise_size=40):
         self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])  # calc noise sd in max imtensity frame in square region
