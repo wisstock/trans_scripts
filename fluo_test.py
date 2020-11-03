@@ -54,12 +54,14 @@ one_cell = 2
 
 
 # PA in loading solution experiment (1 - no PA, 2 - with PA)
-df = pd.DataFrame(columns=['cell', 'PA', 'time', 'int'])
+df = pd.DataFrame(columns=['cell', 'power', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
 
     series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=40, sigma=3, noise_size=40)
+
+    series_int = edge.deltaF(series_int)
 
     # try:                            # register exceptions from lowHyst function
     # 	series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=40, sigma=3, noise_size=40)
@@ -70,10 +72,9 @@ for cell_num in range(0, len(all_cells)):
     # 	logging.fatal('For image {} relative intensity DON`T calculated, VE!\n'.format(cell.img_name))
     # 	continue
 
-    loading_type = cell.load
     for single_num in range(len(series_int)):
         single_int = series_int[single_num]
-        df = df.append(pd.Series([int(cell_num+1), loading_type, int(single_num+1), single_int],
+        df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
                        index=df.columns),
                        ignore_index=True)
 

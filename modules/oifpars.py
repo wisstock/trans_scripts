@@ -21,7 +21,7 @@ import oiffile as oif
 import edge
 
 
-def WDPars(wd_path, mode='fluo', **kwargs):
+def WDPars(wd_path, mode='fluo'):
     """ Parser for data dirrectory and YAML methadata file
 
     """
@@ -49,6 +49,7 @@ def WDPars(wd_path, mode='fluo', **kwargs):
                 data_path = os.path.join(root, file)
 
                 if data_name in data_metha.keys():
+                    logging.info(f'File {data_name} prepating!')
                     data_path = os.path.join(root, file)
                     fluo_list.append(FluoData(data_path,
                                               img_name=data_name,
@@ -123,7 +124,7 @@ class FluoData:
     """ Time series in NP-EGTA + Fluo-4 test experiment series
 
     """
-    def __init__(self, oif_input, img_name, exposure=10, cycles=1, max_frame=23, feature=0, background_rm=True):
+    def __init__(self, oif_input, img_name, exposure=10, cycles=1, max_frame=6, feature=0, background_rm=True):
         self.img_series = oif.OibImread(oif_input)[0,:,:,:]  # z-stack frames series
 
         if background_rm:  # background remove option
@@ -153,7 +154,8 @@ class FluoData:
         self.rel_int = [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3)
                         for img in self.img_series]
 
-        return self.rel_int, self.cell_mask, self.max_gauss 
+        return self.rel_int, self.cell_mask, self.max_gauss
+
 
 # class FRETData:
 #   """ One registation in co-transfected cell after uncaging

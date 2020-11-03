@@ -55,6 +55,20 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
+def deltaF(int_list, f_0_win=2, rm_f_0=True):
+    """ Function for colculation ΔF/F0 for data series.
+    f_0_win - window for F0 calculation (mean of first 2 values by defoult);
+    rm_f_0 - remove values which used for F0 calculation from the data series.
+
+    """
+
+    f_0 = np.mean(int_list[:f_0_win])
+    if rm_f_0:
+        int_list = int_list[f_0_win:]
+
+    return [(i - f_0)/f_0 for i in int_list]
+
+
 def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, mode='memb'):
     """ Lower treshold calculations for hysteresis membrane detection function hystMemb.
 
