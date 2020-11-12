@@ -49,7 +49,7 @@ cell_roi = [70, 250, 70, 250]
 yfp_raw_stack = yfp_raw_stack[:, cell_roi[0]:cell_roi[1], cell_roi[2]:cell_roi[3]]
 
 
-frame = 15
+frame = 13
 roi_start = [85, 85]
 roi_lim = 30    
 
@@ -151,17 +151,17 @@ sd, mean, res = edge.hystMemb(img, roi_center=[100, 100], low_diff=100)  # raw_m
 
 
 
-ax1 = plt.subplot(231)
-ax1.imshow(sd)
-ax2 = plt.subplot(232)
-ax2.imshow(mean)
-ax3 = plt.subplot(233)
+# ax1 = plt.subplot(231)
+# ax1.imshow(sd)
+# ax2 = plt.subplot(232)
+# ax2.imshow(mean)
+ax3 = plt.subplot(122)  # 233)
 ax3.imshow(res)
 
-ax4 = plt.subplot(223)
+ax4 = plt.subplot(121)  # 223)
 ax4.imshow(img)
-ax5 = plt.subplot(224)
-ax5.imshow(ma.masked_where(~res, img))
+# ax5 = plt.subplot(224)
+# ax5.imshow(ma.masked_where(~res, img))
 
 plt.tight_layout()
 plt.show()

@@ -5,6 +5,7 @@ confocal_data/
 motoneuron/
 raw_data/
 fluo_data/
+fluo_img/
 
 __pycache__
 

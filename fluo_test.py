@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-
-""" Copyright © 2020 Borys Olifirov
-
+""" Copyright © 2020 Borys Olifiro
 Test experiment with NP-EGTA + Fluo-4 in new HEK cells.
 24-27,07.2020
 
@@ -22,9 +20,6 @@ from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.append('modules')
 import oifpars as op
-import edge
-
-
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
@@ -35,74 +30,75 @@ logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
 
+def deltaF(int_list, f_0_win=2):
+    """ Function for colculation ΔF/F0 for data series.
+    f_0_win - window for F0 calculation (mean of first 2 values by defoult).
+
+    """
+    f_0 = np.mean(int_list[:f_0_win])
+    return [(i - f_0)/f_0 for i in int_list[f_0_win:]]
+
 
 data_path = os.path.join(sys.path[0], 'fluo_data')
 
-all_cells = op.WDPars(data_path)
+all_cells = op.WDPars(data_path, max_frame=5, sigma=3, noise_size=40,
+                      high_lim=0.8, init_low=0.05, mask_diff=40)
 one_cell = 2
 
-# # Fluo-4 bleachin experiment
-# df = pd.DataFrame(columns=['cell', 'exp', 'cycl', 'time', 'int'])
+# df = pd.DataFrame(columns=['cell', 'feature', 'time', 'int'])
 # for cell_num in range(0, len(all_cells)):
 #     cell = all_cells[cell_num]
+#     logging.info('Image {} in progress'.format(cell.img_name))
+
 #     series_int = cell.relInt()
+#     series_int = deltaF(series_int, f_0_win=3)
+
 #     for single_num in range(len(series_int)):
 #         single_int = series_int[single_num]
-#         df = df.append(pd.Series([int(cell_num+1), cell.exposure, cell.cycles, int(single_num+1), single_int],
+#         df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
 #                        index=df.columns),
 #                        ignore_index=True)
 
-
-# PA in loading solution experiment (1 - no PA, 2 - with PA)
-df = pd.DataFrame(columns=['cell', 'power', 'time', 'int'])
-for cell_num in range(0, len(all_cells)):
-    cell = all_cells[cell_num]
-    logging.info('Image {} in progress'.format(cell.img_name))
-
-    series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=40, sigma=3, noise_size=40)
-
-    series_int = edge.deltaF(series_int)
-
-    # try:                            # register exceptions from lowHyst function
-    # 	series_int, mask, gauss = cell.relInt(high_lim=0.8, init_low=0.05, mask_diff=40, sigma=3, noise_size=40)
-    # except RuntimeError:
-    # 	logging.fatal('For image {} relative intensity DON`T calculated, RE!\n'.format(cell.img_name))
-    # 	continue
-    # except ValueError:
-    # 	logging.fatal('For image {} relative intensity DON`T calculated, VE!\n'.format(cell.img_name))
-    # 	continue
-
-    for single_num in range(len(series_int)):
-        single_int = series_int[single_num]
-        df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
-                       index=df.columns),
-                       ignore_index=True)
-
-df.to_csv('results.csv', index=False)
+# df.to_csv('results.csv', index=False)
 
 
-ax0 = plt.subplot(131)
-slc0 = ax0.imshow(all_cells[one_cell].max_frame)
-slc0.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
-div0 = make_axes_locatable(ax0)
-cax0 = div0.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc0, cax=cax0)
-ax0.set_title(all_cells[one_cell].img_name)
+for cell_img in all_cells:
+  plt.figure()
+  ax0 = plt.subplot(121)
+  img0 = ax0.imshow(cell_img.max_gauss)
+  ax0.text(10,10,cell_img.img_name,fontsize=10)
+  ax0.axis('off')
+  
+  ax1 = plt.subplot(122)
+  img1 = ax1.imshow(cell_img.cell_mask)
+  ax1.axis('off')
 
-ax1 = plt.subplot(133)
-ax1.imshow(all_cells[one_cell].cell_mask)
-ax1.set_title('mask')
-
-ax2 = plt.subplot(132)
-slc2 = ax2.imshow(all_cells[one_cell].max_gauss)
-# slc2.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
-div2 = make_axes_locatable(ax2)
-cax2 = div2.append_axes('right', size='3%', pad=0.1)
-plt.colorbar(slc2, cax=cax2)
-ax2.set_title('gauss')
+  plt.savefig(f'fluo_img/{cell_img.img_name}_max_frame.png')
+  logging.info(f'Frame {cell_img.img_name} saved!')
 
 
-plt.tight_layout()
-plt.show()
+# ax0 = plt.subplot(131)
+# slc0 = ax0.imshow(all_cells[one_cell].max_frame)
+# slc0.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
+# div0 = make_axes_locatable(ax0)
+# cax0 = div0.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc0, cax=cax0)
+# ax0.set_title(all_cells[one_cell].img_name)
+
+# ax1 = plt.subplot(133)
+# ax1.imshow(all_cells[one_cell].cell_mask)
+# ax1.set_title('mask')
+
+# ax2 = plt.subplot(132)
+# slc2 = ax2.imshow(all_cells[one_cell].max_gauss)
+# # slc2.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
+# div2 = make_axes_locatable(ax2)
+# cax2 = div2.append_axes('right', size='3%', pad=0.1)
+# plt.colorbar(slc2, cax=cax2)
+# ax2.set_title('gauss')
+
+
+# plt.tight_layout()
+# plt.show()
 
 

@@ -55,20 +55,6 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def deltaF(int_list, f_0_win=2, rm_f_0=True):
-    """ Function for colculation ΔF/F0 for data series.
-    f_0_win - window for F0 calculation (mean of first 2 values by defoult);
-    rm_f_0 - remove values which used for F0 calculation from the data series.
-
-    """
-
-    f_0 = np.mean(int_list[:f_0_win])
-    if rm_f_0:
-        int_list = int_list[f_0_win:]
-
-    return [(i - f_0)/f_0 for i in int_list]
-
-
 def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, mode='memb'):
     """ Lower treshold calculations for hysteresis membrane detection function hystMemb.
 
@@ -85,14 +71,12 @@ def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, 
     elif mode == 'cell':
         masks = {'2sd': ma.masked_greater_equal(img, 2*sd)}
 
-    logging.info('masks: {}'.format(masks.keys()))
-
     low_val = {}
     control_diff = False
     for mask_name in masks:
         mask_img = masks[mask_name]
 
-        logging.info('Mask {} lower treshold fitting in progress'.format(mask_name))
+        logging.info(f'Mask {mask_name} lower treshold fitting in progress')
 
         mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
                                                       low=init_low*np.max(img_gauss),
@@ -104,9 +88,7 @@ def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, 
         logging.info('Initial masks difference {}'.format(diff_mask))
 
         low = init_low
-
-        i = 0
-        control_diff = 1
+        # control_diff = 1
         while diff_mask >= diff:
             mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
                                                           low=low*np.max(img_gauss),
@@ -114,11 +96,10 @@ def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, 
             diff_mask = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
 
             low += 0.01
-
-            i += 1
             # is cytoplasm mean mask at initial lower threshold value closed? prevent infinit cycle
-            if i == 75:
-                logging.fatal('Lower treshold for {} mask {:.2f}, control difference {}px'.format(mask_name, low, control_diff))
+            if low >= gen_high:
+                logging.fatal('Lower treshold for {} mask {:.2f}, control difference {}px'.format(mask_name, low, diff_mask))
+                break
                 raise RuntimeError('Membrane in mean mask doesn`t detected at initial lower threshold value!')
     
 
@@ -130,7 +111,7 @@ def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, 
                 raise ValueError('Membrane in {} mask doesn`t closed, mebrane unlocated at this diff value (too low)!'.format(mask_name))
 
         low_val.update({mask_name : low})
-    logging.info('Lower tresholds {}\n'.format(low_val))
+    logging.info(f'Lower tresholds {low_val}')
 
     return low_val
 
