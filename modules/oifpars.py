@@ -16,6 +16,7 @@ import yaml
 import pandas as pd
 from skimage import filters
 from skimage import measure
+from scipy import ndimage as ndi
 
 import oiffile as oif
 import edge
@@ -115,8 +116,7 @@ class FluoData:
 
     """
     def __init__(self, oif_path, img_name, feature=0, max_frame=6, background_rm=True,
-                 sigma=3, noise_size=40, 
-                 high_lim=0.8, init_low=0.05, mask_diff=50):
+                 sigma=3, noise_size=40):
         self.img_series = oif.OibImread(oif_path)[0,:,:,:]  # z-stack frames series
 
         if background_rm:  # background remove option
@@ -131,19 +131,13 @@ class FluoData:
         self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])  # calc noise sd in max imtensity frame in square region
         self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)    # create gauss blured image for thresholding
 
-        low_lim = edge.hystLow(self.max_frame, self.max_gauss, sd=self.noise_sd,
-                               mode='cell', diff=mask_diff, init_low=init_low, gen_high=high_lim)
+        self.cell_mask, self.all_cells_mask = edge.cellMask(high_lim=0.8, init_low=0.05, mask_diff=50, sd_lvl=2, mode='single')
 
-        self.cell_mask = filters.apply_hysteresis_threshold(self.max_gauss,
-                                                            low=low_lim['2sd']*np.max(self.max_gauss),
-                                                            high=high_lim*np.max(self.max_gauss))
-
-
-    def relInt(self):
+    def relInt(self, cell_mask):
         """ Calculating intensity along frames time series in masked area.
 
         """
-        return [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3) for img in self.img_series]
+        return [round(np.sum(ma.masked_where(~cell_mask, img)) / np.sum(cell_mask), 3) for img in self.img_series]
 
 
 if __name__=="__main__":

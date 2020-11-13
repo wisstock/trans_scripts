@@ -55,21 +55,20 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def hystLow(img, img_gauss, sd=0, mean=0, diff=40, init_low=0.05, gen_high=0.8, mode='memb'):
+def hystLow(img, img_gauss, sd=0, sd_threshold=2, mean=0, diff=40, init_low=0.05, gen_high=0.8, mode='memb'):
     """ Lower treshold calculations for hysteresis membrane detection function hystMemb.
 
     diff - int, difference (in px number) between hysteresis mask and img without greater values
-    delta_diff - int, tolerance level (in px number) for diff value
     gen_high, sd, mean - see hystMemb
 
     mode - 'cell': only sd treshold calc, 'memb': both tresholds calc
 
     """
     if mode == 'memb':
-        masks = {'2sd': ma.masked_greater_equal(img, 2*sd),  # values greater then 2 noise sd 
+        masks = {'2sd': ma.masked_greater_equal(img, sd_threshold*sd),  # values greater then 2 noise sd 
                  'mean': ma.masked_greater(img, mean)}       # values greater then mean cytoplasm intensity
     elif mode == 'cell':
-        masks = {'2sd': ma.masked_greater_equal(img, 2*sd)}
+        masks = {'2sd': ma.masked_greater_equal(img, sd_threshold*sd)}
 
     low_val = {}
     control_diff = False
@@ -160,6 +159,59 @@ def hystMemb(img, roi_center, roi_size=30, noise_size=20, low_diff=40, gen_high=
 
     return mask_2sd, mask_roi_mean, ma.masked_where(~mask_cytoplasm, mask_2sd)
 
+
+def cellMask(img, gauss, sd, high_lim=0.8, init_low=0.05, mask_diff=50, sd_lvl=2, mode='single'):
+    """ Create binary mask for one cell in the frame, detect largest area as a cell.
+    """
+    low_lim = edge.hystLow(img, gauss, sd,
+                           sd_threshold=sd_lvl, mode='cell', diff=mask_diff, init_low=init_low, gen_high=high_lim)
+    raw_mask = filters.apply_hysteresis_threshold(self.max_gauss,
+                                                  low=low_lim['2sd']*np.max(self.max_gauss),
+                                                  high=high_lim*np.max(self.max_gauss))
+
+    # self.cell_mask, self.all_cells_mask = cellMask()
+    labels_cells, num_cells = ndi.label(raw_mask)
+    return mask, feature_mask
+
+
+class HystTools():
+    """ Apply hysteresis thresholding for cell detection in confocal image.
+    Optimised for image of the individual cells.
+
+    """
+    def __init__(self, img, sigma, sd, mean=0, sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50):
+        """ Lower treshold calculations for hysteresis membrane detection functions.
+
+        """
+
+        self.img = img
+        self.gauss = filters.gaussian(self.img, sigma=sigma)
+
+        mask_img = ma.masked_greater_equal(img, sd_lvl*sd)
+        low = low_init
+        diff = np.size(self.img)
+
+        while diff > mask_diff:
+            mask_hyst = filters.apply_hysteresis_threshold(self.gauss,
+                                                          low=low*np.max(self.gauss),
+                                                          high=high*np.max(self.gauss))
+            diff = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
+
+            if diff < mask_diff:
+                raise ValueError('Initial lower threshold is too low!')
+
+            low += 0.01
+
+            if low >= high:
+                logging.fatal('No cell detected!')
+                break
+        logging.info(f'Lower tresholds {low}')
+
+        self.low = low
+
+    def cell_mask():
+
+    def memb_mask():
 
 
 if __name__=="__main__":

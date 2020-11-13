@@ -41,9 +41,8 @@ def deltaF(int_list, f_0_win=2):
 
 data_path = os.path.join(sys.path[0], 'fluo_data')
 
-all_cells = op.WDPars(data_path, max_frame=5, sigma=3, noise_size=40,
-                      high_lim=0.8, init_low=0.05, mask_diff=40)
-one_cell = 2
+all_cells = op.WDPars(data_path, max_frame=1, sigma=3, noise_size=40,
+                      high_lim=0.8, init_low=0.05, mask_diff=40, sd_lvl=1.5)
 
 # df = pd.DataFrame(columns=['cell', 'feature', 'time', 'int'])
 # for cell_num in range(0, len(all_cells)):
@@ -58,9 +57,7 @@ one_cell = 2
 #         df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
 #                        index=df.columns),
 #                        ignore_index=True)
-
-# df.to_csv('results.csv', index=False)
-
+# df.to_csv('fluo_res/results.csv', index=False)
 
 for cell_img in all_cells:
   plt.figure()
@@ -70,10 +67,10 @@ for cell_img in all_cells:
   ax0.axis('off')
   
   ax1 = plt.subplot(122)
-  img1 = ax1.imshow(cell_img.cell_mask)
+  img1 = ax1.imshow(cell_img.all_cells_mask)
   ax1.axis('off')
 
-  plt.savefig(f'fluo_img/{cell_img.img_name}_max_frame.png')
+  plt.savefig(f'fluo_res/{cell_img.img_name}_max_frame.png')
   logging.info(f'Frame {cell_img.img_name} saved!')
 
 
