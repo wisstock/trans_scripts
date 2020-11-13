@@ -21,6 +21,7 @@ from skimage import segmentation
 
 from scipy.ndimage import measurements as msr
 from scipy import signal
+from scipy import ndimage as ndi
 
 
 def backCon(img, edge_lim=20, dim=3):
@@ -55,135 +56,51 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def hystLow(img, img_gauss, sd=0, sd_threshold=2, mean=0, diff=40, init_low=0.05, gen_high=0.8, mode='memb'):
-    """ Lower treshold calculations for hysteresis membrane detection function hystMemb.
+def sDerivate(series, mask, sd_area=50, sigma=4, mode='whole', mean_win=1, mean_space=0):
+    """ Calculating derivative image series (difference between current and previous frames).
 
-    diff - int, difference (in px number) between hysteresis mask and img without greater values
-    gen_high, sd, mean - see hystMemb
-
-    mode - 'cell': only sd treshold calc, 'memb': both tresholds calc
+    Pixels greater than noise sd set equal to 1;
+    Pixels less than -noise sd set equal to -1.
 
     """
-    if mode == 'memb':
-        masks = {'2sd': ma.masked_greater_equal(img, sd_threshold*sd),  # values greater then 2 noise sd 
-                 'mean': ma.masked_greater(img, mean)}       # values greater then mean cytoplasm intensity
-    elif mode == 'cell':
-        masks = {'2sd': ma.masked_greater_equal(img, sd_threshold*sd)}
-
-    low_val = {}
-    control_diff = False
-    for mask_name in masks:
-        mask_img = masks[mask_name]
-
-        logging.info(f'Mask {mask_name} lower treshold fitting in progress')
-
-        mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
-                                                      low=init_low*np.max(img_gauss),
-                                                      high=gen_high*np.max(img_gauss))
-        diff_mask = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
-
-        if diff_mask < diff:
-            raise ValueError('Initial lower threshold is too low!')
-        logging.info('Initial masks difference {}'.format(diff_mask))
-
-        low = init_low
-        # control_diff = 1
-        while diff_mask >= diff:
-            mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
-                                                          low=low*np.max(img_gauss),
-                                                          high=gen_high*np.max(img_gauss))
-            diff_mask = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
-
-            low += 0.01
-            # is cytoplasm mean mask at initial lower threshold value closed? prevent infinit cycle
-            if low >= gen_high:
-                logging.fatal('Lower treshold for {} mask {:.2f}, control difference {}px'.format(mask_name, low, diff_mask))
-                break
-                raise RuntimeError('Membrane in mean mask doesn`t detected at initial lower threshold value!')
+    def seriesBinn(series, mean_series, binn, space):
+        mean_frame, series = np.mean(series[:binn,:,:], axis=0), series[binn+space:,:,:]
+        mean_series.append(mean_frame)
+        if len(series) > 0:
+            seriesBinn(series, mean_series, binn, space)
+        else:
+            return mean_series
     
+    if mode == 'binn':
+        series_mean = []
+        seriesBinn(series, series_mean, binn=mean_win, space=mean_space)
+        logging.info(f'Mean series len={len(series_mean)} (window={mean_win}, space={mean_space}')
+    else:
+        series_mean = series
 
-        # is cytoplasm mask at setted up difference value closed?
-        if mask_name == 'mean':
-            control_diff = np.all((segmentation.flood(mask_hyst, (0, 0)) + mask_hyst))
-            if control_diff == True:
-                logging.fatal('Lower treshold for {} mask {:.2f}, masks difference {}px'.format(mask_name, low, diff_mask))
-                raise ValueError('Membrane in {} mask doesn`t closed, mebrane unlocated at this diff value (too low)!'.format(mask_name))
+    gauss_series = [filters.gaussian(img, sigma=sigma) for img in series_mean]
+    logging.info('Derivate sigma={}'.format(sigma))
+    derivete_series = []
 
-        low_val.update({mask_name : low})
-    logging.info(f'Lower tresholds {low_val}')
+    for i in range(1, len(gauss_series)):
+        frame_sd = np.std(gauss_series[i][:sd_area, :sd_area])
+        derivete_frame = gauss_series[i] - gauss_series[i-1]
+        derivete_frame[derivete_frame > frame_sd] = 1
+        derivete_frame[derivete_frame < -frame_sd] = -1
+        derivete_series.append(ma.masked_where(~mask, derivete_frame))
 
-    return low_val
-
-
-def hystMemb(img, roi_center, roi_size=30, noise_size=20, low_diff=40, gen_high=0.8, sigma=3):
-    """ Function for membrane region detection with hysteresis threshold algorithm.
-    Outdide edge - >= 2sd noise
-    Inside edge - >= cytoplasm mean intensity
-
-    Require hystLow function for lower hysteresis threshold calculations.
-
-    img - imput z-stack frame;
-    roi_center - list of int [x, y], coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
-    roi_size - int, cutoplasmic ROI side size in px (ROI is a square area);
-    noise_size - int, size in px of region for noise sd calculation (square area witf start in 0,0 coordinates);
-    sd_low - float, hysteresis algorithm lower threshold for outside cell edge detection,
-             > 2sd of noise (percentage of maximum frame intensity);
-    mean_low - float, hysteresis algorithm lower threshold for inside cell edge detection,
-             > cytoplasmic ROI mean intensity (percentage of maximum frame intensity);
-    gen_high - float,  general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
-    sigma - int, sd for gaussian filter.
-
-    Returts membrane region boolean mask for input frame.
-
-    """
-    img = backCon(img, dim=2)
-    img_gauss = filters.gaussian(img, sigma=sigma)
-
-    noise_sd = np.std(img[:noise_size, :noise_size])
-    logging.info('Frame noise SD={:.3f}'.format(noise_sd))
-
-    roi_mean = np.mean(img[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
-                           roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])  # cutoplasmic ROI mean celculation
-    logging.info('Cytoplasm ROI mean intensity {:.3f}'.format(roi_mean))
-
-    low_val = hystLow(img, img_gauss, sd=noise_sd, mean=roi_mean, diff=low_diff, gen_high=gen_high)
-
-    mask_2sd = filters.apply_hysteresis_threshold(img_gauss,
-                                                  low=low_val['2sd']*np.max(img_gauss),
-                                                  high=gen_high*np.max(img_gauss))
-    mask_roi_mean = filters.apply_hysteresis_threshold(img_gauss,
-                                                      low=low_val['mean']*np.max(img_gauss),
-                                                      high=gen_high*np.max(img_gauss))
-    # filling external space and create cytoplasmic mask 
-    mask_cytoplasm = mask_roi_mean + segmentation.flood(mask_roi_mean, (0, 0))
-
-    return mask_2sd, mask_roi_mean, ma.masked_where(~mask_cytoplasm, mask_2sd)
+    return derivete_series
 
 
-def cellMask(img, gauss, sd, high_lim=0.8, init_low=0.05, mask_diff=50, sd_lvl=2, mode='single'):
-    """ Create binary mask for one cell in the frame, detect largest area as a cell.
-    """
-    low_lim = edge.hystLow(img, gauss, sd,
-                           sd_threshold=sd_lvl, mode='cell', diff=mask_diff, init_low=init_low, gen_high=high_lim)
-    raw_mask = filters.apply_hysteresis_threshold(self.max_gauss,
-                                                  low=low_lim['2sd']*np.max(self.max_gauss),
-                                                  high=high_lim*np.max(self.max_gauss))
-
-    # self.cell_mask, self.all_cells_mask = cellMask()
-    labels_cells, num_cells = ndi.label(raw_mask)
-    return mask, feature_mask
-
-
-class HystTools():
+class hystTool():
     """ Apply hysteresis thresholding for cell detection in confocal image.
     Optimised for image of the individual cells.
 
     """
     def __init__(self, img, sigma, sd, mean=0, sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50):
-        """ Lower treshold calculations for hysteresis membrane detection functions.
+        """ Lower threshold calculations for hysteresis membrane detection functions.
 
         """
-
         self.img = img
         self.gauss = filters.gaussian(self.img, sigma=sigma)
 
@@ -197,21 +114,142 @@ class HystTools():
                                                           high=high*np.max(self.gauss))
             diff = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
 
-            if diff < mask_diff:
+            if all([diff < mask_diff, low == low_init]):
                 raise ValueError('Initial lower threshold is too low!')
-
             low += 0.01
-
             if low >= high:
-                logging.fatal('No cell detected!')
+                logging.fatal('LOW=HIGH, thresholding failed!')
                 break
-        logging.info(f'Lower tresholds {low}')
-
+        logging.info(f'Lower threshold {round(low, 2)}')
         self.low = low
 
-    def cell_mask():
+    def cell_mask(self, high=0.8, mode='single'):
+        """ Creating binary mask for homogeneous fluoresced cell by SD thresholding and hysteresis smoothing.
+        Detecting one cell in frame, with largest area ('single' mode) or all thresholded areas ('multi' mode).
+        """
+        raw_mask = filters.apply_hysteresis_threshold(self.gauss,
+                                                      low=self.low*np.max(self.gauss),
+                                                      high=high*np.max(self.gauss))
+        labels_cells, cells_conunt = ndi.label(raw_mask)
+        logging.info(f'{cells_conunt} cells detected')
+        if mode == 'single':
+            if cells_conunt > 1:
+                size_list = [np.sum(ma.masked_where(labels_cells ==  cell_num, labels_cells).mask) for cell_num in range(cells_conunt)]
+                logging.info(f'Cells sizes {size_list}')
+                mask = ma.masked_where(labels_cells == size_list.index(max(size_list))+1, labels_cells).mask
+            else:
+                mask = raw_mask
+            return mask, labels_cells
+        elif mode == 'multi':
+            return raw_mask, labels_cells
 
-    def memb_mask():
+    def memb_mask(self):
+        pass
+
+
+# def hystLow(img, img_gauss, sd=0, sd_threshold=2, mean=0, diff=40, init_low=0.05, gen_high=0.8, mode='memb'):
+#     """ Lower treshold calculations for hysteresis membrane detection function hystMemb.
+
+#     diff - int, difference (in px number) between hysteresis mask and img without greater values
+#     gen_high, sd, mean - see hystMemb
+
+#     mode - 'cell': only sd treshold calc, 'memb': both tresholds calc
+
+#     """
+#     if mode == 'memb':
+#         masks = {'2sd': ma.masked_greater_equal(img, sd_threshold*sd),  # values greater then 2 noise sd 
+#                  'mean': ma.masked_greater(img, mean)}       # values greater then mean cytoplasm intensity
+#     elif mode == 'cell':
+#         masks = {'2sd': ma.masked_greater_equal(img, sd_threshold*sd)}
+
+#     low_val = {}
+#     control_diff = False
+#     for mask_name in masks:
+#         mask_img = masks[mask_name]
+
+#         logging.info(f'Mask {mask_name} lower treshold fitting in progress')
+
+#         mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
+#                                                       low=init_low*np.max(img_gauss),
+#                                                       high=gen_high*np.max(img_gauss))
+#         diff_mask = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
+
+#         if diff_mask < diff:
+#             raise ValueError('Initial lower threshold is too low!')
+#         logging.info('Initial masks difference {}'.format(diff_mask))
+
+#         low = init_low
+#         # control_diff = 1
+#         while diff_mask >= diff:
+#             mask_hyst = filters.apply_hysteresis_threshold(img_gauss,
+#                                                           low=low*np.max(img_gauss),
+#                                                           high=gen_high*np.max(img_gauss))
+#             diff_mask = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
+
+#             low += 0.01
+#             # is cytoplasm mean mask at initial lower threshold value closed? prevent infinit cycle
+#             if low >= gen_high:
+#                 logging.fatal('Lower treshold for {} mask {:.2f}, control difference {}px'.format(mask_name, low, diff_mask))
+#                 break
+#                 raise RuntimeError('Membrane in mean mask doesn`t detected at initial lower threshold value!')
+    
+
+#         # is cytoplasm mask at setted up difference value closed?
+#         if mask_name == 'mean':
+#             control_diff = np.all((segmentation.flood(mask_hyst, (0, 0)) + mask_hyst))
+#             if control_diff == True:
+#                 logging.fatal('Lower treshold for {} mask {:.2f}, masks difference {}px'.format(mask_name, low, diff_mask))
+#                 raise ValueError('Membrane in {} mask doesn`t closed, mebrane unlocated at this diff value (too low)!'.format(mask_name))
+
+#         low_val.update({mask_name : low})
+#     logging.info(f'Lower tresholds {low_val}')
+
+#     return low_val
+
+
+# def hystMemb(img, roi_center, roi_size=30, noise_size=20, low_diff=40, gen_high=0.8, sigma=3):
+#     """ Function for membrane region detection with hysteresis threshold algorithm.
+#     Outdide edge - >= 2sd noise
+#     Inside edge - >= cytoplasm mean intensity
+
+#     Require hystLow function for lower hysteresis threshold calculations.
+
+#     img - imput z-stack frame;
+#     roi_center - list of int [x, y], coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
+#     roi_size - int, cutoplasmic ROI side size in px (ROI is a square area);
+#     noise_size - int, size in px of region for noise sd calculation (square area witf start in 0,0 coordinates);
+#     sd_low - float, hysteresis algorithm lower threshold for outside cell edge detection,
+#              > 2sd of noise (percentage of maximum frame intensity);
+#     mean_low - float, hysteresis algorithm lower threshold for inside cell edge detection,
+#              > cytoplasmic ROI mean intensity (percentage of maximum frame intensity);
+#     gen_high - float,  general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
+#     sigma - int, sd for gaussian filter.
+
+#     Returts membrane region boolean mask for input frame.
+
+#     """
+#     img = backCon(img, dim=2)
+#     img_gauss = filters.gaussian(img, sigma=sigma)
+
+#     noise_sd = np.std(img[:noise_size, :noise_size])
+#     logging.info('Frame noise SD={:.3f}'.format(noise_sd))
+
+#     roi_mean = np.mean(img[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
+#                            roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])  # cutoplasmic ROI mean celculation
+#     logging.info('Cytoplasm ROI mean intensity {:.3f}'.format(roi_mean))
+
+#     low_val = hystLow(img, img_gauss, sd=noise_sd, mean=roi_mean, diff=low_diff, gen_high=gen_high)
+
+#     mask_2sd = filters.apply_hysteresis_threshold(img_gauss,
+#                                                   low=low_val['2sd']*np.max(img_gauss),
+#                                                   high=gen_high*np.max(img_gauss))
+#     mask_roi_mean = filters.apply_hysteresis_threshold(img_gauss,
+#                                                       low=low_val['mean']*np.max(img_gauss),
+#                                                       high=gen_high*np.max(img_gauss))
+#     # filling external space and create cytoplasmic mask 
+#     mask_cytoplasm = mask_roi_mean + segmentation.flood(mask_roi_mean, (0, 0))
+
+#     return mask_2sd, mask_roi_mean, ma.masked_where(~mask_cytoplasm, mask_2sd)
 
 
 if __name__=="__main__":

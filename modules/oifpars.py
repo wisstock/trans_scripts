@@ -16,7 +16,6 @@ import yaml
 import pandas as pd
 from skimage import filters
 from skimage import measure
-from scipy import ndimage as ndi
 
 import oiffile as oif
 import edge
@@ -52,7 +51,7 @@ def WDPars(wd_path, **kwargs):
     return fluo_list
 
 
-class OifPars(oif.OifFile):
+class OifExt(oif.OifFile):
     """ Inheritance and extension of the functionality
     of the OfFice class. Methods for extracting file metadata.
 
@@ -112,26 +111,26 @@ class OifPars(oif.OifFile):
 
 
 class FluoData:
-    """ Time series in NP-EGTA + Fluo-4 test experiment series
+    """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
 
     """
     def __init__(self, oif_path, img_name, feature=0, max_frame=6, background_rm=True,
-                 sigma=3, noise_size=40):
-        self.img_series = oif.OibImread(oif_path)[0,:,:,:]  # z-stack frames series
-
-        if background_rm:  # background remove option
+                 sigma=3, noise_size=40, **kwargs):
+        self.img_series = oif.OibImread(oif_path)[0,:,:,:]                # z-stack frames series
+        if background_rm:                                                 # background remove option
             for frame in range(0, np.shape(self.img_series)[0]):
                 self.img_series[frame] = edge.backCon(self.img_series[frame],
                                                       edge_lim=10,
                                                       dim=2)
-        
         self.img_name = img_name                                          # file name
         self.max_frame = self.img_series[max_frame,:,:]                   # first frame after 405 nm exposure (max intensity)
         self.feature = feature                                            # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
         self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])  # calc noise sd in max imtensity frame in square region
         self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)    # create gauss blured image for thresholding
 
-        self.cell_mask, self.all_cells_mask = edge.cellMask(high_lim=0.8, init_low=0.05, mask_diff=50, sd_lvl=2, mode='single')
+        self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)
+        self.cell_mask, self.all_cells_mask = self.cell_detector.cell_mask()
+
 
     def relInt(self, cell_mask):
         """ Calculating intensity along frames time series in masked area.
