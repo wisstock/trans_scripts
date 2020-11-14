@@ -56,14 +56,14 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def sDerivate(series, mask, sd_area=50, sigma=4, mode='whole', mean_win=1, mean_space=0):
+def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0):
     """ Calculating derivative image series (difference between current and previous frames).
 
     Pixels greater than noise sd set equal to 1;
     Pixels less than -noise sd set equal to -1.
 
     """
-    def seriesBinn(series, mean_series, binn, space):
+    def series_binn(series, mean_series, binn, space):
         mean_frame, series = np.mean(series[:binn,:,:], axis=0), series[binn+space:,:,:]
         mean_series.append(mean_frame)
         if len(series) > 0:
@@ -71,15 +71,15 @@ def sDerivate(series, mask, sd_area=50, sigma=4, mode='whole', mean_win=1, mean_
         else:
             return mean_series
     
-    if mode == 'binn':
+    if mean_win != 1 | mean_space != 0:
         series_mean = []
-        seriesBinn(series, series_mean, binn=mean_win, space=mean_space)
+        series_binn(series, series_mean, binn=mean_win, space=mean_space)
         logging.info(f'Mean series len={len(series_mean)} (window={mean_win}, space={mean_space}')
     else:
         series_mean = series
 
     gauss_series = [filters.gaussian(img, sigma=sigma) for img in series_mean]
-    logging.info('Derivate sigma={}'.format(sigma))
+    logging.info(f'Derivate sigma={sigma}')
     derivete_series = []
 
     for i in range(1, len(gauss_series)):

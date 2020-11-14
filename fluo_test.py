@@ -20,6 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.append('modules')
 import oifpars as op
+import edge
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
@@ -44,20 +45,38 @@ data_path = os.path.join(sys.path[0], 'fluo_data')
 all_cells = op.WDPars(data_path, max_frame=1, sigma=3, noise_size=40,
                       sd_lvl=1.5, high=0.8, low_init=0.05, mask_diff=50)
 
-# df = pd.DataFrame(columns=['cell', 'feature', 'time', 'int'])
-# for cell_num in range(0, len(all_cells)):
-#     cell = all_cells[cell_num]
-#     logging.info('Image {} in progress'.format(cell.img_name))
+df = pd.DataFrame(columns=['cell', 'feature', 'time', 'int'])
+for cell_num in range(0, len(all_cells)):
+    cell = all_cells[cell_num]
+    logging.info('Image {} in progress'.format(cell.img_name))
 
-#     series_int = cell.relInt()
-#     series_int = deltaF(series_int, f_0_win=3)
+    series_int = cell.relInt()
+    der_int = edge.s_der(series_int, cell.cell_mask)
+    series_int = deltaF(series_int, f_0_win=3)
 
-#     for single_num in range(len(series_int)):
-#         single_int = series_int[single_num]
-#         df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
-#                        index=df.columns),
-#                        ignore_index=True)
-# df.to_csv('fluo_res/results.csv', index=False)
+    for single_num in range(len(series_int)):
+        single_int = series_int[single_num]
+        df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
+                       index=df.columns),
+                       ignore_index=True)
+
+    plt.figure()
+    ax0 = plt.subplot(121)
+    img0 = ax0.imshow(cell.max_gauss)
+    ax0.text(10,10,cell.img_name,fontsize=10)
+    ax0.axis('off')
+    ax1 = plt.subplot(122)
+    img1 = ax1.imshow(cell.cell_mask)
+    ax1.axis('off')
+    ax2 = plt.subplot(122)
+    img2 = ax1.imshow(der_int[0], vmin=-1, vmax=1, cmap='bwr')
+    ax2.axis('off')
+    plt.savefig(f'fluo_res/{cell.img_name}_max_frame.png')
+    logging.info(f'Frame {cell.img_name} saved!')
+
+
+
+df.to_csv('fluo_res/results.csv', index=False)
 
 for cell_img in all_cells:
   plt.figure()

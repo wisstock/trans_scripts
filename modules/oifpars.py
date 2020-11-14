@@ -132,11 +132,11 @@ class FluoData:
         self.cell_mask, self.all_cells_mask = self.cell_detector.cell_mask()
 
 
-    def relInt(self, cell_mask):
+    def relInt(self):
         """ Calculating intensity along frames time series in masked area.
 
         """
-        return [round(np.sum(ma.masked_where(~cell_mask, img)) / np.sum(cell_mask), 3) for img in self.img_series]
+        return [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3) for img in self.img_series]
 
 
 if __name__=="__main__":
