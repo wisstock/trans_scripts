@@ -77,7 +77,7 @@ for cell_num in range(0, len(all_cells)):
     plt.savefig(f'fluo_res/{cell.img_name}_max_frame.png')
     logging.info(f'{cell.img_name} ctrl img saved!\n')
 
-df.to_csv(res_path + 'results.csv', index=False)
+df.to_csv(f'{res_path}/results.csv', index=False)
 
 # for cell_img in all_cells:
 #   plt.figure()
