@@ -14,6 +14,9 @@ import logging
 import numpy as np
 import numpy.ma as ma
 
+import matplotlib
+import matplotlib.pyplot as plt
+
 from skimage.external import tifffile
 from skimage import filters
 from skimage import measure
@@ -56,7 +59,7 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0):
+def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0, save_path=False):
     """ Calculating derivative image series (difference between current and previous frames).
 
     Pixels greater than noise sd set equal to 1;
@@ -67,14 +70,14 @@ def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0):
         mean_frame, series = np.mean(series[:binn,:,:], axis=0), series[binn+space:,:,:]
         mean_series.append(mean_frame)
         if len(series) > 0:
-            seriesBinn(series, mean_series, binn, space)
+            series_binn(series, mean_series, binn, space)
         else:
             return mean_series
     
     if mean_win != 1 | mean_space != 0:
         series_mean = []
         series_binn(series, series_mean, binn=mean_win, space=mean_space)
-        logging.info(f'Mean series len={len(series_mean)} (window={mean_win}, space={mean_space}')
+        logging.info(f'Mean series len={len(series_mean)} (window={mean_win}, space={mean_space})')
     else:
         series_mean = series
 
@@ -89,7 +92,21 @@ def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0):
         derivete_frame[derivete_frame < -frame_sd] = -1
         derivete_series.append(ma.masked_where(~mask, derivete_frame))
 
-    return derivete_series
+    if save_path:
+        os.makedirs(save_path)
+        a = 1
+        for frame in derivete_series:
+            plt.figure()
+            ax = plt.subplot()
+            img = ax.imshow(frame, vmin=-1, vmax=1, cmap='bwr')
+            ax.text(10,10,a,fontsize=10)
+            ax.axis('off')
+            plt.savefig(f'{save_path}/frame_{a}.png')
+            logging.info('Frame {} saved!'.format(a))
+            a += 1
+        return derivete_series
+    else:
+        return derivete_series
 
 
 class hystTool():
