@@ -75,11 +75,17 @@ def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0, save_path
             return mean_series
     
     if mean_win != 1 | mean_space != 0:
-        series_mean = []
+        # binn_len = mean_win+mean_space
+        # series_mean = [np.mean(series[binn_len*i:binn_len*i+mean_win,:,:]) for i in range(np.shape(series)[0]/binn_len)]  # list comprehension binning
+
+        series_mean = []  # recursive binning
         series_binn(series, series_mean, binn=mean_win, space=mean_space)
+
         logging.info(f'Mean series len={len(series_mean)} (window={mean_win}, space={mean_space})')
     else:
         series_mean = series
+
+
 
     gauss_series = [filters.gaussian(img, sigma=sigma) for img in series_mean]
     logging.info(f'Derivate sigma={sigma}')

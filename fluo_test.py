@@ -52,8 +52,7 @@ for cell_num in range(0, len(all_cells)):
     logging.info('Image {} in progress'.format(cell.img_name))
 
     der_path=f'{res_path}/{cell.img_name}_der'
-    der_int = edge.s_der(cell.img_series, cell.cell_mask,
-                         mean_win=2, save_path=der_path)
+    der_int = edge.s_der(cell.img_series, cell.cell_mask, save_path=der_path)
 
     series_int = cell.relInt()
     series_int = deltaF(series_int, f_0_win=3)
@@ -72,7 +71,7 @@ for cell_num in range(0, len(all_cells)):
     img1 = ax1.imshow(cell.cell_mask)
     ax1.axis('off')
     ax2 = plt.subplot(133)
-    img2 = ax2.imshow(der_int[0], vmin=-1, vmax=1, cmap='bwr')
+    img2 = ax2.imshow(der_int[2], vmin=-1, vmax=1, cmap='bwr')
     ax2.axis('off')
     plt.savefig(f'fluo_res/{cell.img_name}_max_frame.png')
     logging.info(f'{cell.img_name} ctrl img saved!\n')
