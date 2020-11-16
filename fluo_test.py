@@ -44,15 +44,16 @@ data_path = os.path.join(sys.path[0], 'fluo_data')
 res_path = os.path.join(sys.path[0], 'fluo_res')
 
 all_cells = op.WDPars(data_path, max_frame=1, sigma=3, noise_size=40,
-                      sd_lvl=1.5, high=0.8, low_init=0.05, mask_diff=50)
+                      sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50)
 
 df = pd.DataFrame(columns=['cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
 
-    der_path=f'{res_path}/{cell.img_name}_der'
-    der_int = edge.s_der(cell.img_series, cell.cell_mask, save_path=der_path)
+    der_path=f'{res_path}/{cell.img_name}'
+    der_int = edge.s_der(cell.img_series, cell.cell_mask,
+                         mean_win=2, save_path=der_path)
 
     series_int = cell.relInt()
     series_int = deltaF(series_int, f_0_win=3)

@@ -99,7 +99,8 @@ def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0, save_path
         derivete_series.append(ma.masked_where(~mask, derivete_frame))
 
     if save_path:
-        os.makedirs(save_path)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
         a = 1
         for frame in derivete_series:
             plt.figure()
@@ -107,7 +108,8 @@ def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0, save_path
             img = ax.imshow(frame, vmin=-1, vmax=1, cmap='bwr')
             ax.text(10,10,a,fontsize=10)
             ax.axis('off')
-            plt.savefig(f'{save_path}/frame_{a}.png')
+            file_name = save_path.split('/')[-1]
+            plt.savefig(f'{save_path}/{file_name}_frame_{a}.png')
             logging.info('Frame {} saved!'.format(a))
             a += 1
         return derivete_series
