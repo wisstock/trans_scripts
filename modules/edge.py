@@ -59,62 +59,80 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def s_der(series, mask, sd_area=50, sigma=4, mean_win=1, mean_space=0, save_path=False):
-    """ Calculating derivative image series (difference between current and previous frames).
+def s_der(series, mask, sigma=4,  sd_area=50, sd_tolerance=1, left_w=1, space_w=0, right_w=1, save_path=False,):
+    """ Calculating derivative image series (difference between two windows of interes).
 
-    Pixels greater than noise sd set equal to 1;
-    Pixels less than -noise sd set equal to -1.
+    Pixels greater than noise sd * sd_tolerance set equal to 1;
+    Pixels less than -noise sd * sd_tolerance set equal to -1.
 
     """
-    def series_binn(series, mean_series, binn, space):
-        mean_frame, series = np.mean(series[:binn,:,:], axis=0), series[binn+space:,:,:]
-        mean_series.append(mean_frame)
-        if len(series) > 0:
-            series_binn(series, mean_series, binn, space)
-        else:
-            return mean_series
-    
-    if mean_win != 1 | mean_space != 0:
-        # binn_len = mean_win+mean_space
-        # series_mean = [np.mean(series[binn_len*i:binn_len*i+mean_win,:,:]) for i in range(np.shape(series)[0]/binn_len)]  # list comprehension binning
+    # def series_binn(series, mean_series, binn, space):
+    #     mean_frame, series = np.mean(series[:binn,:,:], axis=0), series[binn+space:,:,:]
+    #     mean_series.append(mean_frame)
+    #     if len(series) > 0:
+    #         series_binn(series, mean_series, binn, space)
+    #     else:
+    #         return mean_series
+    gauss_series = np.asarray([filters.gaussian(series[i], sigma=sigma) for i in range(np.shape(series)[0])])
 
-        series_mean = []  # recursive binning
-        series_binn(series, series_mean, binn=mean_win, space=mean_space)
-
-        logging.info(f'Mean series len={len(series_mean)} (window={mean_win}, space={mean_space})')
-    else:
-        series_mean = series
-
-
-
-    gauss_series = [filters.gaussian(img, sigma=sigma) for img in series_mean]
     logging.info(f'Derivate sigma={sigma}')
-    derivete_series = []
 
-    for i in range(1, len(gauss_series)):
-        frame_sd = np.std(gauss_series[i][:sd_area, :sd_area])
-        derivete_frame = gauss_series[i] - gauss_series[i-1]
-        derivete_frame[derivete_frame > frame_sd] = 1
-        derivete_frame[derivete_frame < -frame_sd] = -1
-        derivete_series.append(ma.masked_where(~mask, derivete_frame))
+
+    der_series = []
+    for i in range(np.shape(gauss_series)[0] - (left_w+space_w+right_w)):
+        der_frame = np.mean(gauss_series[i:i+left_w], axis=0) - np.mean(gauss_series[i+left_w+space_w:i+left_w+space_w+right_w], axis=0)
+        der_sd = np.std(der_frame[:sd_area, sd_area])
+        # der_frame[der_frame > der_sd * sd_tolerance] = 1
+        # der_frame[der_frame < -der_sd * sd_tolerance] = -1
+        der_series.append(ma.masked_where(~mask, der_frame))    
+    logging.info(f'Derivative series len={len(der_series)} (left WOI={left_w}, spacer={space_w}, right WOI={right_w})')
+
+
+
+    
+    # def win_diff(imgs, num, sd_area, sd_tolerance, left, spacer, right):
+    #     """ Calculate difference between two windows of interes.
+
+    #     """
+    #     np.mean(imgs[num+left+spacer:num+left+spacer+right,:,:]) - np.mean(imgs[num:num+left,:,:])
+
+    # series_mean = [win_diff(gauss_series, i, left_win, space_win, right_win) for i in range(np.shape(gauss_series)[0] - (left_win+space_win+right_win))]  # list comprehension binning
+
+    # series_mean = []  # recursive binning
+    # series_binn(gauss_series, series_mean, binn=mean_win, space=mean_space)
+
+    # logging.info(f'Mean series len={len(series_mean)} (window={mean_win}, space={mean_space})')
+
+
+
+    # derivete_series = []
+
+    # for i in range(1, len(mean_serien)):
+    #     frame_sd = np.std(mean_serien[i][:sd_area, :sd_area])
+    #     derivete_frame = mean_serien[i] - mean_serien[i-1]
+    #     derivete_frame[derivete_frame > frame_sd] = 1
+    #     derivete_frame[derivete_frame < -frame_sd] = -1
+    #     derivete_series.append(ma.masked_where(~mask, derivete_frame))
 
     if save_path:
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        a = 1
-        for frame in derivete_series:
+        # max_val = np.max(der_series)
+        # min_val = np.min(der_series)
+        # logging.info(f'Min derivate series={min_val}, max derivate series={max_val}')
+        for i in range(len(der_series)):
+            frame = der_series[i]
             plt.figure()
             ax = plt.subplot()
-            img = ax.imshow(frame, vmin=-1, vmax=1, cmap='bwr')
-            ax.text(10,10,a,fontsize=10)
+            img = ax.imshow(frame,  vmin=-1., vmax=1., cmap='RdBu_r')
+            ax.text(10,10,i+1,fontsize=10)
             ax.axis('off')
             file_name = save_path.split('/')[-1]
-            plt.savefig(f'{save_path}/{file_name}_frame_{a}.png')
-            logging.info('Frame {} saved!'.format(a))
-            a += 1
-        return derivete_series
+            plt.savefig(f'{save_path}/{file_name}_frame_{i}.png')
+            logging.info('Frame {} saved!'.format(i))
+        return der_series
     else:
-        return derivete_series
+        return der_series
 
 
 class hystTool():
