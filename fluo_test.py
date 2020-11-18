@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Copyright © 2020 Borys Olifiro
+""" Copyright © 2020 Borys Olifirov
 Test experiment with NP-EGTA + Fluo-4 in new HEK cells.
 24-27,07.2020
 
@@ -54,10 +54,14 @@ for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
 
-    # der_path=f'{res_path}/{cell.img_name}'
-    # der_int = edge.s_der(cell.img_series, cell.cell_mask,
-    #                      left_w=3, space_w=2, right_w=2, sd_tolerance=2,
-    #                      save_path=der_path)
+    cell_path = f'{res_path}/{cell.img_name}'
+    if not os.path.exists(cell_path):
+        os.makedirs(cell_path)
+
+
+    der_int = edge.s_der(cell.img_series, cell.cell_mask,
+                         left_w=2, space_w=1, right_w=2, sd_tolerance=2,
+                         output_path=cell_path)
 
     series_int = cell.relInt()
     series_int = deltaF(series_int, f_0_win=3)
