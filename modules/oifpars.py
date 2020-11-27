@@ -114,29 +114,31 @@ class FluoData:
     """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
 
     """
-    def __init__(self, oif_path, img_name, feature=0, max_frame=6, background_rm=True,
-                 sigma=3, noise_size=40, **kwargs):
+    def __init__(self, oif_path, img_name, feature=0, max_frame=6, sigma=3, noise_size=40,
+                 background_rm=True,
+                 **kwargs):
         self.img_series = oif.OibImread(oif_path)[0,:,:,:]                # z-stack frames series
         if background_rm:                                                 # background remove option
             for frame in range(0, np.shape(self.img_series)[0]):
-                self.img_series[frame] = edge.backCon(self.img_series[frame],
+                self.img_series[frame] = edge.back_rm(self.img_series[frame],
                                                       edge_lim=10,
                                                       dim=2)
-        self.img_name = img_name                                          # file name
-        self.max_frame = self.img_series[max_frame,:,:]                   # first frame after 405 nm exposure (max intensity)
-        self.feature = feature                                            # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
-        self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])  # calc noise sd in max imtensity frame in square region
-        self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)    # create gauss blured image for thresholding
+        self.img_name = img_name                                                     # file name
+        self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
+        self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
+        self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max imtensity frame in square region
+        self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
         self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)
         self.cell_mask, self.all_cells_mask = self.cell_detector.cell_mask()
 
 
-    def relInt(self):
+    def sum_int(self):
         """ Calculating intensity along frames time series in masked area.
 
         """
-        return [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3) for img in self.img_series]
+        # return [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3) for img in self.img_series]
+        return edge.series_sum_int(self.img_series, self.cell_mask)
 
 
 if __name__=="__main__":

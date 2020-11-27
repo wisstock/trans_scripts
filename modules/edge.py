@@ -28,7 +28,7 @@ from scipy import signal
 from scipy import ndimage as ndi
 
 
-def backCon(img, edge_lim=20, dim=3):
+def back_rm(img, edge_lim=20, dim=3):
     """ Background extraction in TIFF series
 
     For confocal Z-stacks only!
@@ -60,15 +60,60 @@ def backCon(img, edge_lim=20, dim=3):
         return img
 
 
-def s_der(gauss_series, mask, sigma=4,  sd_area=50, sd_tolerance=1, left_w=1, space_w=0, right_w=1, output_path=False, norm=True):
-    """ Calculating derivative image series (difference between two windows of interes).
+def series_sum_int(img_series, mask):
+    """ Calcualtion of summary intensity of masked region along time series frames
+
+    """
+    return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
+
+
+def series_point_delta(series, mask, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
+    trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
+    img_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
+
+    baseline_img = np.mean(img_series[:baseline_frames,:,:], axis=0)
+
+    delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
+    vdelta = np.vectorize(delta)
+
+    delta_series = [ma.masked_where(~mask, vdelta(i, baseline_img)) for i in img_series]
+
+    if output_path:
+        save_path = f'{output_path}/delta_F'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        for i in range(len(delta_series)):
+            frame = delta_series[i]
+            
+
+            plt.figure()
+            ax = plt.subplot()
+            img = ax.imshow(frame, cmap='rainbow')
+            img.set_clim(vmin=-1.., vmax=1.) 
+            div = make_axes_locatable(ax)
+            cax = div.append_axes('right', size='3%', pad=0.1)
+            plt.colorbar(img, cax=cax)
+            ax.text(10,10,i+1,fontsize=10)
+            ax.axis('off')
+
+            file_name = save_path.split('/')[-1]
+            plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
+            logging.info('Delta F frame {} saved!'.format(i))
+        return np.asarray(delta_series)
+    else:
+        return np.asarray(delta_series)
+
+
+def series_derivate(series, mask, sigma=4, kernel_size=3,  sd_area=50, sd_tolerance=1, left_w=1, space_w=0, right_w=1, output_path=False):
+    """ Calculation of derivative image series (difference between two windows of interes).
 
     Pixels greater than noise sd * sd_tolerance set equal to 1;
     Pixels less than -noise sd * sd_tolerance set equal to -1.
 
     """
-    # w = 3
-    # gauss_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=(((w - 1)/2)-0.5)/sigma) for i in range(np.shape(series)[0])])
+    trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
+    gauss_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
     logging.info(f'Derivate sigma={sigma}')
 
@@ -104,8 +149,8 @@ def s_der(gauss_series, mask, sigma=4,  sd_area=50, sd_tolerance=1, left_w=1, sp
             ax.axis('off')
 
             file_name = save_path.split('/')[-1]
-            plt.savefig(f'{save_path}/{file_name}_frame_{i}.png')
-            logging.info('Frame {} saved!'.format(i))
+            plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
+            logging.info('Derivate frame {} saved!'.format(i))
         return np.asarray(der_series)
     else:
         return np.asarray(der_series)
