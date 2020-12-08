@@ -59,7 +59,8 @@ for cell_num in range(0, len(all_cells)):
         os.makedirs(cell_path)
 
     delta_int = edge.series_point_delta(cell.img_series, cell.cell_mask,
-                                        baseline_frames=3, output_path=cell_path)
+                                        mask_series=cell.masks_series,
+                                        baseline_frames=18, output_path=cell_path)
 
     # der_int = edge.series_derivate(cell.img_series, cell.cell_mask,
     #                                sigma=8, kernel_size=3,
@@ -68,11 +69,12 @@ for cell_num in range(0, len(all_cells)):
 
     # series_int = cell.sum_int()
     # series_int = deltaF(series_int, f_0_win=3)
-    # for single_num in range(len(series_int)):
-    #     single_int = series_int[single_num]
-    #     df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
-    #                    index=df.columns),
-    #                    ignore_index=True)
+    series_int = cell.mask_series()
+    for single_num in range(len(series_int)):
+        single_int = series_int[single_num]
+        df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
+                       index=df.columns),
+                       ignore_index=True)
 
     plt.figure()
     ax0 = plt.subplot(131)

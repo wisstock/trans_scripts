@@ -132,6 +132,13 @@ class FluoData:
         self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)
         self.cell_mask, self.all_cells_mask = self.cell_detector.cell_mask()
 
+        self.masks_series = []
+        for i in range(np.shape(self.img_series)[0]):
+            self.frame_img =self.img_series[i]
+            self.frame_cell = edge.hystTool(self.frame_img, sigma, self.noise_sd, **kwargs)
+            self.frame_mask, self.frame_whole_mask = self.frame_cell.cell_mask()
+            self.masks_series.append(self.frame_mask)
+
 
     def sum_int(self):
         """ Calculating intensity along frames time series in masked area.
@@ -139,6 +146,14 @@ class FluoData:
         """
         # return [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3) for img in self.img_series]
         return edge.series_sum_int(self.img_series, self.cell_mask)
+
+    def mask_series(self):
+        mean_series = []
+        for i in range(len(self.img_series)):
+            img = self.img_series[i]
+            mask = self.masks_series[i]
+            mean_series.append(round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3))
+        return mean_series
 
 
 if __name__=="__main__":

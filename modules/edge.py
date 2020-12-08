@@ -67,7 +67,7 @@ def series_sum_int(img_series, mask):
     return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
 
 
-def series_point_delta(series, mask, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
+def series_point_delta(series, mask, mask_series=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
     img_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
@@ -76,7 +76,10 @@ def series_point_delta(series, mask, baseline_frames=3, sigma=4, kernel_size=5, 
     delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
     vdelta = np.vectorize(delta)
 
-    delta_series = [ma.masked_where(~mask, vdelta(i, baseline_img)) for i in img_series]
+    if mask_series:
+        delta_series = [ma.masked_where(~mask_series[i], vdelta(img_series[i], baseline_img)) for i in range(len(img_series))]
+    else:
+        delta_series = [ma.masked_where(~mask, vdelta(i, baseline_img)) for i in img_series]
 
     if output_path:
         save_path = f'{output_path}/delta_F'
@@ -89,8 +92,8 @@ def series_point_delta(series, mask, baseline_frames=3, sigma=4, kernel_size=5, 
 
             plt.figure()
             ax = plt.subplot()
-            img = ax.imshow(frame, cmap='rainbow')
-            img.set_clim(vmin=-1.., vmax=1.) 
+            img = ax.imshow(frame, cmap='jet')
+            img.set_clim(vmin=-1., vmax=1.) 
             div = make_axes_locatable(ax)
             cax = div.append_axes('right', size='3%', pad=0.1)
             plt.colorbar(img, cax=cax)
