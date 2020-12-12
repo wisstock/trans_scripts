@@ -88,7 +88,6 @@ def series_point_delta(series, mask, mask_series=False, baseline_frames=3, sigma
 
         for i in range(len(delta_series)):
             frame = delta_series[i]
-            
 
             plt.figure()
             ax = plt.subplot()
@@ -110,9 +109,6 @@ def series_point_delta(series, mask, mask_series=False, baseline_frames=3, sigma
 
 def series_derivate(series, mask, sigma=4, kernel_size=3,  sd_area=50, sd_tolerance=1, left_w=1, space_w=0, right_w=1, output_path=False):
     """ Calculation of derivative image series (difference between two windows of interes).
-
-    Pixels greater than noise sd * sd_tolerance set equal to 1;
-    Pixels less than -noise sd * sd_tolerance set equal to -1.
 
     """
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size

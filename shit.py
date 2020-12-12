@@ -1,13 +1,17 @@
+import confuse
 
-
-def a(aa, bb, **kwargs):
+def a(**kwargs):
 	print(kwargs)
-	ff = b(**kwargs)
-	return aa + bb + ff
+	print(aa)
+	print(bb)
+	dd = b(kwargs)
+	
 
-def b(cc, dd):
+def b(cc):
 	print(cc)
-	print(dd)
-	return cc + dd
 
-print(a(1, 2, cc = 3, dd = 4))
+
+config = confuse.Configuration('Fluo_test', __name__)
+config.set_file('config.yaml')
+
+a(config)

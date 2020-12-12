@@ -34,7 +34,7 @@ def WDPars(wd_path, **kwargs):
                 with open(file_path) as f:
                     data_metha = yaml.safe_load(f)
 
-                logging.info(f'Methadata file {file} uploaded')
+                logging.info(f'Methadata file {file} uploaded!')
 
     for root, dirs, files in os.walk(wd_path):  # loop over OIF files
         for file in files:
@@ -130,43 +130,30 @@ class FluoData:
         self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
         self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)
-        self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask()
+        self.cell_mask, self.all_cells_mask = self.cell_detector.cell_mask()
 
-        self.mask_series = []
+        self.masks_series = []
         for i in range(np.shape(self.img_series)[0]):
             self.frame_img =self.img_series[i]
             self.frame_cell = edge.hystTool(self.frame_img, sigma, self.noise_sd, **kwargs)
             self.frame_mask, self.frame_whole_mask = self.frame_cell.cell_mask()
-            self.mask_series.append(self.frame_mask)
+            self.masks_series.append(self.frame_mask)
 
 
-    def max_mask_int(self):
-        """ Calculation mean intensity  in masked area along frames series.
-        Mask was created by max_frame image.
-
-        """
-        return edge.series_sum_int(self.img_series, self.max_frame_mask)
-
-    def frame_mask_int(self):
-        """ Calculation mean intensity  in masked area along frames series.
-        Mask was created for each frame individualy.
+    def sum_int(self):
+        """ Calculating intensity along frames time series in masked area.
 
         """
+        # return [round(np.sum(ma.masked_where(~self.cell_mask, img)) / np.sum(self.cell_mask), 3) for img in self.img_series]
+        return edge.series_sum_int(self.img_series, self.cell_mask)
+
+    def mask_series(self):
         mean_series = []
         for i in range(len(self.img_series)):
             img = self.img_series[i]
-            mask = self.mask_series[i]
+            mask = self.masks_series[i]
             mean_series.append(round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3))
         return mean_series
-
-
-class FRETData():
-    """ Time series of FRET registration. Include both donor and acceptor image series.
-
-    """
-    def __init__(self):
-        pass
-        
 
 
 if __name__=="__main__":

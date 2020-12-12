@@ -69,7 +69,7 @@ for cell_num in range(0, len(all_cells)):
 
     # series_int = cell.sum_int()
     # series_int = deltaF(series_int, f_0_win=3)
-    series_int = cell.mask_series()
+    series_int = cell.frame_mask_int()
     for single_num in range(len(series_int)):
         single_int = series_int[single_num]
         df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
