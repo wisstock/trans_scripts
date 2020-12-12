@@ -28,7 +28,7 @@ def WDPars(wd_path, **kwargs):
     fluo_list = []
     for root, dirs, files in os.walk(wd_path):
         for file in files:
-            if file.endswith('.yml'):
+            if file.endswith('.yml') or file.endswith('.yaml'):
                 file_path = os.path.join(root, file)
 
                 with open(file_path) as f:
