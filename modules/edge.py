@@ -168,7 +168,7 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    def __init__(self, img, sd, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=4, kernel_size=3,):
+    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=4, kernel_size=3,):
         """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
 
         """
@@ -177,14 +177,15 @@ class hystTool():
         self.low_init = low_init
         self.low_detection = low_detection
         self.mask_diff = mask_diff
-        self.sd = sd
+        self.sd_area = sd_area
         self.sd_lvl = sd_lvl
         self.mean = mean
         self.kernel_size = kernel_size
         self.sigma = sigma
 
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
-        self.gauss = filters.gaussian(self.img, sigma=sigma, truncate=trun(self.kernel_size, self.sigma))
+        self.truncate = trun(self.kernel_size, self.sigma)
+        self.gauss = filters.gaussian(self.img, sigma=sigma, truncate= self.truncate)
 
         self.detection_mask = filters.apply_hysteresis_threshold(self.gauss,
                                                                  low=self.low_detection*np.max(self.gauss),
@@ -192,7 +193,7 @@ class hystTool():
 
         self.cells_labels, self.cells_num = ndi.label(self.detection_mask)
         if self.cells_num == 0:
-            logging.fatal(f'In file {self.img_name} cellls DOESN`T detected! You should try increase low_detection')
+            logging.fatal(f'In file {self.img_name} cells DOESN`T detected! You should try increase low_detection')
             raise ValueError
 
         cells_center_float = ndi.center_of_mass(self.cells_labels, self.cells_labels, range(1, self.cells_num+1))
@@ -200,24 +201,11 @@ class hystTool():
         self.cells_center_dict = dict(zip(range(1, self.cells_num+1), self.cells_center))
         logging.info(f'Detected {self.cells_num} cells with center of mass coord. {self.cells_center_dict}')
 
-    def cell_mask(self, img_series):
-        """ Create series of masks for each frame.
-        If there are more than one cells per frame, create dict with mask series for each cell. 
-        """
-        if self.cells_num == 1:
-            mask_series = []
-            for i in range(np.shape(self.img_series)[0]):
-                frame = img_series[i]
-
-    def __low_calc(img):
+    def __low_calc(self, img, gauss, sd):
         """ Lower threshold calculations for hysteresis membrane detection functions.
 
         """
-        mask_img = ma.masked_greater_equal(img, self.sd_lvl*self.sd)
-
-        trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
-        gauss = filters.gaussian(img, sigma=sigma, truncate=trun(self.kernel_size, self.sigma))
-
+        mask_img = ma.masked_greater_equal(img, self.sd_lvl*sd)
         low = self.low_init
         diff = np.size(img)
 
@@ -226,24 +214,41 @@ class hystTool():
                                                           low=low*np.max(gauss),
                                                           high=self.high*np.max(gauss))
             diff = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
-
-            if all([diff < mask_diff, low == low_init]):
+            if all([diff < self.mask_diff, low == self.low_init]):
                 logging.fatal('Initial lower threshold is too low!')
                 break
             low += 0.01
-            if low >= high:
+            if low >= self.high:
                 logging.fatal('LOW=HIGH, thresholding failed!')
                 break
         logging.info(f'Lower threshold {round(low, 2)}')
         return low
 
-    def huge_cell_mask(self, mode='single'):
+    def cell_mask(self, img_series):
+        """ Create series of masks for each frame.
+        If there are more than one cells per frame, create dict with mask series for each cell. 
+        """
+        if self.cells_num == 1:
+            mask_series = []
+            for i in range(np.shape(img_series)[0]):
+                frame = img_series[i]
+                frame_gauss = filters.gaussian(frame, sigma=self.sigma, truncate= self.truncate)
+                frame_sd = np.std(frame[:self.sd_area, :self.sd_area])
+                frame_mask = filters.apply_hysteresis_threshold(frame_gauss,
+                                                                low=self.__low_calc(frame, frame_gauss, frame_sd)*np.max(frame_gauss),
+                                                                high=self.high*np.max(frame_gauss))
+                mask_series.append(frame_mask)
+            return mask_series
+        else:
+            pass
+
+    def huge_cell_mask(self):
         """ Creating binary mask for homogeneous fluoresced cell by SD thresholding and hysteresis smoothing.
         Detecting one cell in frame, with largest area.
 
         """
         raw_mask = filters.apply_hysteresis_threshold(self.gauss,
-                                                      low=self.low*np.max(self.gauss),
+                                                      low=self.__low_calc(self.img)*np.max(self.gauss),
                                                       high=self.high*np.max(self.gauss))
         labels_cells, cells_conunt = ndi.label(raw_mask)
         logging.info(f'{cells_conunt} cells detected')

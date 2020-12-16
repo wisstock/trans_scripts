@@ -46,8 +46,8 @@ res_path = os.path.join(sys.path[0], 'fluo_res')
 if not os.path.exists(res_path):
     os.makedirs(res_path)
 
-all_cells = op.WDPars(data_path, max_frame=1, sigma=3, noise_size=40,   # FluoData parameters
-                      sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
+all_cells = op.WDPars(data_path, max_frame=1,    # FluoData parameters
+                      sigma=3, sd_area=40, sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
 
 df = pd.DataFrame(columns=['file', 'cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):

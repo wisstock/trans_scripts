@@ -114,7 +114,7 @@ class FluoData:
     """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
 
     """
-    def __init__(self, oif_path, img_name, feature=0, max_frame=6, sigma=3, noise_size=40,
+    def __init__(self, oif_path, img_name, feature=False, max_frame=6,
                  background_rm=True,
                  **kwargs):
         self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
@@ -126,21 +126,12 @@ class FluoData:
         self.img_name = img_name                                                     # file name
         self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
         self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
-        self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
-        self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
+        # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
+        # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
-        self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)  # detect all cells in max frame
+        self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
         # self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask(mode='multi')
-
-        if self.cell_detector.cells_num == 1:
-            self.mask_series = []
-            for i in range(np.shape(self.img_series)[0]):
-                self.frame_img =self.img_series[i]
-                self.frame_cell = edge.hystTool(self.frame_img, sigma, self.noise_sd, **kwargs)
-                self.frame_mask, self.frame_whole_mask = self.frame_cell.cell_mask()
-                self.mask_series.append(self.frame_mask)
-        elif self.cell_detector.cells_num > 1:
-            self.cells = self.cell_detector.cells_labels
+        self.mask_series = self.cell_detector.cell_mask(self.img_series)
 
     def max_mask_int(self):
         """ Calculation mean intensity  in masked area along frames series.
