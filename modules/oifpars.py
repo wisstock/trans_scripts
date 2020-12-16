@@ -123,7 +123,8 @@ class FluoData:
                 self.img_series[frame] = edge.back_rm(self.img_series[frame],
                                                       edge_lim=10,
                                                       dim=2)
-        self.img_name = img_name                                                     # file name
+        self.img_name = img_name
+        self.max_frame_num = max_frame                                                     # file name
         self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
         self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
         # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region

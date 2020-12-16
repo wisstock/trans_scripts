@@ -47,7 +47,7 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 all_cells = op.WDPars(data_path, max_frame=1,    # FluoData parameters
-                      sigma=3, sd_area=40, sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
+                      sigma=2, kernel_size=9, sd_area=40, sd_lvl=1.5, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
 
 df = pd.DataFrame(columns=['file', 'cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
@@ -58,15 +58,16 @@ for cell_num in range(0, len(all_cells)):
     if not os.path.exists(cell_path):
         os.makedirs(cell_path)
 
-    # delta_int = edge.series_point_delta(cell.img_series, cell.cell_mask,
-    #                                     mask_series=cell.masks_series,
+    # delta_int = edge.series_point_delta(cell.img_series,
+    #                                     mask_series=cell.mask_series,
     #                                     baseline_frames=18,
     #                                     output_path=cell_path)
 
-    # der_int = edge.series_derivate(cell.img_series, cell.cell_mask,
-    #                                sigma=8, kernel_size=3,
-    #                                left_w=2, space_w=1, right_w=2,
-    #                                output_path=cell_path)
+    der_int = edge.series_derivate(cell.img_series, mask_series=cell.mask_series, mask_num=cell.max_frame_num,
+                                   sd_tolerance=2,
+                                   sigma=4, kernel_size=3,
+                                   left_w=4, space_w=2, right_w=4,
+                                   output_path=cell_path)
 
     # series_int = cell.sum_int()
     # series_int = deltaF(series_int, f_0_win=3)
@@ -79,11 +80,11 @@ for cell_num in range(0, len(all_cells)):
 
     plt.figure()
     ax0 = plt.subplot(131)
-    img0 = ax0.imshow(cell.max_gauss)
+    img0 = ax0.imshow(cell.max_frame)
     # ax0.axis('off')
-    ax0.text(10,10,f'max int frame + gauss',fontsize=8)
+    ax0.text(10,10,f'max int frame',fontsize=8)
     ax1 = plt.subplot(132)
-    img1 = ax1.imshow(cell.cells)
+    img1 = ax1.imshow(cell.mask_series[0])
     # ax1.axis('off')
     ax1.text(10,10,f'binary mask',fontsize=8)
     plt.show()

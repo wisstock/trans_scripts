@@ -73,7 +73,7 @@ def series_sum_int(img_series, mask):
     return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
 
 
-def series_point_delta(series, mask, mask_series=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
+def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
     img_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
@@ -84,8 +84,10 @@ def series_point_delta(series, mask, mask_series=False, baseline_frames=3, sigma
 
     if mask_series:
         delta_series = [ma.masked_where(~mask_series[i], vdelta(img_series[i], baseline_img)) for i in range(len(img_series))]
-    else:
+    elif mask:
         delta_series = [ma.masked_where(~mask, vdelta(i, baseline_img)) for i in img_series]
+    else:
+        raise TypeError('NO mask available!')
 
     if output_path:
         save_path = f'{output_path}/delta_F'
@@ -114,7 +116,7 @@ def series_point_delta(series, mask, mask_series=False, baseline_frames=3, sigma
         return np.asarray(delta_series)
 
 
-def series_derivate(series, mask, sigma=4, kernel_size=3,  sd_area=50, sd_tolerance=False, left_w=1, space_w=0, right_w=1, output_path=False):
+def series_derivate(series, mask=False, mask_series=False, mask_num=0, sigma=4, kernel_size=3,  sd_area=50, sd_tolerance=False, left_w=1, space_w=0, right_w=1, output_path=False):
     """ Calculation of derivative image series (difference between two windows of interes).
 
     """
@@ -130,7 +132,12 @@ def series_derivate(series, mask, sigma=4, kernel_size=3,  sd_area=50, sd_tolera
             der_sd = np.std(der_frame[:sd_area, sd_area])
             der_frame[der_frame > der_sd * sd_tolerance] = 1
             der_frame[der_frame < -der_sd * sd_tolerance] = -1
-        der_series.append(ma.masked_where(~mask, der_frame))    
+        if mask_series:
+            der_series.append(ma.masked_where(~mask_series[mask_num], der_frame)) 
+        elif mask:
+            der_series.append(ma.masked_where(~mask, der_frame))
+        else:
+            raise TypeError('NO mask available!')
     logging.info(f'Derivative series len={len(der_series)} (left WOI={left_w}, spacer={space_w}, right WOI={right_w})')
 
     if output_path:
@@ -168,7 +175,7 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=4, kernel_size=3,):
+    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=4, kernel_size=3):
         """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
 
         """
