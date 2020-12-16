@@ -130,14 +130,17 @@ class FluoData:
         self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
         self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)
-        self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask()
+        # self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask(mode='multi')
 
-        self.mask_series = []
-        for i in range(np.shape(self.img_series)[0]):
-            self.frame_img =self.img_series[i]
-            self.frame_cell = edge.hystTool(self.frame_img, sigma, self.noise_sd, **kwargs)
-            self.frame_mask, self.frame_whole_mask = self.frame_cell.cell_mask()
-            self.mask_series.append(self.frame_mask)
+        if self.cell_detector.cells_num == 1:
+            self.mask_series = []
+            for i in range(np.shape(self.img_series)[0]):
+                self.frame_img =self.img_series[i]
+                self.frame_cell = edge.hystTool(self.frame_img, sigma, self.noise_sd, **kwargs)
+                self.frame_mask, self.frame_whole_mask = self.frame_cell.cell_mask()
+                self.mask_series.append(self.frame_mask)
+        elif self.cell_detector.cells_num > 1:
+            self.cells = self.cell_detector.cells_labels
 
 
     def max_mask_int(self):

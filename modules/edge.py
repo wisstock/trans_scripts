@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 
-""" Copyright © 2020 Borys Olifirov
+""" Copyright © 2020-2021 Borys Olifirov
+Toolkit.
+- Function for series analysis (require image series):
+  back_rm
+  series_sum_int
+  series_point_delta
+  series_derivate
+- Cell detection with hysteresis thresholding (require one image):
+  hystTools class
 
-Functions for cell detecting and ROI extraction.
-Functions for embrane detection and membrane regions extraction with hysteresis filter.
-Optimysed for confocal images of the individual HEK 293 cells.
+Optimised at confocal images of HEK 293 cells.
 
 """
 
@@ -102,6 +108,7 @@ def series_point_delta(series, mask, mask_series=False, baseline_frames=3, sigma
             file_name = save_path.split('/')[-1]
             plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
             logging.info('Delta F frame {} saved!'.format(i))
+            plt.close('all')
         return np.asarray(delta_series)
     else:
         return np.asarray(delta_series)
@@ -149,22 +156,24 @@ def series_derivate(series, mask, sigma=4, kernel_size=3,  sd_area=50, sd_tolera
 
             file_name = save_path.split('/')[-1]
             plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
-            logging.info('Derivate frame {} saved!'.format(i))
+            logging.info(f'Derivate frame {i+1} saved!')
+            plt.close('all')
         return np.asarray(der_series)
     else:
         return np.asarray(der_series)
 
 
 class hystTool():
-    """ Apply hysteresis thresholding for cell detection in confocal image.
-    Optimised for image of the individual cells.
+    """ Cells detection with hysteresis thresholding.
 
     """
     def __init__(self, img, sigma, sd, mean=0, sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50):
         """ Lower threshold calculations for hysteresis membrane detection functions.
+        Detection of all cells with calculated lower threshold and save center of mass coordinates for each cell.
 
         """
         self.img = img
+        self.high = high
         self.gauss = filters.gaussian(self.img, sigma=sigma)
 
         mask_img = ma.masked_greater_equal(img, sd_lvl*sd)
@@ -185,26 +194,36 @@ class hystTool():
                 break
         logging.info(f'Lower threshold {round(low, 2)}')
         self.low = low
+        self.init_mask = mask_hyst
 
-    def cell_mask(self, high=0.8, mode='single'):
+        self.cells_labels, self.cells_num = ndi.label(mask_hyst)
+        if self.cells_num == 0:
+            logging.fatal(f'In file {self.img_name} cellls DOESN`T detected!')
+
+        cells_center_float = ndi.center_of_mass(self.cells_labels, self.cells_labels, range(1, self.cells_num+1))
+        self.cells_center = [[int(x) for x in i] for i in cells_center_float]
+        self.cells_center_dict = dict(zip(range(1, self.cells_num+1), self.cells_center))
+        logging.info(f'Detected {self.cells_num} cells with center of mass cootd. {self.cells_center_dict}')
+
+    def cell_mask(self):
+        pass
+
+    def huge_cell_mask(self, mode='single'):
         """ Creating binary mask for homogeneous fluoresced cell by SD thresholding and hysteresis smoothing.
-        Detecting one cell in frame, with largest area ('single' mode) or all thresholded areas ('multi' mode).
+        Detecting one cell in frame, with largest area.
         """
         raw_mask = filters.apply_hysteresis_threshold(self.gauss,
                                                       low=self.low*np.max(self.gauss),
-                                                      high=high*np.max(self.gauss))
+                                                      high=self.high*np.max(self.gauss))
         labels_cells, cells_conunt = ndi.label(raw_mask)
         logging.info(f'{cells_conunt} cells detected')
-        if mode == 'single':
-            if cells_conunt > 1:
-                size_list = [np.sum(ma.masked_where(labels_cells ==  cell_num, labels_cells).mask) for cell_num in range(cells_conunt)]
-                logging.info(f'Cells sizes {size_list}')
-                mask = ma.masked_where(labels_cells == size_list.index(max(size_list))+1, labels_cells).mask
-            else:
-                mask = raw_mask
-            return mask, labels_cells
-        elif mode == 'multi':
-            return raw_mask, labels_cells
+        if cells_conunt > 1:
+            size_list = [np.sum(ma.masked_where(labels_cells ==  cell_num, labels_cells).mask) for cell_num in range(cells_conunt)]
+            logging.info(f'Cells sizes {size_list}')
+            mask = ma.masked_where(labels_cells == size_list.index(max(size_list))+1, labels_cells).mask
+        else:
+            mask = raw_mask
+        return mask, labels_cells
 
     def memb_mask(self):
         pass

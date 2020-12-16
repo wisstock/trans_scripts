@@ -49,7 +49,7 @@ if not os.path.exists(res_path):
 all_cells = op.WDPars(data_path, max_frame=1, sigma=3, noise_size=40,   # FluoData parameters
                       sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
 
-df = pd.DataFrame(columns=['cell', 'feature', 'time', 'int'])
+df = pd.DataFrame(columns=['file', 'cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
@@ -58,9 +58,10 @@ for cell_num in range(0, len(all_cells)):
     if not os.path.exists(cell_path):
         os.makedirs(cell_path)
 
-    delta_int = edge.series_point_delta(cell.img_series, cell.cell_mask,
-                                        mask_series=cell.masks_series,
-                                        baseline_frames=18, output_path=cell_path)
+    # delta_int = edge.series_point_delta(cell.img_series, cell.cell_mask,
+    #                                     mask_series=cell.masks_series,
+    #                                     baseline_frames=18,
+    #                                     output_path=cell_path)
 
     # der_int = edge.series_derivate(cell.img_series, cell.cell_mask,
     #                                sigma=8, kernel_size=3,
@@ -69,26 +70,43 @@ for cell_num in range(0, len(all_cells)):
 
     # series_int = cell.sum_int()
     # series_int = deltaF(series_int, f_0_win=3)
-    series_int = cell.frame_mask_int()
-    for single_num in range(len(series_int)):
-        single_int = series_int[single_num]
-        df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
-                       index=df.columns),
-                       ignore_index=True)
+    # series_int = cell.frame_mask_int()
+    # for single_num in range(len(series_int)):
+    #     single_int = series_int[single_num]
+    #     df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
+    #                    index=df.columns),
+    #                    ignore_index=True)
 
     plt.figure()
     ax0 = plt.subplot(131)
     img0 = ax0.imshow(cell.max_gauss)
-    ax0.axis('off')
+    # ax0.axis('off')
     ax0.text(10,10,f'max int frame + gauss',fontsize=8)
     ax1 = plt.subplot(132)
-    img1 = ax1.imshow(cell.cell_mask)
-    ax1.axis('off')
+    img1 = ax1.imshow(cell.cells)
+    # ax1.axis('off')
     ax1.text(10,10,f'binary mask',fontsize=8)
-    plt.savefig(f'{cell_path}/{cell.img_name}_mask.png')
-    logging.info(f'{cell.img_name} ctrl img saved!\n')
+    plt.show()
+    # plt.savefig(f'{cell_path}/{cell.img_name}_mask.png')
+    # logging.info(f'{cell.img_name} ctrl img saved!\n')
 
-df.to_csv(f'{res_path}/results.csv', index=False)
+# df.to_csv(f'{res_path}/results.csv', index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # for cell_img in all_cells:
 #   plt.figure()
