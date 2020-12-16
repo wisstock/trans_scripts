@@ -117,8 +117,8 @@ class FluoData:
     def __init__(self, oif_path, img_name, feature=0, max_frame=6, sigma=3, noise_size=40,
                  background_rm=True,
                  **kwargs):
-        self.img_series = oif.OibImread(oif_path)[0,:,:,:]                # z-stack frames series
-        if background_rm:                                                 # background remove option
+        self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
+        if background_rm:                                                           # background remove option
             for frame in range(0, np.shape(self.img_series)[0]):
                 self.img_series[frame] = edge.back_rm(self.img_series[frame],
                                                       edge_lim=10,
@@ -126,10 +126,10 @@ class FluoData:
         self.img_name = img_name                                                     # file name
         self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
         self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
-        self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max imtensity frame in square region
+        self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
         self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
-        self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)
+        self.cell_detector = edge.hystTool(self.max_frame, sigma, self.noise_sd, **kwargs)  # detect all cells in max frame
         # self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask(mode='multi')
 
         if self.cell_detector.cells_num == 1:
@@ -142,7 +142,6 @@ class FluoData:
         elif self.cell_detector.cells_num > 1:
             self.cells = self.cell_detector.cells_labels
 
-
     def max_mask_int(self):
         """ Calculation mean intensity  in masked area along frames series.
         Mask was created by max_frame image.
@@ -152,7 +151,7 @@ class FluoData:
 
     def frame_mask_int(self):
         """ Calculation mean intensity  in masked area along frames series.
-        Mask was created for each frame individualy.
+        Mask was created for each frame individually.
 
         """
         mean_series = []
@@ -161,6 +160,12 @@ class FluoData:
             mask = self.mask_series[i]
             mean_series.append(round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3))
         return mean_series
+
+    def save_int():
+        """ Saving mask intensity results to CSV table.
+
+        """
+        pass
 
 
 class FRETData():
