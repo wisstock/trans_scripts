@@ -43,7 +43,6 @@ def WDPars(wd_path, **kwargs):
 
             if data_name in data_metha.keys():
                 data_path = os.path.join(root, file)
-                logging.info(f'File {data_name} in progress')
                 fluo_list.append(FluoData(oif_path=data_path,
                                           img_name=data_name,
                                           feature=data_metha[data_name],
@@ -118,6 +117,7 @@ class FluoData:
                  background_rm=True,
                  **kwargs):
         self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
+        logging.info(f'{img_name} series with {len(self.img_series)} frames uploaded')
         if background_rm:                                                           # background remove option
             for frame in range(0, np.shape(self.img_series)[0]):
                 self.img_series[frame] = edge.back_rm(self.img_series[frame],

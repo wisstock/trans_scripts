@@ -24,7 +24,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from skimage.external import tifffile
 from skimage import filters
 from skimage import measure
 from skimage import segmentation
@@ -73,10 +72,11 @@ def series_sum_int(img_series, mask):
     return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
 
 
-def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
+def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3, delta_min=-1, delta_max=1, sigma=4, kernel_size=5, output_path=False):
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
     img_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
+    logging.info(f'{baseline_frames} baseline framese define')
     baseline_img = np.mean(img_series[:baseline_frames,:,:], axis=0)
 
     delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
@@ -100,7 +100,7 @@ def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3,
             plt.figure()
             ax = plt.subplot()
             img = ax.imshow(frame, cmap='jet')
-            img.set_clim(vmin=-1., vmax=1.) 
+            img.set_clim(vmin=delta_min, vmax=delta_max) 
             div = make_axes_locatable(ax)
             cax = div.append_axes('right', size='3%', pad=0.1)
             plt.colorbar(img, cax=cax)
@@ -109,8 +109,8 @@ def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3,
 
             file_name = save_path.split('/')[-1]
             plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
-            logging.info('Delta F frame {} saved!'.format(i))
             plt.close('all')
+        logging.info(f'{len(delta_series)} F/F0 frames saved!')
         return np.asarray(delta_series)
     else:
         return np.asarray(delta_series)
@@ -122,8 +122,6 @@ def series_derivate(series, mask=False, mask_series=False, mask_num=0, sigma=4, 
     """
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
     gauss_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
-
-    logging.info(f'Derivate sigma={sigma}')
 
     der_series = []
     for i in range(np.shape(gauss_series)[0] - (left_w+space_w+right_w)):
@@ -164,8 +162,8 @@ def series_derivate(series, mask=False, mask_series=False, mask_num=0, sigma=4, 
 
             file_name = save_path.split('/')[-1]
             plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
-            logging.info(f'Derivate frame {i+1} saved!')
             plt.close('all')
+        logging.info(f'{len(der_series)} derivate frames saved!')
         return np.asarray(der_series)
     else:
         return np.asarray(der_series)
@@ -175,7 +173,7 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=4, kernel_size=3):
+    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=4, kernel_size=3, output_path=False):
         """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
 
         """
@@ -189,6 +187,7 @@ class hystTool():
         self.mean = mean
         self.kernel_size = kernel_size
         self.sigma = sigma
+        self.output_path = output_path
 
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
         self.truncate = trun(self.kernel_size, self.sigma)
@@ -199,6 +198,9 @@ class hystTool():
                                                                  high=self.high*np.max(self.gauss))
 
         self.cells_labels, self.cells_num = ndi.label(self.detection_mask)
+        print(np.shape(self.cells_labels))
+        self.__debug_save(self.cells_labels, 'det', self.output_path)
+
         if self.cells_num == 0:
             logging.fatal(f'In file {self.img_name} cells DOESN`T detected! You should try increase low_detection')
             raise ValueError
@@ -231,9 +233,31 @@ class hystTool():
         logging.info(f'Lower threshold {round(low, 2)}')
         return low
 
+    @staticmethod
+    def __debug_save(series, name, output_path):
+        if output_path:
+            save_path = f'{output_path}/hyst_debug'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        for i in range(len(series)):
+            img = series[i]
+
+            plt.figure()
+            ax = plt.subplot()
+            img = ax.imshow(img)
+            ax.text(10,10,i+1,fontsize=10)
+            ax.axis('off')
+
+            plt.savefig(f'{save_path}/{name}_{i+1}.png')
+            plt.close('all')
+        logging.info(f'{len(series)} img saved!')
+
     def cell_mask(self, img_series):
         """ Create series of masks for each frame.
-        If there are more than one cells per frame, create dict with mask series for each cell. 
+        If there are more than one cells per frame, create dict with mask series for each cell.
+        Return list of masks if there is one cell at the frame, if more - return dict with list of masks for each cell.
+
         """
         if self.cells_num == 1:
             mask_series = []
@@ -241,13 +265,17 @@ class hystTool():
                 frame = img_series[i]
                 frame_gauss = filters.gaussian(frame, sigma=self.sigma, truncate= self.truncate)
                 frame_sd = np.std(frame[:self.sd_area, :self.sd_area])
+                # if self.cells_num ==1:
+                
                 frame_mask = filters.apply_hysteresis_threshold(frame_gauss,
                                                                 low=self.__low_calc(frame, frame_gauss, frame_sd)*np.max(frame_gauss),
                                                                 high=self.high*np.max(frame_gauss))
                 mask_series.append(frame_mask)
+                # else:
+                #     mask_series = {}
+            self.__debug_save(mask_series, 'mask', self.output_path)
+
             return mask_series
-        else:
-            pass
 
     def huge_cell_mask(self):
         """ Creating binary mask for homogeneous fluoresced cell by SD thresholding and hysteresis smoothing.
