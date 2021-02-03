@@ -1,0 +1,59 @@
+# 21.01.2021
+# Fluo-4 + NP-EGTA loading of HEK cells
+# Serial stimulation protocol (4 or 8 sequenctional stimulus)
+
+# 4 stimulus
+cell3_01: '4'
+cell3_02: '4'
+cell3_03: '4'
+cell3_04: '4'
+cell3_05: '4'
+cell3_06: '4'
+
+cell4_01: '4'
+cell4_02: '4'
+cell4_03: '4'
+cell4_04: '4'
+cell4_05: '4'
+cell4_06: '4'
+
+# cell5_01: '4'
+# cell5_02: '4'
+# cell5_03: '4'
+# cell5_04: '4'
+# cell5_05: '4'
+# cell5_06: '4'
+
+# # 8 stimulus
+# cell6_01: '8'
+# cell6_02: '8'
+# cell6_03: '8'
+# cell6_04: '8'
+# cell6_05: '8'
+# cell6_06: '8'
+# cell6_07: '8'
+# cell6_08: '8'
+# cell6_09: '8'
+# cell6_10: '8'
+
+# cell7_01: '8'
+# cell7_02: '8'
+# cell7_03: '8'
+# cell7_04: '8'
+# cell7_05: '8'
+# cell7_06: '8'
+# cell7_07: '8'
+# cell7_08: '8'
+# cell7_09: '8'
+# cell7_10: '8'
+
+# cell8_01: '8'
+# cell8_02: '8'
+# cell8_03: '8'
+# cell8_04: '8'
+# cell8_05: '8'
+# cell8_06: '8'
+# cell8_07: '8'
+# cell8_08: '8'
+# cell8_09: '8'
+# cell8_10: '8'

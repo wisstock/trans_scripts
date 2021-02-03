@@ -5,9 +5,12 @@ confocal_data/
 motoneuron/
 raw_data/
 fluo_data/
+_fluo_data/
 fluo_res/
+memb_res/
+data/
 
-__pycache__
+__pycache__/
 
 *.log
 *.sublime-project

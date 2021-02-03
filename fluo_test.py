@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-""" Copyright © 2020 Borys Olifirov
+ #!/usr/bin/env python3
+""" Copyright © 2020-2021 Borys Olifirov
 Test experiment with NP-EGTA + Fluo-4 in new HEK cells.
 24-27,07.2020
 
@@ -31,23 +31,21 @@ logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
 
-def deltaF(int_list, f_0_win=2):
-    """ Function for colculation ΔF/F0 for data series.
-    f_0_win - window for F0 calculation (mean of first 2 values by defoult).
-
-    """
-    f_0 = np.mean(int_list[:f_0_win])
-    return [(i - f_0)/f_0 for i in int_list[f_0_win:]]
-
-
 data_path = os.path.join(sys.path[0], 'fluo_data')
 res_path = os.path.join(sys.path[0], 'fluo_res')
 
 if not os.path.exists(res_path):
     os.makedirs(res_path)
 
-all_cells = op.WDPars(data_path, max_frame=1,    # FluoData parameters
-                      sigma=2, kernel_size=9, sd_area=40, sd_lvl=1.5, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
+# for single file registrations
+all_cells = op.WDPars(data_path, max_frame=21,    # FluoData parameters
+                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=0.5, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
+
+# # for multiple file registrations, merge all files one by one
+# all_registrations = op.WDPars(data_path, restrict=True)
+
+# op.fluo_ext(all_registrations)
+
 
 df = pd.DataFrame(columns=['file', 'cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
@@ -58,19 +56,35 @@ for cell_num in range(0, len(all_cells)):
     if not os.path.exists(cell_path):
         os.makedirs(cell_path)
 
-    # delta_int = edge.series_point_delta(cell.img_series,
-    #                                     mask_series=cell.mask_series,
-    #                                     baseline_frames=18,
-    #                                     output_path=cell_path)
+    alex_mask = edge.alex_delta(cell.img_series,
+                                mask=cell.mask_series[cell.max_frame_num],
+                                baseline_frames=10,
+                                max_frames=[20, 25],
+                                sd_tolerance=10,
+                                output_path=cell_path)
 
-    der_int = edge.series_derivate(cell.img_series, mask_series=cell.mask_series, mask_num=cell.max_frame_num,
-                                   sd_tolerance=2,
-                                   sigma=4, kernel_size=3,
-                                   left_w=4, space_w=2, right_w=4,
+    # # pixel-wise F-FO/F0 images
+    # delta_int = edge.series_point_delta(cell.img_series,
+    #                                     mask=cell.mask_series,
+    #                                     sigma=1, kernel_size=1,
+    #                                     baseline_frames=15,
+    #                                     output_path=cell_path)
+    
+    # blue/red derivate images
+    der_int = edge.series_derivate(cell.img_series,
+                                   mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
+                                   sd_mode='cell',
+                                   sd_tolerance=False,
+                                   sigma=1, kernel_size=3,
+                                   left_w=2, space_w=1, right_w=2,
                                    output_path=cell_path)
+    
+    # abs sum of derivate images intensity for derivate plot building
+    der_sum = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
+    print(len(der_sum))
 
     # series_int = cell.sum_int()
-    # series_int = deltaF(series_int, f_0_win=3)
+    # series_int = edge.deltaF(series_int, f_0_win=3)
     # series_int = cell.frame_mask_int()
     # for single_num in range(len(series_int)):
     #     single_int = series_int[single_num]
@@ -79,17 +93,24 @@ for cell_num in range(0, len(all_cells)):
     #                    ignore_index=True)
 
     plt.figure()
-    ax0 = plt.subplot(131)
+    ax0 = plt.subplot(121)
     img0 = ax0.imshow(cell.max_frame)
-    # ax0.axis('off')
+    ax0.axis('off')
     ax0.text(10,10,f'max int frame',fontsize=8)
-    ax1 = plt.subplot(132)
+
+    ax1 = plt.subplot(122)
     img1 = ax1.imshow(cell.mask_series[0])
-    # ax1.axis('off')
+    ax1.axis('off')
     ax1.text(10,10,f'binary mask',fontsize=8)
-    plt.show()
-    # plt.savefig(f'{cell_path}/{cell.img_name}_mask.png')
-    # logging.info(f'{cell.img_name} ctrl img saved!\n')
+
+    plt.savefig(f'{res_path}/{cell.img_name}_mask.png')
+    logging.info(f'{cell.img_name} ctrl img saved!\n')
+
+    plt.close('all')
+    plt.figure()
+    ax = plt.subplot()
+    img = ax.plot(der_sum)
+    plt.savefig(f'{res_path}/{cell.img_name}_der_plot.png')
 
 # df.to_csv(f'{res_path}/results.csv', index=False)
 

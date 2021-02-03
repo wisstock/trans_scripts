@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Copyright © 2020 Borys Olifirov
+""" Copyright © 2020-2021 Borys Olifirov
 
 OIF test
 
@@ -51,88 +51,48 @@ def WDPars(wd_path, **kwargs):
     return fluo_list
 
 
-class OifExt(oif.OifFile):
-    """ Inheritance and extension of the functionality
-    of the OfFice class. Methods for extracting file metadata.
-
-    """
-    @property
-    def geometry(self):
-        """Return linear size in um from mainfile"""
-        size = {
-            self.mainfile[f'Axis {i} Parameters Common']['AxisCode']:
-            float(self.mainfile[f'Axis {i} Parameters Common']['EndPosition'])
-            for i in [0, 1]
-        }
-        size['Z'] = float(self.mainfile['Axis 3 Parameters Common']['Interval']*self.mainfile['Axis 3 Parameters Common']['MaxSize'] / 1000)
-
-        return tuple(size[ax] for ax in ['X', 'Y', 'Z'])
-
-    @property
-    def px_size(self):
-        """Return linear px size in nm from mainfile"""
-        size = {
-            self.mainfile[f'Axis {i} Parameters Common']['AxisCode']:
-            float(self.mainfile[f'Axis {i} Parameters Common']['EndPosition'] / self.mainfile[f'Axis {i} Parameters Common']['MaxSize'] * 1000)
-            for i in [0, 1]     
-        }
-        size['Z'] = float(self.mainfile['Axis 3 Parameters Common']['Interval'] / 1000)
-
-        return tuple(size[ax] for ax in ['X', 'Y', 'Z'])
-
-    @property
-    def lasers(self):
-        """Return active lasers and theyir transmissivity lyst from mainfile"""
-        laser = {
-            self.mainfile[f'Laser {i} Parameters']['LaserWavelength']:
-            int(self.mainfile[f'Laser {i} Parameters']['LaserTransmissivity']/10)
-            for i in range(5) 
-        }
-        laser_enable = [self.mainfile[f'Laser {i} Parameters']['LaserWavelength']
-                        for i in range(5)
-                        if self.mainfile[f'Laser {i} Parameters']['Laser Enable'] == 1]
-
-
-        return tuple([i, laser[i]] for i in laser.keys() if i in laser_enable)
-
-    @property
-    def channels(self):
-        """Return list of active channel (return laser WL and intensity) from minefile"""
-        active_ch = [self.mainfile[f'GUI Channel {i} Parameters']['ExcitationWavelength']
-                     for i in range(1, 4)
-                     if self.mainfile[f'GUI Channel {i} Parameters']['CH Activate'] == 1]
-        laser = {
-            self.mainfile[f'GUI Channel {i} Parameters']['ExcitationWavelength']:
-            int(self.mainfile[f'GUI Channel {i} Parameters']['LaserNDLevel']/10)
-            for i in range(1, 4)
-        }
-
-        return tuple([ch, laser[ch]] for ch in active_ch)
-
-
-class FluoData:
+class FluoData():
     """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
 
     """
     def __init__(self, oif_path, img_name, feature=False, max_frame=6,
-                 background_rm=True,
+                 background_rm=True, 
+                 restrict=False,
+                 img_series=False,
                  **kwargs):
-        self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
-        if background_rm:                                                           # background remove option
-            for frame in range(0, np.shape(self.img_series)[0]):
-                self.img_series[frame] = edge.back_rm(self.img_series[frame],
-                                                      edge_lim=10,
-                                                      dim=2)
-        self.img_name = img_name
-        self.max_frame_num = max_frame                                                     # file name
-        self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
-        self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
-        # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
-        # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
+        # restricted variant for multiple file registration, next step - connect all registration to one FluoData object with fluo_ext function
+        if restrict:
+            pass
+        # NOT READY!
+        #     self.img_name = img_name
+        #     self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
+        #     if background_rm:                                                           # background remove option
+        #         for frame in range(0, np.shape(self.img_series)[0]):
+        #         self.img_series[frame] = edge.back_rm(self.img_series[frame],
+        #                                               edge_lim=10,
+        #                                               dim=2)
+        #     self.feature = feature
+        # # full variant for one-file registration
+        else:
+            if not img_series:
+                self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
+                if background_rm:                                                           # background remove option
+                    for frame in range(0, np.shape(self.img_series)[0]):
+                        self.img_series[frame] = edge.back_rm(self.img_series[frame],
+                                                              edge_lim=10,
+                                                              dim=2)
+            else:
+                self.img_series = img_series
+            self.img_name = img_name
+            self.max_frame_num = max_frame                                                     # file name
+            self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
+            # self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
+            # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
+            # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
-        self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
-        # self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask(mode='multi')
-        self.mask_series = self.cell_detector.cell_mask(self.img_series)
+            self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
+            # self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask(mode='multi')
+            self.mask_series = self.cell_detector.cell_mask(self.img_series)
 
     def max_mask_int(self):
         """ Calculation mean intensity  in masked area along frames series.
@@ -157,6 +117,25 @@ class FluoData:
         """ Saving mask intensity results to CSV table.
 
         """
+        pass
+
+
+def fluo_ext(reg_list, **kwargs):
+    """ Extension for FluoData class, require list of FluoData objects to create single output image series.
+    Return new FluoData object.
+    """
+    cells_name = list(dict.fromkeys([reg.img_name.split('_')[0] for reg in reg_list]))  # create list of cells name (remove repeated names)
+    print(cells_name)
+
+    return [FluoData(kwargs) ]
+    
+
+class YFPmem():
+    """ Registration of co-transferenced (TFP + EYFP-Mem) cells.
+    T-axis of file represent excitation laser combination (1 - 456+488, 456, 488).
+
+    """
+    def __init__(self):
         pass
 
 

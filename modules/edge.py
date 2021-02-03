@@ -34,6 +34,15 @@ from scipy import signal
 from scipy import ndimage as ndi
 
 
+def deltaF(int_list, f_0_win=2):
+    """ Function for colculation ΔF/F0 for data series.
+    f_0_win - window for F0 calculation (mean of first 2 values by defoult).
+
+    """
+    f_0 = np.mean(int_list[:f_0_win])
+    return [(i - f_0)/f_0 for i in int_list[f_0_win:]]
+
+
 def back_rm(img, edge_lim=20, dim=3):
     """ Background extraction in TIFF series
 
@@ -67,13 +76,53 @@ def back_rm(img, edge_lim=20, dim=3):
 
 
 def series_sum_int(img_series, mask):
-    """ Calcualtion of summary intensity of masked region along time series frames
+    """ Calculation of summary intensity of masked region along time series frames
 
     """
     return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
 
 
-def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
+def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_tolerance=2, output_path=False):
+    """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
+
+    """
+    baseline_img = np.mean(series[:baseline_frames,:,:], axis=0)
+    max_img = np.mean(series[max_frames[0]:max_frames[1],:,:], axis=0)
+
+    cell_sd = np.std(ma.masked_where(~mask, series[max_frames[0],:,:]))
+    logging.info(f'Cell area SD={round(cell_sd, 2)}')
+
+    delta_img = max_img - baseline_img
+
+    delta_img[delta_img > cell_sd * sd_tolerance] = 1
+    delta_img[delta_img < -cell_sd * sd_tolerance] = -1
+    delta_img = ma.masked_where(~mask, delta_img)
+
+
+    if output_path:
+        # save_path = f'{output_path}/alex_F'
+        # if not os.path.exists(save_path):
+        #     os.makedirs(save_path)
+
+        plt.figure()
+        ax = plt.subplot()
+        img = ax.imshow(delta_img, cmap='bwr')
+        img.set_clim(vmin=-1., vmax=1.) 
+        div = make_axes_locatable(ax)
+        cax = div.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img, cax=cax)
+        ax.axis('off')
+
+        plt.savefig(f'{output_path}/alex_mask.png')
+        logging.info('Alex F/F0 mask saved!')
+        plt.close('all')
+
+        return np.asarray(delta_img)
+    else:
+        return np.asarray(delta_img)
+
+
+def series_point_delta(series, mask=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
     img_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
@@ -82,12 +131,14 @@ def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3,
     delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
     vdelta = np.vectorize(delta)
 
-    if mask_series:
-        delta_series = [ma.masked_where(~mask_series[i], vdelta(img_series[i], baseline_img)) for i in range(len(img_series))]
+    if type(mask) is list:
+        delta_series = [ma.masked_where(~mask[i], vdelta(img_series[i], baseline_img)) for i in range(len(img_series))]
+    elif mask == 'full_frame':
+        delta_series = [vdelta(i, baseline_img) for i in img_series]
     elif mask:
         delta_series = [ma.masked_where(~mask, vdelta(i, baseline_img)) for i in img_series]
     else:
-        raise TypeError('NO mask available!')
+        raise TypeError('INCORRECT mask option!')
 
     if output_path:
         save_path = f'{output_path}/delta_F'
@@ -116,26 +167,31 @@ def series_point_delta(series, mask=False, mask_series=False, baseline_frames=3,
         return np.asarray(delta_series)
 
 
-def series_derivate(series, mask=False, mask_series=False, mask_num=0, sigma=4, kernel_size=3,  sd_area=50, sd_tolerance=False, left_w=1, space_w=0, right_w=1, output_path=False):
+def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_mode='cell',  sd_area=50, sd_tolerance=False, left_w=1, space_w=0, right_w=1, output_path=False):
     """ Calculation of derivative image series (difference between two windows of interes).
+
+    SD mode - noise SD/'noise' (in sd_area region) or cell region SD/'cell' (in mask region)
 
     """
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
     gauss_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
-    logging.info(f'Derivate sigma={sigma}')
-
     der_series = []
     for i in range(np.shape(gauss_series)[0] - (left_w+space_w+right_w)):
         der_frame = np.mean(gauss_series[i+left_w+space_w:i+left_w+space_w+right_w], axis=0) - np.mean(gauss_series[i:i+left_w], axis=0) 
         if sd_tolerance:
-            der_sd = np.std(der_frame[:sd_area, sd_area])
+            if sd_mode == 'cell':
+                logging.info('Cell region SD mode selected')
+                der_sd = np.std(ma.masked_where(~mask, der_frame))
+            else:
+                logging.info('Outside region SD mode selected')
+                der_sd = np.std(der_frame[:sd_area, sd_area])
             der_frame[der_frame > der_sd * sd_tolerance] = 1
             der_frame[der_frame < -der_sd * sd_tolerance] = -1
-        if mask_series:
-            der_series.append(ma.masked_where(~mask_series[mask_num], der_frame)) 
-        elif mask:
+        if type(mask) is not str:
             der_series.append(ma.masked_where(~mask, der_frame))
+        elif mask == 'full_frame':
+            der_series.append(der_frame)
         else:
             raise TypeError('NO mask available!')
     logging.info(f'Derivative series len={len(der_series)} (left WOI={left_w}, spacer={space_w}, right WOI={right_w})')
@@ -159,13 +215,13 @@ def series_derivate(series, mask=False, mask_series=False, mask_num=0, sigma=4, 
             div = make_axes_locatable(ax)
             cax = div.append_axes('right', size='3%', pad=0.1)
             plt.colorbar(img, cax=cax)
-            ax.text(10,10,i+1,fontsize=10)
+            ax.text(10,10,i+1,fontsize=10, color='w')
             ax.axis('off')
 
             file_name = save_path.split('/')[-1]
             plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
-            logging.info(f'Derivate frame {i+1} saved!')
             plt.close('all')
+        logging.info(f'Derivate images saved!')
         return np.asarray(der_series)
     else:
         return np.asarray(der_series)
@@ -228,7 +284,7 @@ class hystTool():
             if low >= self.high:
                 logging.fatal('LOW=HIGH, thresholding failed!')
                 break
-        logging.info(f'Lower threshold {round(low, 2)}')
+        # logging.info(f'Lower threshold {round(low, 2)}')
         return low
 
     def cell_mask(self, img_series):
@@ -245,6 +301,7 @@ class hystTool():
                                                                 low=self.__low_calc(frame, frame_gauss, frame_sd)*np.max(frame_gauss),
                                                                 high=self.high*np.max(frame_gauss))
                 mask_series.append(frame_mask)
+            logging.info('Mask series builded successfully')
             return mask_series
         else:
             pass
@@ -257,6 +314,7 @@ class hystTool():
         raw_mask = filters.apply_hysteresis_threshold(self.gauss,
                                                       low=self.__low_calc(self.img)*np.max(self.gauss),
                                                       high=self.high*np.max(self.gauss))
+        logging.info('Mask builded successfully')
         labels_cells, cells_conunt = ndi.label(raw_mask)
         logging.info(f'{cells_conunt} cells detected')
         if cells_conunt > 1:
