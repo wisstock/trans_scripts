@@ -39,7 +39,7 @@ if not os.path.exists(res_path):
 
 # for single file registrations
 all_cells = op.WDPars(data_path, max_frame=21,    # FluoData parameters
-                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=0.5, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
+                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=0.5, high=0.8, low_init=0.04, mask_diff=50)  # hystTools parameters
 
 # # for multiple file registrations, merge all files one by one
 # all_registrations = op.WDPars(data_path, restrict=True)
@@ -81,7 +81,17 @@ for cell_num in range(0, len(all_cells)):
     
     # abs sum of derivate images intensity for derivate plot building
     der_sum = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
-    print(len(der_sum))
+
+    # delta_int = edge.series_point_delta(cell.img_series, mask_series=cell.mask_series, 
+    #                                     baseline_frames=18,
+    #                                     delta_min=-0.75, delta_max=0.75,
+    #                                     sigma=1, kernel_size=3,
+    #                                     output_path=cell_path)
+
+    # der_int = edge.series_derivate(cell.img_series, mask_series=cell.mask_series, mask_num=cell.max_frame_num,
+    #                                left_w=4, space_w=2, right_w=4,
+    #                                sigma=1, kernel_size=3,
+    #                                output_path=cell_path)
 
     # series_int = cell.sum_int()
     # series_int = edge.deltaF(series_int, f_0_win=3)
@@ -97,35 +107,21 @@ for cell_num in range(0, len(all_cells)):
     img0 = ax0.imshow(cell.max_frame)
     ax0.axis('off')
     ax0.text(10,10,f'max int frame',fontsize=8)
-
     ax1 = plt.subplot(122)
     img1 = ax1.imshow(cell.mask_series[0])
     ax1.axis('off')
     ax1.text(10,10,f'binary mask',fontsize=8)
-
     plt.savefig(f'{res_path}/{cell.img_name}_mask.png')
     logging.info(f'{cell.img_name} ctrl img saved!\n')
 
     plt.close('all')
+
     plt.figure()
     ax = plt.subplot()
     img = ax.plot(der_sum)
     plt.savefig(f'{res_path}/{cell.img_name}_der_plot.png')
 
 # df.to_csv(f'{res_path}/results.csv', index=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
