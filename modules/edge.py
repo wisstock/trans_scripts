@@ -95,8 +95,8 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
     delta_img = max_img - baseline_img
 
     delta_img[delta_img > cell_sd * sd_tolerance] = 1
-    delta_img[delta_img < -cell_sd * sd_tolerance] = -1
-    delta_img = ma.masked_where(~mask, delta_img)
+    # delta_img[delta_img < -cell_sd * sd_tolerance] = -1
+    # delta_img = ma.masked_where(~mask, delta_img)
 
 
     if output_path:
@@ -174,7 +174,10 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
 
     """
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
-    gauss_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
+    if sigma == 'no_gauss':
+        gauss_series = series
+    else:
+        gauss_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
     der_series = []
     for i in range(np.shape(gauss_series)[0] - (left_w+space_w+right_w)):

@@ -58,8 +58,8 @@ for cell_num in range(0, len(all_cells)):
 
     alex_mask = edge.alex_delta(cell.img_series,
                                 mask=cell.mask_series[cell.max_frame_num],
-                                baseline_frames=10,
-                                max_frames=[20, 25],
+                                baseline_frames=2,
+                                max_frames=[6, 11],
                                 sd_tolerance=10,
                                 output_path=cell_path)
 
@@ -75,8 +75,8 @@ for cell_num in range(0, len(all_cells)):
                                    mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
                                    sd_mode='cell',
                                    sd_tolerance=False,
-                                   sigma=1, kernel_size=3,
-                                   left_w=2, space_w=1, right_w=2,
+                                   sigma=1, kernel_size=5,
+                                   left_w=1, space_w=0, right_w=1,
                                    output_path=cell_path)
     
     # abs sum of derivate images intensity for derivate plot building
