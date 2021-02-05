@@ -1,7 +1,6 @@
  #!/usr/bin/env python3
 """ Copyright © 2020-2021 Borys Olifirov
-Test experiment with NP-EGTA + Fluo-4 in new HEK cells.
-24-27,07.2020
+Registration of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation) analysis.
 
 """
 
@@ -38,7 +37,7 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 # for single file registrations
-all_cells = op.WDPars(data_path, max_frame=21,    # FluoData parameters
+all_cells = op.WDPars(data_path, max_frame=0,    # FluoData parameters
                       sigma=1, kernel_size=3, sd_area=40, sd_lvl=0.5, high=0.8, low_init=0.04, mask_diff=50)  # hystTools parameters
 
 # # for multiple file registrations, merge all files one by one
@@ -78,20 +77,16 @@ for cell_num in range(0, len(all_cells)):
                                    sigma=1, kernel_size=5,
                                    left_w=1, space_w=0, right_w=1,
                                    output_path=cell_path)
-    
-    # abs sum of derivate images intensity for derivate plot building
-    der_sum = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
+    # abs sum of derivate images intensity for derivate amplitude plot
+    der_amp = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
 
+
+    # # pixel-wise F/F0 images
     # delta_int = edge.series_point_delta(cell.img_series, mask_series=cell.mask_series, 
     #                                     baseline_frames=18,
     #                                     delta_min=-0.75, delta_max=0.75,
     #                                     sigma=1, kernel_size=3,
     #                                     output_path=cell_path)
-
-    # der_int = edge.series_derivate(cell.img_series, mask_series=cell.mask_series, mask_num=cell.max_frame_num,
-    #                                left_w=4, space_w=2, right_w=4,
-    #                                sigma=1, kernel_size=3,
-    #                                output_path=cell_path)
 
     # series_int = cell.sum_int()
     # series_int = edge.deltaF(series_int, f_0_win=3)
@@ -102,6 +97,7 @@ for cell_num in range(0, len(all_cells)):
     #                    index=df.columns),
     #                    ignore_index=True)
 
+    # control image of the cell with native image of max frame and hysteresis binary mask,
     plt.figure()
     ax0 = plt.subplot(121)
     img0 = ax0.imshow(cell.max_frame)
@@ -111,15 +107,16 @@ for cell_num in range(0, len(all_cells)):
     img1 = ax1.imshow(cell.mask_series[0])
     ax1.axis('off')
     ax1.text(10,10,f'binary mask',fontsize=8)
-    plt.savefig(f'{res_path}/{cell.img_name}_mask.png')
-    logging.info(f'{cell.img_name} ctrl img saved!\n')
+    plt.savefig(f'{res_path}/{cell.img_name}_ctrl.png')
+    logging.info(f'{cell.img_name} control image saved!\n')
 
     plt.close('all')
 
+    # derivate amplitude plot of image series
     plt.figure()
     ax = plt.subplot()
-    img = ax.plot(der_sum)
-    plt.savefig(f'{res_path}/{cell.img_name}_der_plot.png')
+    img = ax.plot(der_amp)
+    plt.savefig(f'{res_path}/{cell.img_name}_der_amp.png')
 
 # df.to_csv(f'{res_path}/results.csv', index=False)
 

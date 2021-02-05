@@ -21,11 +21,11 @@ import oiffile as oif
 import edge
 
 
-def WDPars(wd_path, **kwargs):
+def WDPars(wd_path, mode='fluo', **kwargs):
     """ Parser for data dirrectory and YAML methadata file
 
     """
-    fluo_list = []
+    data_list = []
     for root, dirs, files in os.walk(wd_path):
         for file in files:
             if file.endswith('.yml') or file.endswith('.yaml'):
@@ -44,11 +44,36 @@ def WDPars(wd_path, **kwargs):
             if data_name in data_metha.keys():
                 data_path = os.path.join(root, file)
                 logging.info(f'File {data_name} in progress')
-                fluo_list.append(FluoData(oif_path=data_path,
-                                          img_name=data_name,
-                                          feature=data_metha[data_name],
-                                          **kwargs))
-    return fluo_list
+                if mode == 'fluo':
+                    data_list.append(FluoData(oif_path=data_path,
+                                              img_name=data_name,
+                                              feature=data_metha[data_name],
+                                              **kwargs))
+                elif mode == 'memb':
+                    data_list.append(MembData(oif_path=data_path,
+                                              img_name=data_name,
+                                              feature=data_metha[data_name],
+                                              **kwargs))
+                elif mode == 'FRET':
+                    data_list.append(FRETData(oif_path=data_path,
+                                              img_name=data_name,
+                                              feature=data_metha[data_name],
+                                              **kwargs))
+                else:
+                    logging.fatal('Incorrect data mode!')
+
+    return data_list
+
+
+# # NOR READY!
+# def series_ext(reg_list, **kwargs):
+#     """ Extension for data classes, require list of data objects to create single output image series.
+#     Return new object with same data type.
+#     """
+#     cells_name = list(dict.fromkeys([reg.img_name.split('_')[0] for reg in reg_list]))  # create list of cells name (remove repeated names)
+#     print(cells_name)
+
+#     return [FluoData(kwargs) ]
 
 
 class FluoData():
@@ -65,7 +90,7 @@ class FluoData():
             pass
         # NOT READY!
         #     self.img_name = img_name
-        #     self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
+        #     self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # OIF file reading 
         #     if background_rm:                                                           # background remove option
         #         for frame in range(0, np.shape(self.img_series)[0]):
         #         self.img_series[frame] = edge.back_rm(self.img_series[frame],
@@ -84,8 +109,8 @@ class FluoData():
             else:
                 self.img_series = img_series
             self.img_name = img_name
-            self.max_frame_num = max_frame                                                     # file name
-            self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
+            self.max_frame_num = max_frame                                                 # file name
+            self.max_frame = self.img_series[max_frame,:,:]                                # first frame after 405 nm exposure (max intensity) or first frame (for FP)
             # self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
             # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
             # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
@@ -118,25 +143,56 @@ class FluoData():
 
         """
         pass
-
-
-def fluo_ext(reg_list, **kwargs):
-    """ Extension for FluoData class, require list of FluoData objects to create single output image series.
-    Return new FluoData object.
-    """
-    cells_name = list(dict.fromkeys([reg.img_name.split('_')[0] for reg in reg_list]))  # create list of cells name (remove repeated names)
-    print(cells_name)
-
-    return [FluoData(kwargs) ]
     
 
-class YFPmem():
-    """ Registration of co-transferenced (TFP + EYFP-Mem) cells.
-    T-axis of file represent excitation laser combination (1 - 456+488, 456, 488).
+class MembData():
+    """ Registration of co-transferenced (HPCA-TagRFP + EYFP-Mem) cells.
+    T-axis of file represent excitation laser combination (HPCA+label, HPCA, label).
+
+    Multi channel time series dimensions structure:
+    (ch, z-axis, t, x-axis, y-axis)
+
+    fluo_order - order of fluo,
+    if target protein label emission wavelength less then membrane label emission wavelength, HPCA-TFP + EYFP-Mem - direct order ('dir'),
+    if target protein label emission wavelength greater then membrane label emission wavelength, HPCA-TagRFP + EYFP-Mem - revers order ('rev'),
 
     """
-    def __init__(self):
-        pass
+    def __init__(self, oif_path, img_name, feature=False,
+                 max_frame=0,     # if time series
+                 background_rm=True, 
+                 img_series=False,
+                 z_data=False,
+                 middle_frame=5,  # if z-stack
+                 fluo_order='dir',
+                 **kwargs):
+        self.img_series = oif.OibImread(oif_path)                                   # OIF file reading
+        if fluo_order == 'dir':
+            target_ch, target_ex = 0, 1
+            label_ch, label_ex = 1, 2
+        elif fluo_order == 'rev':
+            target_ch, target_ex = 1, 2
+            label_ch, label_ex = 0, 1
+        else:
+            logging.fatal('Incorrect fluo_order option!')
+        self.target_series = self.img_series[target_ch,:,target_ex,:,:]             # selection of target channel and excitation series 
+        self.label_series = self.img_series[label_ch,:,label_ex,:,:]                # selection of label channel and excitation series
+
+        logging.info(f'Target image shape {np.shape(self.target_series)}, label image shape {np.shape(self.label_series)}')
+
+        if background_rm:                                                           # background remove option
+            for frame in range(0, np.shape(self.target_series)[0]):
+                self.target_series[frame] = edge.back_rm(self.target_series[frame],
+                                                         edge_lim=10,
+                                                         dim=2)
+                self.label_series[frame] = edge.back_rm(self.label_series[frame],
+                                                        edge_lim=10,
+                                                        dim=2)
+        self.img_name = img_name
+        self.max_frame_num = max_frame                                               # file name
+        self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
+
+        self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
+        # self.mask_series = self.cell_detector.cell_mask(self.img_series)
 
 
 class FRETData():

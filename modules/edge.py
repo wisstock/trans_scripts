@@ -52,26 +52,22 @@ def back_rm(img, edge_lim=20, dim=3):
     """
 
     if dim == 3:
-        edge_stack = img[:,:edge_lim,:edge_lim]
-        mean_back = np.mean(edge_stack)
+        mean_back = np.mean(img[:,:edge_lim,:edge_lim])
 
         logging.debug('Mean background, {} px region: {:.3f}'.format(edge_lim, mean_back))
 
         img_out = np.copy(img)
         img_out = img_out - mean_back
         img_out[img_out < 0] = 0
-
         return img_out
     elif dim == 2:
-        edge_fragment = img[:edge_lim,:edge_lim]
-        mean_back = np.mean(edge_fragment)
+        mean_back = np.mean(img[:edge_lim,:edge_lim])
 
         logging.debug('Mean background, %s px region: %s' % (edge_lim, mean_back))
 
         img = np.copy(img)
         img = img - mean_back
         img[img < 0] = 0
-
         return img
 
 
@@ -234,7 +230,7 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=4, kernel_size=3):
+    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=3, kernel_size=5):
         """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
 
         """
@@ -307,7 +303,8 @@ class hystTool():
             logging.info('Mask series builded successfully')
             return mask_series
         else:
-            pass
+            # NOT READY FOR MULTIPLE CELLS!
+            logging.fatal('More then one cell, CAN`T create masks series!')
 
     def huge_cell_mask(self):
         """ Creating binary mask for homogeneous fluoresced cell by SD thresholding and hysteresis smoothing.
@@ -329,6 +326,22 @@ class hystTool():
         return mask, labels_cells
 
     def memb_mask(self):
+        """ Membrane region detection.
+        Outdide edge - >= 2sd noise
+        Inside edge - >= cytoplasm mean intensity
+
+       img - imput z-stack frame;
+       roi_center - list of int [x, y], coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
+       roi_size - int, cutoplasmic ROI side size in px (ROI is a square area);
+       noise_size - int, size in px of region for noise sd calculation (square area witf start in 0,0 coordinates);
+       sd_low - float, hysteresis algorithm lower threshold for outside cell edge detection,
+                > 2sd of noise (percentage of maximum frame intensity);
+       mean_low - float, hysteresis algorithm lower threshold for inside cell edge detection,
+                > cytoplasmic ROI mean intensity (percentage of maximum frame intensity);
+       gen_high - float,  general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
+       sigma - int, sd for gaussian filter.
+
+        """
         pass
 
 
