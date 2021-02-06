@@ -49,6 +49,11 @@ def WDPars(wd_path, mode='fluo', **kwargs):
                                               img_name=data_name,
                                               feature=data_metha[data_name],
                                               **kwargs))
+                elif mode == 'z':
+                    data_list.append(MembZData(oif_path=data_path,
+                                              img_name=data_name,
+                                              feature=data_metha[data_name],
+                                              **kwargs))
                 elif mode == 'memb':
                     data_list.append(MembData(oif_path=data_path,
                                               img_name=data_name,
@@ -145,8 +150,8 @@ class FluoData():
         pass
     
 
-class MembData():
-    """ Registration of co-transferenced (HPCA-TagRFP + EYFP-Mem) cells.
+class MembZData():
+    """ Registration of static co-transferenced (HPCA-TagRFP + EYFP-Mem) cells.
     T-axis of file represent excitation laser combination (HPCA+label, HPCA, label).
 
     Multi channel time series dimensions structure:
@@ -158,11 +163,8 @@ class MembData():
 
     """
     def __init__(self, oif_path, img_name, feature=False,
-                 max_frame=0,     # if time series
                  background_rm=True, 
-                 img_series=False,
-                 z_data=False,
-                 middle_frame=5,  # if z-stack
+                 middle_frame=5,
                  fluo_order='dir',
                  **kwargs):
         self.img_series = oif.OibImread(oif_path)                                   # OIF file reading
@@ -188,11 +190,28 @@ class MembData():
                                                         edge_lim=10,
                                                         dim=2)
         self.img_name = img_name
-        self.max_frame_num = max_frame                                               # file name
-        self.max_frame = self.img_series[max_frame,:,:]                              # first frame after 405 nm exposure (max intensity) or first frame (for FP)
+        self.middle_frame_num = middle_frame
+        self.target_middle_frame = self.target_series[self.middle_frame_num,:,:]
+        self.label_middle_frame = self.label_series[self.middle_frame_num,:,:]
 
-        self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
+        self.cell_detector = edge.hystTool(self.middle_frame, **kwargs)  # detect all cells in max frame
         # self.mask_series = self.cell_detector.cell_mask(self.img_series)
+
+        def __output_dir_check(output_path, output_name):
+            """ Creating output directory.
+
+            """
+            save_path = f'{output_path}/memb_res'
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+
+
+class MembData():
+    """
+
+    """
+    def __init__(self):
+        pass
 
 
 class FRETData():

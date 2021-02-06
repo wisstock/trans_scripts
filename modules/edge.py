@@ -91,15 +91,11 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
     delta_img = max_img - baseline_img
 
     delta_img[delta_img > cell_sd * sd_tolerance] = 1
-    # delta_img[delta_img < -cell_sd * sd_tolerance] = -1
-    # delta_img = ma.masked_where(~mask, delta_img)
+    delta_img[delta_img < -cell_sd * sd_tolerance] = -1
+    delta_img = ma.masked_where(~mask, delta_img)
 
 
     if output_path:
-        # save_path = f'{output_path}/alex_F'
-        # if not os.path.exists(save_path):
-        #     os.makedirs(save_path)
-
         plt.figure()
         ax = plt.subplot()
         img = ax.imshow(delta_img, cmap='bwr')
@@ -230,22 +226,23 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, sigma=3, kernel_size=5):
+    def __init__(self, img, sd_area=20, mean=0, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.3, mask_diff=50, inside_mask_diff=50, sigma=3, kernel_size=5):
         """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
 
         """
-        self.img = img
-        self.high = high
-        self.low_init = low_init
-        self.low_detection = low_detection
-        self.mask_diff = mask_diff
-        self.sd_area = sd_area
-        self.sd_lvl = sd_lvl
-        self.mean = mean
-        self.kernel_size = kernel_size
-        self.sigma = sigma
+        self.img = img                            # image for hystTool initialization and cell counting                   
+        self.high = high                          # high threshold for all methods
+        self.low_init = low_init                  # initial low threshold for cell detection
+        self.low_detection = low_detection        # low threshold for cell counting during initialization
+        self.mask_diff = mask_diff                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
+        self.inside_mask_diff = inside_mask_diff  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
+        self.sd_area = sd_area                    # area in px for frame SD calculation
+        self.sd_lvl = sd_lvl                      # multiplication factor of noise SD value for outside fixed-value mask building
+        self.mean = mean                          # cytoplasm mean value for inside fixed-value mask building
+        self.kernel_size = kernel_size            # kernel size of the Gaussian filter
+        self.sigma = sigma                        # sigma of the Gaussian filter
 
-        trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
+        trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for Gaussian fliter according to sigma value and kernel size
         self.truncate = trun(self.kernel_size, self.sigma)
         self.gauss = filters.gaussian(self.img, sigma=sigma, truncate= self.truncate)
 
@@ -283,7 +280,7 @@ class hystTool():
             if low >= self.high:
                 logging.fatal('LOW=HIGH, thresholding failed!')
                 break
-        # logging.info(f'Lower threshold {round(low, 2)}')
+        logging.debug(f'Lower threshold {round(low, 2)}')
         return low
 
     def cell_mask(self, img_series):
