@@ -37,7 +37,8 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 # for single file registrations
-all_cells = op.WDPars(data_path, max_frame=0,    # FluoData parameters
+all_cells = op.WDPars(data_path,
+                      max_frame=0,    # FluoData parameters
                       sigma=1, kernel_size=3, sd_area=40, sd_lvl=0.5, high=0.8, low_init=0.04, mask_diff=50)  # hystTools parameters
 
 # # for multiple file registrations, merge all files one by one

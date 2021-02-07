@@ -36,8 +36,8 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 all_cells = op.WDPars(wd_path=data_path, mode='z',
-	                  middle_frame=6,  # MembData parameters
-                      sigma=2, kernel_size=5, sd_area=40, sd_lvl=0.5, high=0.8, low_init=0.05, mask_diff=50)  # hystTools parameters
+	                  middle_frame=5,  # MembData parameters
+                      sigma=3, kernel_size=21, sd_area=40, sd_lvl=2, high=0.8, low_init=0.05, mask_diff=10)  # hystTools parameters
 
 df = pd.DataFrame(columns=['file', 'cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
@@ -45,14 +45,22 @@ for cell_num in range(0, len(all_cells)):
     logging.info('Image {} in progress'.format(cell.img_name))
 
     plt.figure()
-    ax0 = plt.subplot(121)
-    img0 = ax0.imshow(cell.max_frame)
+    ax0 = plt.subplot(131)
+    img0 = ax0.imshow(cell.label_middle_frame)
     ax0.axis('off')
-    ax0.text(10,10,f'max int frame',fontsize=8)
-    ax1 = plt.subplot(122)
-    img1 = ax1.imshow(cell.mask_series[0])
+    ax0.text(10,10,f'label, frame {cell.middle_frame_num}',fontsize=8)
+
+    ax1 = plt.subplot(132)
+    img1 = ax1.imshow(cell.target_middle_frame)
     ax1.axis('off')
-    ax1.text(10,10,f'binary mask',fontsize=8)
+    ax1.text(10,10,f'target',fontsize=8)
+
+    ax2 = plt.subplot(133)
+    img2 = ax2.imshow(cell.cells_labels)
+    ax2.axis('off')
+    ax2.text(10,10,f'binary mask',fontsize=8)
+    
+
     plt.savefig(f'{res_path}/{cell.img_name}_ctrl.png')
     logging.info(f'{cell.img_name} control image saved!\n')
 

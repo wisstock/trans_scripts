@@ -39,7 +39,6 @@ def WDPars(wd_path, mode='fluo', **kwargs):
     for root, dirs, files in os.walk(wd_path):  # loop over OIF files
         for file in files:
             data_name = file.split('.')[0]
-            data_path = os.path.join(root, file)
 
             if data_name in data_metha.keys():
                 data_path = os.path.join(root, file)
@@ -79,6 +78,7 @@ def WDPars(wd_path, mode='fluo', **kwargs):
 #     print(cells_name)
 
 #     return [FluoData(kwargs) ]
+
 
 
 class FluoData():
@@ -122,7 +122,8 @@ class FluoData():
 
             self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
             # self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask(mode='multi')
-            self.mask_series = self.cell_detector.cell_mask(self.img_series)
+            # self.mask_series = self.cell_detector.cell_mask(self.img_series)
+            self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.img_series]
 
     def max_mask_int(self):
         """ Calculation mean intensity  in masked area along frames series.
@@ -179,7 +180,7 @@ class MembZData():
         self.target_series = self.img_series[target_ch,:,target_ex,:,:]             # selection of target channel and excitation series 
         self.label_series = self.img_series[label_ch,:,label_ex,:,:]                # selection of label channel and excitation series
 
-        logging.info(f'Target image shape {np.shape(self.target_series)}, label image shape {np.shape(self.label_series)}')
+        logging.info(f'Z-stack with {np.shape(self.target_series)[0]} slices uploaded')
 
         if background_rm:                                                           # background remove option
             for frame in range(0, np.shape(self.target_series)[0]):
@@ -194,8 +195,13 @@ class MembZData():
         self.target_middle_frame = self.target_series[self.middle_frame_num,:,:]
         self.label_middle_frame = self.label_series[self.middle_frame_num,:,:]
 
-        self.cell_detector = edge.hystTool(self.middle_frame, **kwargs)  # detect all cells in max frame
-        # self.mask_series = self.cell_detector.cell_mask(self.img_series)
+        self.cell_detector = edge.hystTool(self.target_middle_frame, **kwargs)  # detect all cells in max frame
+
+        self.cells_labels = self.cell_detector.cells_labels
+        self.middle_mask = self.cell_detector.cell_mask(self.label_middle_frame)
+
+        # self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.label_series]
+
 
         def __output_dir_check(output_path, output_name):
             """ Creating output directory.
