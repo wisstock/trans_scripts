@@ -199,6 +199,7 @@ class MembZData():
 
         self.cells_labels = self.cell_detector.cells_labels
         self.middle_mask = self.cell_detector.cell_mask(self.label_middle_frame)
+        self.cell_detector.memb_mask(self.label_middle_frame)
 
         # self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.label_series]
 

@@ -63,7 +63,7 @@ def back_rm(img, edge_lim=20, dim=3):
     elif dim == 2:
         mean_back = np.mean(img[:edge_lim,:edge_lim])
 
-        logging.debug('Mean background, %s px region: %s' % (edge_lim, mean_back))
+        logging.debug(f'Mean background, {edge_lim} px region: {mean_back}')
 
         img = np.copy(img)
         img = img - mean_back
@@ -88,7 +88,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
     cell_sd = np.std(ma.masked_where(~mask, series[max_frames[0],:,:]))
     logging.info(f'Cell area SD={round(cell_sd, 2)}')
 
-    delta_img = max_img - baseline_img
+    delta_img = max_img - baseline_img  
 
     delta_img[delta_img > cell_sd * sd_tolerance] = 1
     delta_img[delta_img < -cell_sd * sd_tolerance] = -1
@@ -238,7 +238,7 @@ class hystTool():
         self.inside_mask_diff = inside_mask_diff  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
         self.sd_area = sd_area                    # area in px for frame SD calculation
         self.sd_lvl = sd_lvl                      # multiplication factor of noise SD value for outside fixed-value mask building
-        self.mean = mean                          # cytoplasm mean value for inside fixed-value mask building
+        # self.mean = mean                          # cytoplasm mean value for inside fixed-value mask building
         self.kernel_size = kernel_size            # kernel size of the Gaussian filter
         self.sigma = sigma                        # sigma of the Gaussian filter
 
@@ -283,15 +283,14 @@ class hystTool():
         logging.debug(f'Lower threshold {round(low, 2)}')
         return low
 
-    def __sd_mask(self, img):
+    def __create_mask(self, img, for_low, mode='SD'):
         """ Create SD mask for image
         """
         img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
-        img_sd = np.std(img[:self.sd_area, :self.sd_area])
         img_mask = filters.apply_hysteresis_threshold(img_gauss,
-                                                     low=self.__low_calc(img, img_gauss, img_sd)*np.max(img_gauss),
+                                                     low=self.__low_calc(img, img_gauss, for_low)*np.max(img_gauss),
                                                      high=self.high*np.max(img_gauss))
-        logging.info(f'{self.sd_lvl}SD mask builded successfully, {np.shape(img_mask)}')
+        logging.info(f'{mode} mask builded successfully, {np.shape(img_mask)}')
         return img_mask
 
     def cell_mask(self, frame):
@@ -299,7 +298,8 @@ class hystTool():
         If there are more than one cells per frame, create dict with mask series for each cell. 
         """
         if self.cells_num == 1:
-            return self.__sd_mask(frame)
+            frame_sd = np.std(frame[:self.sd_area, :self.sd_area])
+            return self.__create_mask(frame, frame_sd)
         else:
             # NOT READY FOR MULTIPLE CELLS!
             logging.fatal('More then one cell, CAN`T create masks series!')
@@ -325,26 +325,31 @@ class hystTool():
 
     def memb_mask(self, img, roi_size=10):
         """ Membrane region detection.
-        Outdide edge - >= 2sd noise
+        Outside edge - >= 2sd noise
         Inside edge - >= cytoplasm mean intensity
 
        img - imput z-stack frame;
        roi_center - list of int [x, y], coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
-       roi_size - int, cutoplasmic ROI side size in px (ROI is a square area);
-       noise_size - int, size in px of region for noise sd calculation (square area witf start in 0,0 coordinates);
+       roi_size - int, cytoplasmic ROI side size in px (ROI is a square area);
+       noise_size - int, size in px of region for noise sd calculation (square area with start in 0,0 coordinates);
        sd_low - float, hysteresis algorithm lower threshold for outside cell edge detection,
                 > 2sd of noise (percentage of maximum frame intensity);
        mean_low - float, hysteresis algorithm lower threshold for inside cell edge detection,
                 > cytoplasmic ROI mean intensity (percentage of maximum frame intensity);
        gen_high - float,  general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
-       sigma - int, sd for gaussian filter.
+       sigma - int, sd for Gaussian filter.
 
         """
-        if not self.mean:  # calculation of the cytoplasm ROI mean intensity, if custom mean value not available
-            # THIS IS TEMPORARY METHOD, FOR ONE CELL AT IMAGE ONLY!
-            self.roi_center = self.cells_center[0]
-            self.mean = np.mean(img[self.roi_center[0] - roi_size//2:self.roi_center[0] + roi_size//2, \
-                                self.roi_center[1] - roi_size//2:self.roi_center[1] + roi_size//2])
+        # THIS IS TEMPORARY METHOD, FOR ONE CELL AT IMAGE ONLY!
+        sd = np.std(img[:self.sd_area, :self.sd_area])
+        logging.info(f'Noise SD mean intensity={sd}')
+        sd_mask = self.__create_mask(img, sd)
+
+        roi_center = self.cells_center[0]
+        mean = np.mean(img_gauss[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
+                       roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])
+        logging.info(f'Cytoplasm ROI mean intensity={mean}')
+        mean_mask = self.__create_mask(img, mean, mode='Cytoplasm mean')
 
     def ctrl_imsave():
         """ Save control images: fixed-value masks, cells labels etc.
