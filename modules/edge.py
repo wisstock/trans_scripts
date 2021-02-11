@@ -71,11 +71,11 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-def series_sum_int(img_series, mask):
-    """ Calculation of summary intensity of masked region along time series frames
+# def series_sum_int(img_series, mask):
+#     """ Calculation of summary intensity of masked region along time series frames
 
-    """
-    return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
+#     """
+#     return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
 
 
 def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_tolerance=2, output_path=False):
@@ -226,7 +226,7 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    def __init__(self, img, sd_area=20, mean=False, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.15, mask_diff=50, inside_mask_diff=50, sigma=3, kernel_size=5):
+    def __init__(self, img, sd_area=20, roi_area=10, mean=False, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.5, mask_diff=50, inside_mask_diff=50, sigma=3, kernel_size=5):
         """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
 
         """
@@ -237,6 +237,7 @@ class hystTool():
         self.mask_diff = mask_diff                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
         self.inside_mask_diff = inside_mask_diff  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
         self.sd_area = sd_area                    # area in px for frame SD calculation
+        self.roi_area = roi_area                  # area in px for square ROI creating and mean intensity calculation
         self.sd_lvl = sd_lvl                      # multiplication factor of noise SD value for outside fixed-value mask building
         # self.mean = mean                          # cytoplasm mean value for inside fixed-value mask building
         self.kernel_size = kernel_size            # kernel size of the Gaussian filter
@@ -258,13 +259,18 @@ class hystTool():
         cells_center_float = ndi.center_of_mass(self.cells_labels, self.cells_labels, range(1, self.cells_num+1))
         self.cells_center = [[int(x) for x in i] for i in cells_center_float]
         self.cells_center_dict = dict(zip(range(1, self.cells_num+1), self.cells_center))
-        logging.info(f'Detected {self.cells_num} cells with center of mass coord. {self.cells_center_dict}')
 
-    def __low_calc(self, img, gauss, sd):
-        """ Lower threshold calculations for hysteresis membrane detection functions.
+        if self.cells_num == 1:               # just for fun c:
+            logging_cell_num = 'cell'
+        else:
+            logging_cell_num = 'cells_labels'
+        logging.info(f'Detected {self.cells_num} {logging_cell_num} with center of mass coord. {self.cells_center_dict}')
+
+    def __low_calc(self, img, gauss, threshold_value):
+        """ Lower threshold calculations for hysteresis detection functions.
 
         """
-        mask_img = ma.masked_greater_equal(img, self.sd_lvl*sd)
+        mask_img = ma.masked_greater_equal(img, threshold_value)
         low = self.low_init
         diff = np.size(img)
 
@@ -283,23 +289,37 @@ class hystTool():
         logging.debug(f'Lower threshold {round(low, 2)}')
         return low
 
-    def __create_mask(self, img, for_low, mode='SD'):
-        """ Create SD mask for image
+    def __create_sd_mask(self, img):
+        """ Create SD mask for image.
         """
         img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
+        sd = np.std(img[:self.sd_area, :self.sd_area])
         img_mask = filters.apply_hysteresis_threshold(img_gauss,
-                                                     low=self.__low_calc(img, img_gauss, for_low)*np.max(img_gauss),
+                                                     low=self.__low_calc(img, img_gauss, self.sd_lvl*sd) * np.max(img_gauss),
                                                      high=self.high*np.max(img_gauss))
-        logging.info(f'{mode} mask builded successfully, {np.shape(img_mask)}')
-        return img_mask
+        # logging.info(f'{mode} mask builded successfully, {np.shape(img_mask)}')
+        return img_mask, sd
+
+    def __create_roi_mask(self, img):
+        """ Create ROI mean  mask for image, default create ROI across of cell center of mass.
+        """
+        img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
+        roi_center = self.cells_center[0]
+        roi_mean = np.mean(img[roi_center[0] - self.roi_area//2:roi_center[0] + self.roi_area//2, \
+                       roi_center[1] - self.roi_area//2:roi_center[1] + self.roi_area//2])
+        img_mask = filters.apply_hysteresis_threshold(img_gauss,
+                                                      low=self.__low_calc(img, img_gauss, roi_mean) * np.max(img_gauss),
+                                                      high=self.high*np.max(img_gauss))
+        return img_mask, roi_mean
 
     def cell_mask(self, frame):
         """ Create series of masks for each frame.
         If there are more than one cells per frame, create dict with mask series for each cell. 
         """
         if self.cells_num == 1:
-            frame_sd = np.std(frame[:self.sd_area, :self.sd_area])
-            return self.__create_mask(frame, frame_sd)
+            frame_mask, frame_sd = self.__create_sd_mask(frame)
+            logging.info(f'Noise SD={round(frame_sd, 3)}')
+            return frame_mask
         else:
             # NOT READY FOR MULTIPLE CELLS!
             logging.fatal('More then one cell, CAN`T create masks series!')
@@ -309,6 +329,8 @@ class hystTool():
         Detecting one cell in frame, with largest area.
 
         """
+        # NOW DOESN'T WORKING, NEED UPDATE!
+
         raw_mask = filters.apply_hysteresis_threshold(self.gauss,
                                                       low=self.__low_calc(self.img)*np.max(self.gauss),
                                                       high=self.high*np.max(self.gauss))
@@ -323,7 +345,7 @@ class hystTool():
             mask = raw_mask
         return mask, labels_cells
 
-    def memb_mask(self, img, roi_size=10):
+    def memb_mask(self, frame, roi_size=10):
         """ Membrane region detection.
         Outside edge - >= 2sd noise
         Inside edge - >= cytoplasm mean intensity
@@ -341,15 +363,18 @@ class hystTool():
 
         """
         # THIS IS TEMPORARY METHOD, FOR ONE CELL AT IMAGE ONLY!
-        sd = np.std(img[:self.sd_area, :self.sd_area])
-        logging.info(f'Noise SD mean intensity={sd}')
-        sd_mask = self.__create_mask(img, sd)
+        sd_mask, frame_sd = self.__create_sd_mask(frame)
+        roi_mask, frame_roi = self.__create_roi_mask(frame)
+        logging.info(f'Noise SD={round(frame_sd, 3)}, ROI mean intensity={round(frame_roi, 3)}')
 
-        roi_center = self.cells_center[0]
-        mean = np.mean(img_gauss[roi_center[0] - roi_size//2:roi_center[0] + roi_size//2, \
-                       roi_center[1] - roi_size//2:roi_center[1] + roi_size//2])
-        logging.info(f'Cytoplasm ROI mean intensity={mean}')
-        mean_mask = self.__create_mask(img, mean, mode='Cytoplasm mean')
+        # filling external space and create cytoplasmic mask 
+        cytoplasm_mask = roi_mask + segmentation.flood(roi_mask, (0, 0))
+        if np.all(cytoplasm_mask):
+            logging.fatal('Cytoplasm mask is NOT closed, CAN`T create correct membrane mask!')
+
+        membrane_mask = ma.masked_where(~cytoplasm_mask, sd_mask)
+
+        return [sd_mask, roi_mask, cytoplasm_mask, membrane_mask]
 
     def ctrl_imsave():
         """ Save control images: fixed-value masks, cells labels etc.

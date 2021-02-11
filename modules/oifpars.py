@@ -115,22 +115,23 @@ class FluoData():
                 self.img_series = img_series
             self.img_name = img_name
             self.max_frame_num = max_frame                                                 # file name
-            self.max_frame = self.img_series[max_frame,:,:]                                # first frame after 405 nm exposure (max intensity) or first frame (for FP)
+            self.max_frame = self.img_series[self.max_frame_num,:,:]                                # first frame after 405 nm exposure (max intensity) or first frame (for FP)
             # self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
             # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
             # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
             self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
-            # self.max_frame_mask, self.all_cells_mask = self.cell_detector.cell_mask(mode='multi')
+            self.max_frame_mask = self.cell_detector.cell_mask(self.max_frame)
             # self.mask_series = self.cell_detector.cell_mask(self.img_series)
-            self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.img_series]
+            # self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.img_series]
 
     def max_mask_int(self):
         """ Calculation mean intensity  in masked area along frames series.
         Mask was created by max_frame image.
 
         """
-        return edge.series_sum_int(self.img_series, self.max_frame_mask)
+        # return edge.series_sum_int(self.img_series, self.max_frame_mask)
+        return [round(np.sum(ma.masked_where(~self.max_frame_mask, img)) / np.sum(self.max_frame_mask), 3) for img in self.img_series]
 
     def frame_mask_int(self):
         """ Calculation mean intensity  in masked area along frames series.
@@ -196,10 +197,13 @@ class MembZData():
         self.label_middle_frame = self.label_series[self.middle_frame_num,:,:]
 
         self.cell_detector = edge.hystTool(self.target_middle_frame, **kwargs)  # detect all cells in max frame
-
+        
+        # hysteresis debug
+        self.detection_mask = self.cell_detector.detection_mask
         self.cells_labels = self.cell_detector.cells_labels
         self.middle_mask = self.cell_detector.cell_mask(self.label_middle_frame)
-        self.cell_detector.memb_mask(self.label_middle_frame)
+        self.memb_det_masks = self.cell_detector.memb_mask(self.label_middle_frame)
+        self.cells_center = self.cell_detector.cells_center
 
         # self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.label_series]
 

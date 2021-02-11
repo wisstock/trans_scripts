@@ -9,6 +9,7 @@ _fluo_data/
 fluo_res/
 memb_res/
 data/
+.data/
 
 __pycache__/
 
