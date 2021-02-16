@@ -36,8 +36,8 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 all_cells = op.WDPars(wd_path=data_path, mode='z',
-	                  middle_frame=6,  # MembData parameters
-                      sigma=3, kernel_size=21, sd_area=40, sd_lvl=1, mean=[140,130], high=0.8, low_init=0.05, mask_diff=10)  # hystTools parameters
+	                  middle_frame=5,  # MembData parameters
+                      sigma=3, kernel_size=21, sd_area=40, sd_lvl=2, mean=[140,130], high=0.8, low_init=0.01, mask_diff=250)  # hystTools parameters
 
 df = pd.DataFrame(columns=['file', 'cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
