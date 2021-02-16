@@ -239,7 +239,7 @@ class hystTool():
         self.sd_area = sd_area                    # area in px for frame SD calculation
         self.roi_area = roi_area                  # area in px for square ROI creating and mean intensity calculation
         self.sd_lvl = sd_lvl                      # multiplication factor of noise SD value for outside fixed-value mask building
-        # self.mean = mean                          # cytoplasm mean value for inside fixed-value mask building
+        self.mean = mean                          # coordinate of cytoplasm ROI center
         self.kernel_size = kernel_size            # kernel size of the Gaussian filter
         self.sigma = sigma                        # sigma of the Gaussian filter
 
@@ -270,7 +270,7 @@ class hystTool():
         """ Lower threshold calculations for hysteresis detection functions.
 
         """
-        mask_img = ma.masked_greater_equal(img, threshold_value)
+        mask_img = ma.masked_greater(img, threshold_value)
         low = self.low_init
         diff = np.size(img)
 
@@ -304,7 +304,12 @@ class hystTool():
         """ Create ROI mean  mask for image, default create ROI across of cell center of mass.
         """
         img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
-        roi_center = self.cells_center[0]
+        if self.mean:
+            roi_center = self.mean
+            logging.info(f'Custom ROI center {roi_center}')
+        else:
+            roi_center = self.cells_center[0]
+            logging.info(f'CoM ROI center {roi_center}')
         roi_mean = np.mean(img[roi_center[0] - self.roi_area//2:roi_center[0] + self.roi_area//2, \
                        roi_center[1] - self.roi_area//2:roi_center[1] + self.roi_area//2])
         img_mask = filters.apply_hysteresis_threshold(img_gauss,
