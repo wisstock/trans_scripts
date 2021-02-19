@@ -270,7 +270,7 @@ class hystTool():
         """ Lower threshold calculations for hysteresis detection functions.
 
         """
-        mask_img = ma.masked_greater(img, threshold_value)
+        mask_img = ma.masked_greater_equal(img, threshold_value)
         
         # fixed-value masked image saving, for debuging only
         plt.figure()
@@ -294,6 +294,12 @@ class hystTool():
                 logging.fatal('LOW=HIGH, thresholding failed!')
                 break
         logging.debug(f'Lower threshold {round(low, 2)}')
+
+        # final masks difference, for debuging only
+        plt.figure()
+        ax0 = plt.subplot()
+        img0 = ax0.imshow(ma.masked_where(~mask_hyst, mask_img))
+        plt.savefig(f'mask_low_{int(threshold_value)}.png')
         return low
 
     def __create_sd_mask(self, img):
@@ -331,6 +337,7 @@ class hystTool():
         if self.cells_num == 1:
             frame_mask, frame_sd = self.__create_sd_mask(frame)
             logging.info(f'Noise SD={round(frame_sd, 3)}')
+            plt.close('all')
             return frame_mask
         else:
             # NOT READY FOR MULTIPLE CELLS!

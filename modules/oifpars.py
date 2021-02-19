@@ -16,6 +16,11 @@ import yaml
 import pandas as pd
 from skimage import filters
 from skimage import measure
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.mplot3d import Axes3D
 
 import oiffile as oif
 import edge
@@ -209,13 +214,33 @@ class MembZData():
         # self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.label_series]
 
 
-        def __output_dir_check(output_path, output_name):
-            """ Creating output directory.
+    def __output_dir_check(output_path, output_name):
+        """ Creating output directory.
 
-            """
-            save_path = f'{output_path}/memb_res'
-            if not os.path.exists(save_path):
-                os.makedirs(save_path)
+        """
+        save_path = f'{output_path}/memb_res'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+    def get_sd_surf(self, start_frame=0, fin_frame=-1):
+        """ Return 3D array of SD mask for each z-stack frame.
+        """
+        sd_series = np.array([self.cell_detector.cell_mask(frame) for frame in self.label_series[start_frame:fin_frame]])
+        logging.info(f'SD surface series with shape {np.shape(sd_series)} created')
+        
+        # 3D vis of binary data
+        # colors = np.empty(sd_series.shape, dtype=np.float32)
+        # alpha = .5
+        # colors[sd_series >= .5] = 'red'  # [1, 0, 0, alpha]
+        # colors[sd_series < 0.5] = 'blue'  # [0, 1, 0, alpha]
+        # colors[2] = [0, 0, 1, alpha]
+        # colors[3] = [1, 1, 0, alpha]
+        # colors[4] = [0, 1, 1, alpha]
+        fig =plt.figure(figsize=(6,6))
+        ax = fig.gca(projection='3d')
+        ax.voxels(sd_series, facecolors='blue', edgecolor='k', alpha=.75)
+        plt.show()
+
 
 
 class MembData():
