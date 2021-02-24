@@ -311,6 +311,7 @@ class hystTool():
                                                      low=self.__low_calc(img, img_gauss, self.sd_lvl*sd) * np.max(img_gauss),
                                                      high=self.high*np.max(img_gauss))
         # logging.info(f'{mode} mask builded successfully, {np.shape(img_mask)}')
+        plt.close('all')
         return img_mask, sd
 
     def __create_roi_mask(self, img):
@@ -337,7 +338,6 @@ class hystTool():
         if self.cells_num == 1:
             frame_mask, frame_sd = self.__create_sd_mask(frame)
             logging.info(f'Noise SD={round(frame_sd, 3)}')
-            plt.close('all')
             return frame_mask
         else:
             # NOT READY FOR MULTIPLE CELLS!

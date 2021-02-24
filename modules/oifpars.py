@@ -228,17 +228,9 @@ class MembZData():
         sd_series = np.array([self.cell_detector.cell_mask(frame) for frame in self.label_series[start_frame:fin_frame]])
         logging.info(f'SD surface series with shape {np.shape(sd_series)} created')
         
-        # 3D vis of binary data
-        # colors = np.empty(sd_series.shape, dtype=np.float32)
-        # alpha = .5
-        # colors[sd_series >= .5] = 'red'  # [1, 0, 0, alpha]
-        # colors[sd_series < 0.5] = 'blue'  # [0, 1, 0, alpha]
-        # colors[2] = [0, 0, 1, alpha]
-        # colors[3] = [1, 1, 0, alpha]
-        # colors[4] = [0, 1, 1, alpha]
         fig =plt.figure(figsize=(6,6))
         ax = fig.gca(projection='3d')
-        ax.voxels(sd_series, facecolors='blue', edgecolor='k', alpha=.75)
+        ax.voxels(sd_series, facecolors='blue', edgecolor='none', alpha=.3)
         plt.show()
 
 
