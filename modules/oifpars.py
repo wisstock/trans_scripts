@@ -155,6 +155,12 @@ class FluoData():
 
         """
         pass
+
+    def. save_ctrl_img(self, path=False):
+        """ Control images saving.
+
+        """
+        if path: 
     
 
 class MembZData():
