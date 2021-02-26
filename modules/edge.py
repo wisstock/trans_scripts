@@ -7,8 +7,6 @@ Toolkit.
   series_sum_int
   series_point_delta
   series_derivate
-- Cell detection with hysteresis thresholding (require one image):
-  hystTools class
 
 Optimised at confocal images of HEK 293 cells.
 
@@ -34,7 +32,7 @@ from scipy import signal
 from scipy import ndimage as ndi
 
 
-def deltaF(int_list, f_0_win=2):
+def deltaF(int_list, f_0_win=5):
     """ Function for colculation ΔF/F0 for data series.
     f_0_win - window for F0 calculation (mean of first 2 values by defoult).
 
@@ -71,50 +69,106 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-# def series_sum_int(img_series, mask):
-#     """ Calculation of summary intensity of masked region along time series frames
-
-#     """
-#     return [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in img_series]
-
-
-def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_tolerance=2, output_path=False):
+def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_tolerance=2, t_val=200, output_path=False):
     """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
+    Framses indexes for images calc:
+
+         stimulus
+            |
+    --------|--------  registration
+         |--|--|
+         ^  ^  ^   
+         |  |  |      
+         |  |  max_frames[1]
+         |  max_frames[0]
+         max_frames[0] - baseline_frames
+
+    It's necessary for decreasing of the cell movement influence.
 
     """
-    baseline_img = np.mean(series[:baseline_frames,:,:], axis=0)
+    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-2,:,:], axis=0)
     max_img = np.mean(series[max_frames[0]:max_frames[1],:,:], axis=0)
+
+    delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0  # pixel-wise ΔF/F0
+    vdelta = np.vectorize(delta)
 
     cell_sd = np.std(ma.masked_where(~mask, series[max_frames[0],:,:]))
     logging.info(f'Cell area SD={round(cell_sd, 2)}')
 
-    delta_img = max_img - baseline_img  
+    diff_img = max_img - baseline_img
+    diff_img = diff_img.astype(np.int)  # convert float difference image to integer
+    delta_img = vdelta(max_img, baseline_img)
 
-    delta_img[delta_img > cell_sd * sd_tolerance] = 1
-    delta_img[delta_img < -cell_sd * sd_tolerance] = -1
-    delta_img = ma.masked_where(~mask, delta_img)
-
+    # up/down mask creating
+    t_val = np.max(max_img) * 0.05
+    up_mask = np.copy(diff_img) > t_val
+    down_mask = np.copy(diff_img) < -t_val
 
     if output_path:
         plt.figure()
         ax = plt.subplot()
-        img = ax.imshow(delta_img, cmap='bwr')
-        img.set_clim(vmin=-1., vmax=1.) 
+        img = ax.imshow(delta_img, cmap='jet')
+        # img.set_clim(vmin=-1., vmax=1.) 
         div = make_axes_locatable(ax)
         cax = div.append_axes('right', size='3%', pad=0.1)
         plt.colorbar(img, cax=cax)
         ax.axis('off')
-
+        plt.tight_layout()
         plt.savefig(f'{output_path}/alex_mask.png')
-        logging.info('Alex F/F0 mask saved!')
-        plt.close('all')
 
-        return np.asarray(delta_img)
+        plt.figure()
+        ax0 = plt.subplot(121)
+        img0 = ax0.imshow(baseline_img)
+        ax0.text(10,10,f'baseline img, frames {max_frames[0]-baseline_frames}-{max_frames[0]-2}',fontsize=8)
+        ax0.axis('off')
+        ax1 = plt.subplot(122)
+        img1 = ax1.imshow(max_img)
+        ax1.text(10,10,f'max img, frames {max_frames[0]}-{max_frames[1]}',fontsize=8)
+        div1 = make_axes_locatable(ax1)
+        cax1 = div1.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img1, cax=cax1)
+        ax1.axis('off')
+        plt.tight_layout()
+        plt.savefig(f'{output_path}/alex_ctrl.png')
+
+        ax2 = plt.subplot()
+        ax2.text(10,10,f'max - baseline',fontsize=8)
+        img2 = ax2.imshow(diff_img, cmap='seismic')
+        img2.set_clim(vmin=-850., vmax=850.)
+        div2 = make_axes_locatable(ax2)
+        cax2 = div2.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img2, cax=cax2)
+        ax2.axis('off')
+        plt.tight_layout()
+        plt.savefig(f'{output_path}/ctrl_diff.png')
+
+        plt.figure()
+        ax0 = plt.subplot(121)
+        img0 = ax0.imshow(up_mask)
+        ax0.text(10,10,'up mask', fontsize=8)
+        ax0.axis('off')
+        ax1 = plt.subplot(122)
+        img1 = ax1.imshow(down_mask)
+        ax1.text(10,10,'down mask', fontsize=8)
+        ax1.axis('off')
+        plt.tight_layout()
+        plt.savefig(f'{output_path}/masks.png')
+
+        plt.close('all')
+        logging.info('Alex F/F0 mask saved!')
+        
+        return up_mask, down_mask
     else:
-        return np.asarray(delta_img)
+        return up_mask, down_mask
 
 
 def series_point_delta(series, mask=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
+    """ Pixel-wise ΔF/F0 calculation.
+    baseline_frames - numbers of frames for mean baseline image calculation (from first to baseline_frames value frames)
+
+    WARNING! The function is sensitive to cell shift during long registrations!
+
+    """
     trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
     img_series = np.asarray([filters.gaussian(series[i], sigma=sigma, truncate=trun(kernel_size, sigma)) for i in range(np.shape(series)[0])])
 
@@ -221,185 +275,6 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
     else:
         return np.asarray(der_series)
 
-
-# class hystTool():
-#     """ Cells detection with hysteresis thresholding.
-
-#     """
-#     def __init__(self, img, sd_area=20, roi_area=10, mean=False, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.5, mask_diff=50, inside_mask_diff=50, sigma=3, kernel_size=5):
-#         """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
-
-#         """
-#         self.img = img                            # image for hystTool initialization and cell counting                   
-#         self.high = high                          # high threshold for all methods
-#         self.low_init = low_init                  # initial low threshold for cell detection
-#         self.low_detection = low_detection        # low threshold for cell counting during initialization
-#         self.mask_diff = mask_diff                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
-#         self.inside_mask_diff = inside_mask_diff  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
-#         self.sd_area = sd_area                    # area in px for frame SD calculation
-#         self.roi_area = roi_area                  # area in px for square ROI creating and mean intensity calculation
-#         self.sd_lvl = sd_lvl                      # multiplication factor of noise SD value for outside fixed-value mask building
-#         self.mean = mean                          # coordinate of cytoplasm ROI center
-#         self.kernel_size = kernel_size            # kernel size of the Gaussian filter
-#         self.sigma = sigma                        # sigma of the Gaussian filter
-
-#         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for Gaussian fliter according to sigma value and kernel size
-#         self.truncate = trun(self.kernel_size, self.sigma)
-#         self.gauss = filters.gaussian(self.img, sigma=sigma, truncate= self.truncate)
-
-#         self.detection_mask = filters.apply_hysteresis_threshold(self.gauss,
-#                                                                  low=self.low_detection*np.max(self.gauss),
-#                                                                  high=self.high*np.max(self.gauss))
-
-#         self.cells_labels, self.cells_num = ndi.label(self.detection_mask)
-#         if self.cells_num == 0:
-#             logging.warning(f'Cells DOESN`T detected! You should try increase low_detection')
-#             raise ValueError
-
-#         cells_center_float = ndi.center_of_mass(self.cells_labels, self.cells_labels, range(1, self.cells_num+1))
-#         self.cells_center = [[int(x) for x in i] for i in cells_center_float]
-#         self.cells_center_dict = dict(zip(range(1, self.cells_num+1), self.cells_center))
-
-#         if self.cells_num == 1:               # just for fun c:
-#             logging_cell_num = 'cell'
-#         else:
-#             logging_cell_num = 'cells_labels'
-#         logging.info(f'Detected {self.cells_num} {logging_cell_num} with center of mass coord. {self.cells_center_dict}')
-
-#     def __low_calc(self, img, gauss, threshold_value):
-#         """ Lower threshold calculations for hysteresis detection functions.
-
-#         """
-#         mask_img = ma.masked_greater_equal(img, threshold_value)
-        
-#         # fixed-value masked image saving, for debuging only
-#         plt.figure()
-#         ax0 = plt.subplot()
-#         img0 = ax0.imshow(mask_img)
-#         plt.savefig(f'mask_{int(threshold_value)}.png')
-
-#         low = self.low_init
-#         diff = np.size(img)
-
-#         while diff > self.mask_diff:
-#             mask_hyst = filters.apply_hysteresis_threshold(gauss,
-#                                                           low=low*np.max(gauss),
-#                                                           high=self.high*np.max(gauss))
-#             diff = np.sum(ma.masked_where(~mask_hyst, mask_img) > 0)
-#             if all([diff < self.mask_diff, low == self.low_init]):
-#                 logging.fatal('Initial lower threshold is too low!')
-#                 break
-#             low += 0.01
-#             if low >= self.high:
-#                 logging.fatal('LOW=HIGH, thresholding failed!')
-#                 break
-#         logging.debug(f'Lower threshold {round(low, 2)}')
-
-#         # final masks difference, for debuging only
-#         plt.figure()
-#         ax0 = plt.subplot()
-#         img0 = ax0.imshow(ma.masked_where(~mask_hyst, mask_img))
-#         plt.savefig(f'mask_low_{int(threshold_value)}.png')
-#         return low
-
-#     def __create_sd_mask(self, img):
-#         """ Create SD mask for image.
-#         """
-#         img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
-#         sd = np.std(img[:self.sd_area, :self.sd_area])
-#         img_mask = filters.apply_hysteresis_threshold(img_gauss,
-#                                                      low=self.__low_calc(img, img_gauss, self.sd_lvl*sd) * np.max(img_gauss),
-#                                                      high=self.high*np.max(img_gauss))
-#         # logging.info(f'{mode} mask builded successfully, {np.shape(img_mask)}')
-#         plt.close('all')
-#         return img_mask, sd
-
-#     def __create_roi_mask(self, img):
-#         """ Create ROI mean  mask for image, default create ROI across of cell center of mass.
-#         """
-#         img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
-#         if self.mean:
-#             roi_center = self.mean
-#             logging.info(f'Custom ROI center {roi_center}')
-#         else:
-#             roi_center = self.cells_center[0]
-#             logging.info(f'CoM ROI center {roi_center}')
-#         roi_mean = np.mean(img[roi_center[0] - self.roi_area//2:roi_center[0] + self.roi_area//2, \
-#                        roi_center[1] - self.roi_area//2:roi_center[1] + self.roi_area//2])
-#         img_mask = filters.apply_hysteresis_threshold(img_gauss,
-#                                                       low=self.__low_calc(img, img_gauss, roi_mean) * np.max(img_gauss),
-#                                                       high=self.high*np.max(img_gauss))
-#         return img_mask, roi_mean
-
-#     def cell_mask(self, frame):
-#         """ Create series of masks for each frame.
-#         If there are more than one cells per frame, create dict with mask series for each cell. 
-#         """
-#         if self.cells_num == 1:
-#             frame_mask, frame_sd = self.__create_sd_mask(frame)
-#             logging.info(f'Noise SD={round(frame_sd, 3)}')
-#             return frame_mask
-#         else:
-#             # NOT READY FOR MULTIPLE CELLS!
-#             logging.fatal('More then one cell, CAN`T create masks series!')
-
-#     def huge_cell_mask(self):
-#         """ Creating binary mask for homogeneous fluoresced cell by SD thresholding and hysteresis smoothing.
-#         Detecting one cell in frame, with largest area.
-
-#         """
-#         # NOW DOESN'T WORKING, NEED UPDATE!
-
-#         raw_mask = filters.apply_hysteresis_threshold(self.gauss,
-#                                                       low=self.__low_calc(self.img)*np.max(self.gauss),
-#                                                       high=self.high*np.max(self.gauss))
-#         logging.info('Mask builded successfully')
-#         labels_cells, cells_conunt = ndi.label(raw_mask)
-#         logging.info(f'{cells_conunt} cells detected')
-#         if cells_conunt > 1:
-#             size_list = [np.sum(ma.masked_where(labels_cells == cell_num, labels_cells).mask) for cell_num in range(cells_conunt)]
-#             logging.info(f'Cells sizes {size_list}')
-#             mask = ma.masked_where(labels_cells == size_list.index(max(size_list))+1, labels_cells).mask
-#         else:
-#             mask = raw_mask
-#         return mask, labels_cells
-
-#     def memb_mask(self, frame, roi_size=10):
-#         """ Membrane region detection.
-#         Outside edge - >= 2sd noise
-#         Inside edge - >= cytoplasm mean intensity
-
-#        img - imput z-stack frame;
-#        roi_center - list of int [x, y], coordinates of center of the cytoplasmic ROI for cytoplasm mean intensity calculation;
-#        roi_size - int, cytoplasmic ROI side size in px (ROI is a square area);
-#        noise_size - int, size in px of region for noise sd calculation (square area with start in 0,0 coordinates);
-#        sd_low - float, hysteresis algorithm lower threshold for outside cell edge detection,
-#                 > 2sd of noise (percentage of maximum frame intensity);
-#        mean_low - float, hysteresis algorithm lower threshold for inside cell edge detection,
-#                 > cytoplasmic ROI mean intensity (percentage of maximum frame intensity);
-#        gen_high - float,  general upper threshold for hysteresis algorithm (percentage of maximum frame intensity);
-#        sigma - int, sd for Gaussian filter.
-
-#         """
-#         # THIS IS TEMPORARY METHOD, FOR ONE CELL AT IMAGE ONLY!
-#         sd_mask, frame_sd = self.__create_sd_mask(frame)
-#         roi_mask, frame_roi = self.__create_roi_mask(frame)
-#         logging.info(f'Noise SD={round(frame_sd, 3)}, ROI mean intensity={round(frame_roi, 3)}')
-
-#         # filling external space and create cytoplasmic mask 
-#         cytoplasm_mask = roi_mask + segmentation.flood(roi_mask, (0, 0))
-#         if np.all(cytoplasm_mask):
-#             logging.fatal('Cytoplasm mask is NOT closed, CAN`T create correct membrane mask!')
-
-#         membrane_mask = ma.masked_where(~cytoplasm_mask, sd_mask)
-
-#         return [sd_mask, roi_mask, cytoplasm_mask, membrane_mask]
-
-#     def ctrl_imsave():
-#         """ Save control images: fixed-value masks, cells labels etc.
-
-#         """
-#         pass
 
 if __name__=="__main__":
     pass

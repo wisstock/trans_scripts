@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """ Copyright © 2020-2021 Borys Olifirov
-Cells detection with hysteresis thresholding, hystToll class.
+Cell detection with hysteresis thresholding (require one image), hystTools class.
 
 """
 
@@ -108,8 +108,10 @@ class hystTool():
         """
         img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
         sd = np.std(img[:self.sd_area, :self.sd_area])
+        threshold_sd = self.sd_lvl*sd
+        logging.info(f'SD mask threshold {threshold_sd}')
         img_mask = filters.apply_hysteresis_threshold(img_gauss,
-                                                     low=self.__low_calc(img, img_gauss, self.sd_lvl*sd) * np.max(img_gauss),
+                                                     low=self.__low_calc(img, img_gauss, threshold_sd) * np.max(img_gauss),
                                                      high=self.high*np.max(img_gauss))
         # logging.info(f'{mode} mask builded successfully, {np.shape(img_mask)}')
         plt.close('all')
@@ -118,7 +120,7 @@ class hystTool():
     def __create_roi_mask(self, img):
         """ Create ROI mean  mask for image, default create ROI across of cell center of mass.
         """
-        img_gauss = filters.gaussian(img, sigma=self.sigma, truncate= self.truncate)
+        img_gauss = filters.gaussian(img, sigma=self.sigma, truncate=self.truncate)
         if self.mean:
             roi_center = self.mean
             logging.info(f'Custom ROI center {roi_center}')

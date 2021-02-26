@@ -85,7 +85,6 @@ def WDPars(wd_path, mode='fluo', **kwargs):
 #     return [FluoData(kwargs) ]
 
 
-
 class FluoData():
     """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
 
@@ -139,6 +138,7 @@ class FluoData():
         if plot_path:  # mask mean intensity plot saving
             plt.figure()
             ax = plt.subplot()
+            ax.set_title('max frame mask')
             img = ax.plot(mean_list)
             plt.tight_layout()
             plt.savefig(f'{plot_path}/{self.img_name}_max_mask.png')
@@ -166,6 +166,46 @@ class FluoData():
             plt.close('all')
         return mean_list
 
+    def custom_mask_int(self, mask, plot_path=False):
+        """ Calculation mean intensity  in masked area along frames series.
+        Require custom mask.
+
+        """
+        mean_list = [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.img_series]
+        if plot_path:  # mask mean intensity plot saving
+            plt.figure()
+            ax = plt.subplot()
+            img = ax.plot(mean_list)
+            plt.tight_layout()
+            plt.savefig(f'{plot_path}/{self.img_name}_custom_mask.png')
+            plt.close('all')
+        return mean_list
+
+    def updown_mask_int(self, up_mask, down_mask, delta=False, plot_path=False):
+        """ Calculation mean intensity in masked area along frames series.
+        Require two masks, increasing and decreasing regions.
+
+        """
+        up_list = [round(np.sum(ma.masked_where(~up_mask, img)) / np.sum(up_mask), 3) for img in self.img_series]
+        down_list = [round(np.sum(ma.masked_where(~down_mask, img)) / np.sum(down_mask), 3) for img in self.img_series]
+
+        if delta:  # calculate ΔF/F0
+            up_list = edge.deltaF(up_list)
+            down_list = edge.deltaF(down_list)
+
+        if plot_path:  # mask mean intensity plot saving
+            plt.figure()
+            ax1 = plt.subplot(211)
+            ax1.set_title('up mask')
+            img1 = ax1.plot(up_list)
+            ax2 = plt.subplot(212)
+            ax2.set_title('down mask')
+            img2 = ax2.plot(down_list)
+            # plt.tight_layout()
+            plt.savefig(f'{plot_path}/{self.img_name}_up_down_mask.png')
+            plt.close('all')
+        return up_list, down_list
+
     def save_int():
         """ Saving mask intensity results to CSV table.
 
@@ -191,7 +231,6 @@ class FluoData():
         plt.close('all')
 
     
-
 class MembZData():
     """ Registration of static co-transferenced (HPCA-TagRFP + EYFP-Mem) cells.
     T-axis of file represent excitation laser combination (HPCA+label, HPCA, label).
@@ -269,7 +308,6 @@ class MembZData():
         plt.show()
 
 
-
 class MembData():
     """
 
@@ -285,7 +323,6 @@ class FRETData():
     def __init__(self):
         pass
         
-
 
 if __name__=="__main__":
   pass

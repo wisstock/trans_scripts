@@ -39,13 +39,10 @@ if not os.path.exists(res_path):
 # for single file registrations
 all_cells = op.WDPars(data_path,
                       max_frame=20,    # FluoData parameters
-                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=2, high=0.8, low_init=0.01, mask_diff=100)  # hystTools parameters
+                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)  # hystTool parameters
 
 # # for multiple file registrations, merge all files one by one
 # all_registrations = op.WDPars(data_path, restrict=True)
-
-# op.fluo_ext(all_registrations)
-
 
 df = pd.DataFrame(columns=['file', 'cell', 'feature', 'time', 'int'])
 for cell_num in range(0, len(all_cells)):
@@ -56,12 +53,14 @@ for cell_num in range(0, len(all_cells)):
     if not os.path.exists(cell_path):
         os.makedirs(cell_path)
 
-    # alex_mask = edge.alex_delta(cell.img_series,
-    #                             mask=cell.mask_series[cell.max_frame_num],
-    #                             baseline_frames=2,
-    #                             max_frames=[6, 11],
-    #                             sd_tolerance=10,
-    #                             output_path=cell_path)
+    alex_up, alex_down = edge.alex_delta(cell.img_series,
+                                         mask=cell.max_frame_mask,
+                                         baseline_frames=8,
+                                         max_frames=[19, 30],
+                                         sd_tolerance=1,
+                                         output_path=cell_path)
+
+    cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)
 
     # # pixel-wise F-FO/F0 images
     # delta_int = edge.series_point_delta(cell.img_series,
@@ -71,15 +70,15 @@ for cell_num in range(0, len(all_cells)):
     #                                     output_path=cell_path)
     
     # blue/red derivate images
-    der_int = edge.series_derivate(cell.img_series,
-                                   mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
-                                   sd_mode='cell',
-                                   sd_tolerance=False,
-                                   sigma=1, kernel_size=5,
-                                   left_w=1, space_w=0, right_w=1)  # ,
+    # der_int = edge.series_derivate(cell.img_series,
+    #                                mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
+    #                                sd_mode='cell',
+    #                                sd_tolerance=False,
+    #                                sigma=1, kernel_size=5,
+    #                                left_w=1, space_w=0, right_w=1)  # ,
                                    # output_path=cell_path)
     # abs sum of derivate images intensity for derivate amplitude plot
-    der_amp = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
+    # der_amp = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
 
 
     # pixel-wise F/F0 images
@@ -89,69 +88,18 @@ for cell_num in range(0, len(all_cells)):
     #                                     sigma=1, kernel_size=3,
     #                                     output_path=cell_path)
 
-    series_int = cell.max_mask_int(plot_path=res_path)
-    # series_int = edge.deltaF(series_int, f_0_win=3)
-    # series_int = cell.frame_mask_int()
-    # for single_num in range(len(series_int)):
-    #     single_int = series_int[single_num]
-    #     df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],
-    #                    index=df.columns),
-    #                    ignore_index=True)
+    cell.max_mask_int(plot_path=cell_path)
 
     # control image of the cell with native image of max frame and hysteresis binary mask,
     cell.save_ctrl_img(path=res_path)
     # frame_int = cell.frame_mask_int(plot_path=res_path)
 
     # derivate amplitude plot of image series
-    plt.figure()
-    ax = plt.subplot()
-    img = ax.plot(der_amp)
-    plt.savefig(f'{res_path}/{cell.img_name}_der_amp.png')
+    # plt.figure()
+    # ax = plt.subplot()
+    # img = ax.plot(der_amp)
+    # plt.savefig(f'{res_path}/{cell.img_name}_der_amp.png')
 
-    plt.close('all')
+    # plt.close('all')
 
 # df.to_csv(f'{res_path}/results.csv', index=False)
-
-
-
-
-# for cell_img in all_cells:
-#   plt.figure()
-#   ax0 = plt.subplot(121)
-#   img0 = ax0.imshow(cell_img.max_gauss)
-#   ax0.text(10,10,cell_img.img_name,fontsize=10)
-#   ax0.axis('off')
-  
-#   ax1 = plt.subplot(122)
-#   img1 = ax1.imshow(cell_img.cell_mask)
-#   ax1.axis('off')
-
-#   plt.savefig(f'fluo_res/{cell_img.img_name}_max_frame.png')
-#   logging.info(f'Frame {cell_img.img_name} saved!')
-
-
-# ax0 = plt.subplot(131)
-# slc0 = ax0.imshow(all_cells[one_cell].max_frame)
-# slc0.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
-# div0 = make_axes_locatable(ax0)
-# cax0 = div0.append_axes('right', size='3%', pad=0.1)
-# plt.colorbar(slc0, cax=cax0)
-# ax0.set_title(all_cells[one_cell].img_name)
-
-# ax1 = plt.subplot(133)
-# ax1.imshow(all_cells[one_cell].cell_mask)
-# ax1.set_title('mask')
-
-# ax2 = plt.subplot(132)
-# slc2 = ax2.imshow(all_cells[one_cell].max_gauss)
-# # slc2.set_clim(vmin=0, vmax=np.max(all_cells[one_cell].max_frame)) 
-# div2 = make_axes_locatable(ax2)
-# cax2 = div2.append_axes('right', size='3%', pad=0.1)
-# plt.colorbar(slc2, cax=cax2)
-# ax2.set_title('gauss')
-
-
-# plt.tight_layout()
-# plt.show()
-
-
