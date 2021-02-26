@@ -96,11 +96,11 @@ class hystTool():
                 break
         logging.debug(f'Lower threshold {round(low, 2)}')
 
-        # final masks difference, for debuging only
-        plt.figure()
-        ax0 = plt.subplot()
-        img0 = ax0.imshow(ma.masked_where(~mask_hyst, mask_img))
-        plt.savefig(f'mask_low_{int(threshold_value)}.png')
+        # # final masks difference, for debuging only
+        # plt.figure()
+        # ax0 = plt.subplot()
+        # img0 = ax0.imshow(ma.masked_where(~mask_hyst, mask_img))
+        # plt.savefig(f'mask_low_{int(threshold_value)}.png')
         return low
 
     def __create_sd_mask(self, img):
