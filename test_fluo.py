@@ -56,8 +56,7 @@ for cell_num in range(0, len(all_cells)):
     alex_up, alex_down = edge.alex_delta(cell.img_series,
                                          mask=cell.max_frame_mask,
                                          baseline_frames=8,
-                                         max_frames=[19, 30],
-                                         sd_tolerance=1,
+                                         max_frames=[19, 25],
                                          output_path=cell_path)
 
     cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)
@@ -70,15 +69,15 @@ for cell_num in range(0, len(all_cells)):
     #                                     output_path=cell_path)
     
     # blue/red derivate images
-    # der_int = edge.series_derivate(cell.img_series,
-    #                                mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
-    #                                sd_mode='cell',
-    #                                sd_tolerance=False,
-    #                                sigma=1, kernel_size=5,
-    #                                left_w=1, space_w=0, right_w=1)  # ,
+    der_int = edge.series_derivate(cell.img_series,
+                                   mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
+                                   sd_mode='cell',
+                                   sd_tolerance=False,
+                                   sigma=1, kernel_size=5,
+                                   left_w=1, space_w=0, right_w=1)  # ,
                                    # output_path=cell_path)
     # abs sum of derivate images intensity for derivate amplitude plot
-    # der_amp = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
+    der_amp = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
 
 
     # pixel-wise F/F0 images
@@ -95,10 +94,10 @@ for cell_num in range(0, len(all_cells)):
     # frame_int = cell.frame_mask_int(plot_path=res_path)
 
     # derivate amplitude plot of image series
-    # plt.figure()
-    # ax = plt.subplot()
-    # img = ax.plot(der_amp)
-    # plt.savefig(f'{res_path}/{cell.img_name}_der_amp.png')
+    plt.figure()
+    ax = plt.subplot()
+    img = ax.plot(der_amp)
+    plt.savefig(f'{res_path}/{cell.img_name}_der_amp.png')
 
     # plt.close('all')
 

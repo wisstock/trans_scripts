@@ -69,7 +69,7 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_tolerance=2, t_val=200, output_path=False):
+def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], tolerance=0.05, t_val=200, output_path=False):
     """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
     Framses indexes for images calc:
 
@@ -84,6 +84,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
          max_frames[0] - baseline_frames
 
     It's necessary for decreasing of the cell movement influence.
+    tolerance - value for low pixel masling, percent from baseline image maximal intensity.
 
     """
     baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-2,:,:], axis=0)
@@ -100,11 +101,12 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
     delta_img = vdelta(max_img, baseline_img)
 
     # up/down mask creating
-    t_val = np.max(max_img) * 0.05
+    t_val = np.max(max_img) * tolerance
     up_mask = np.copy(diff_img) > t_val
     down_mask = np.copy(diff_img) < -t_val
 
     if output_path:
+        # px-wise delta F
         plt.figure()
         ax = plt.subplot()
         img = ax.imshow(delta_img, cmap='jet')
@@ -114,8 +116,9 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
         plt.colorbar(img, cax=cax)
         ax.axis('off')
         plt.tight_layout()
-        plt.savefig(f'{output_path}/alex_mask.png')
-
+        plt.savefig(f'{output_path}/alex_deltaF.png')
+        
+        # mean frames
         plt.figure()
         ax0 = plt.subplot(121)
         img0 = ax0.imshow(baseline_img)
@@ -130,18 +133,22 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
         ax1.axis('off')
         plt.tight_layout()
         plt.savefig(f'{output_path}/alex_ctrl.png')
+        
+        # mean frames diff
+        centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img)) # normalazing vmin/vmax around zero for diff_img
 
         ax2 = plt.subplot()
         ax2.text(10,10,f'max - baseline',fontsize=8)
         img2 = ax2.imshow(diff_img, cmap='seismic')
-        img2.set_clim(vmin=-850., vmax=850.)
+        img2.set_clim(vmin=-centr(diff_img), vmax=centr(diff_img))
         div2 = make_axes_locatable(ax2)
         cax2 = div2.append_axes('right', size='3%', pad=0.1)
         plt.colorbar(img2, cax=cax2)
         ax2.axis('off')
         plt.tight_layout()
-        plt.savefig(f'{output_path}/ctrl_diff.png')
+        plt.savefig(f'{output_path}/alex_diff.png')
 
+        # up and down masks
         plt.figure()
         ax0 = plt.subplot(121)
         img0 = ax0.imshow(up_mask)
@@ -152,7 +159,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], sd_to
         ax1.text(10,10,'down mask', fontsize=8)
         ax1.axis('off')
         plt.tight_layout()
-        plt.savefig(f'{output_path}/masks.png')
+        plt.savefig(f'{output_path}/alex_mask.png')
 
         plt.close('all')
         logging.info('Alex F/F0 mask saved!')
