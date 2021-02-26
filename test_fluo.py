@@ -100,7 +100,7 @@ for cell_num in range(0, len(all_cells)):
 
     # control image of the cell with native image of max frame and hysteresis binary mask,
     cell.save_ctrl_img(path=res_path)
-    frame_int = cell.frame_mask_int(plot_path=res_path)
+    # frame_int = cell.frame_mask_int(plot_path=res_path)
 
     # derivate amplitude plot of image series
     plt.figure()

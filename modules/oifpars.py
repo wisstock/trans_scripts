@@ -23,6 +23,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import oiffile as oif
 import edge
+import hyst
 
 
 def WDPars(wd_path, mode='fluo', **kwargs):
@@ -124,7 +125,7 @@ class FluoData():
             # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
             # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
 
-            self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
+            self.cell_detector = hyst.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
             self.max_frame_mask = self.cell_detector.cell_mask(self.max_frame)
             # self.mask_series = self.cell_detector.cell_mask(self.img_series)
 
@@ -235,7 +236,7 @@ class MembZData():
         self.target_middle_frame = self.target_series[self.middle_frame_num,:,:]
         self.label_middle_frame = self.label_series[self.middle_frame_num,:,:]
 
-        self.cell_detector = edge.hystTool(self.target_middle_frame, **kwargs)  # detect all cells in max frame
+        self.cell_detector = hyst.hystTool(self.target_middle_frame, **kwargs)  # detect all cells in max frame
         
         # hysteresis debug
         self.detection_mask = self.cell_detector.detection_mask

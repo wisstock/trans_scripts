@@ -20,6 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('modules')
 import oifpars as op
 import edge
+import hyst
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#0000002b'
