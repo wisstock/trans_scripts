@@ -20,7 +20,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.mplot3d import Axes3D
 
 import oiffile as oif
 import edge
@@ -74,7 +73,7 @@ def WDPars(wd_path, mode='fluo', **kwargs):
     return data_list
 
 
-# # NOR READY!
+# # NOT READY!
 # def series_ext(reg_list, **kwargs):
 #     """ Extension for data classes, require list of data objects to create single output image series.
 #     Return new object with same data type.
@@ -119,8 +118,8 @@ class FluoData():
             else:
                 self.img_series = img_series
             self.img_name = img_name
-            self.max_frame_num = max_frame                                                 # file name
-            self.max_frame = self.img_series[self.max_frame_num,:,:]                                # first frame after 405 nm exposure (max intensity) or first frame (for FP)
+            self.max_frame_num = feature
+            self.max_frame = self.img_series[self.max_frame_num,:,:]                       # first frame after 405 nm exposure (max intensity) or first frame (for FP)
             # self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
             # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
             # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
@@ -128,27 +127,43 @@ class FluoData():
             self.cell_detector = edge.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
             self.max_frame_mask = self.cell_detector.cell_mask(self.max_frame)
             # self.mask_series = self.cell_detector.cell_mask(self.img_series)
-            # self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.img_series]
 
-    def max_mask_int(self):
+    def max_mask_int(self, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
         Mask was created by max_frame image.
 
         """
         # return edge.series_sum_int(self.img_series, self.max_frame_mask)
-        return [round(np.sum(ma.masked_where(~self.max_frame_mask, img)) / np.sum(self.max_frame_mask), 3) for img in self.img_series]
+        mean_list = [round(np.sum(ma.masked_where(~self.max_frame_mask, img)) / np.sum(self.max_frame_mask), 3) for img in self.img_series]
+        if plot_path:  # mask mean intensity plot saving
+            plt.figure()
+            ax = plt.subplot()
+            img = ax.plot(mean_list)
+            plt.tight_layout()
+            plt.savefig(f'{plot_path}/{self.img_name}_max_mask.png')
+            plt.close('all')
+        return mean_list
 
-    def frame_mask_int(self):
+    def frame_mask_int(self, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
         Mask was created for each frame individually.
 
         """
-        mean_series = []
-        for i in range(len(self.img_series)):
-            img = self.img_series[i]
-            mask = self.mask_series[i]
-            mean_series.append(round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3))
-        return mean_series
+        self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.img_series]
+        mean_list = [round(np.sum(ma.masked_where(~self.mask_series[i], self.img_series[i])) / np.sum(self.mask_series[i]), 3) for i in range(len(self.img_series))]
+        # mean_list = []
+        # for i in range(len(self.img_series)):
+        #     img = self.img_series[i]
+        #     mask = self.mask_series[i]
+        #     mean_list.append(round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3))
+        if plot_path:  # mask mean intensity plot saving
+            plt.figure()
+            ax = plt.subplot()
+            img = ax.plot(mean_list)
+            plt.tight_layout()
+            plt.savefig(f'{plot_path}/{self.img_name}_frame_mask.png')
+            plt.close('all')
+        return mean_list
 
     def save_int():
         """ Saving mask intensity results to CSV table.
@@ -156,11 +171,24 @@ class FluoData():
         """
         pass
 
-    def. save_ctrl_img(self, path=False):
+    def save_ctrl_img(self, path):
         """ Control images saving.
 
         """
-        if path: 
+        plt.figure()
+        ax0 = plt.subplot(121)
+        img0 = ax0.imshow(self.max_frame)
+        ax0.axis('off')
+        ax0.text(10,10,f'max int frame {self.max_frame_num}',fontsize=8)
+        ax1 = plt.subplot(122)
+        img1 = ax1.imshow(self.max_frame_mask)
+        ax1.axis('off')
+        ax1.text(10,10,f'binary mask',fontsize=8)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_ctrl.png')
+        logging.info(f'{self.img_name} control image saved!\n')
+        plt.close('all')
+
     
 
 class MembZData():

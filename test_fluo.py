@@ -1,6 +1,6 @@
  #!/usr/bin/env python3
 """ Copyright © 2020-2021 Borys Olifirov
-Registration of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation) analysis.
+Registration of homogeneous fluoresced cells (Fluo-4, low range of the HPCA translocation) analysis.
 
 """
 
@@ -39,7 +39,7 @@ if not os.path.exists(res_path):
 # for single file registrations
 all_cells = op.WDPars(data_path,
                       max_frame=20,    # FluoData parameters
-                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=0.5, high=0.8, low_init=0.04, mask_diff=50)  # hystTools parameters
+                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=2, high=0.8, low_init=0.01, mask_diff=100)  # hystTools parameters
 
 # # for multiple file registrations, merge all files one by one
 # all_registrations = op.WDPars(data_path, restrict=True)
@@ -76,8 +76,8 @@ for cell_num in range(0, len(all_cells)):
                                    sd_mode='cell',
                                    sd_tolerance=False,
                                    sigma=1, kernel_size=5,
-                                   left_w=1, space_w=0, right_w=1,
-                                   output_path=cell_path)
+                                   left_w=1, space_w=0, right_w=1)  # ,
+                                   # output_path=cell_path)
     # abs sum of derivate images intensity for derivate amplitude plot
     der_amp = [np.sum(np.abs(der_int[i,:,:])) for i in range(len(der_int))]
 
@@ -89,7 +89,7 @@ for cell_num in range(0, len(all_cells)):
     #                                     sigma=1, kernel_size=3,
     #                                     output_path=cell_path)
 
-    series_int = cell.max_mask_int()
+    series_int = cell.max_mask_int(plot_path=res_path)
     # series_int = edge.deltaF(series_int, f_0_win=3)
     # series_int = cell.frame_mask_int()
     # for single_num in range(len(series_int)):
@@ -99,19 +99,8 @@ for cell_num in range(0, len(all_cells)):
     #                    ignore_index=True)
 
     # control image of the cell with native image of max frame and hysteresis binary mask,
-    plt.figure()
-    ax0 = plt.subplot(121)
-    img0 = ax0.imshow(cell.max_frame)
-    ax0.axis('off')
-    ax0.text(10,10,f'max int frame',fontsize=8)
-    ax1 = plt.subplot(122)
-    img1 = ax1.imshow(cell.max_frame_mask)
-    ax1.axis('off')
-    ax1.text(10,10,f'binary mask',fontsize=8)
-    plt.savefig(f'{res_path}/{cell.img_name}_ctrl.png')
-    logging.info(f'{cell.img_name} control image saved!\n')
-
-    plt.close('all')
+    cell.save_ctrl_img(path=res_path)
+    frame_int = cell.frame_mask_int(plot_path=res_path)
 
     # derivate amplitude plot of image series
     plt.figure()
@@ -120,11 +109,6 @@ for cell_num in range(0, len(all_cells)):
     plt.savefig(f'{res_path}/{cell.img_name}_der_amp.png')
 
     plt.close('all')
-
-    plt.figure()
-    ax = plt.subplot()
-    img = ax.plot(series_int)
-    plt.savefig(f'{res_path}/{cell.img_name}_mask_mean.png')
 
 # df.to_csv(f'{res_path}/results.csv', index=False)
 
