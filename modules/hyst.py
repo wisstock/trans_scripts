@@ -73,11 +73,11 @@ class hystTool():
         """
         mask_img = ma.masked_greater_equal(img, threshold_value)
         
-        # fixed-value masked image saving, for debuging only
-        plt.figure()
-        ax0 = plt.subplot()
-        img0 = ax0.imshow(mask_img)
-        plt.savefig(f'mask_{int(threshold_value)}.png')
+        # # fixed-value masked image saving, for debuging only
+        # plt.figure()
+        # ax0 = plt.subplot()
+        # img0 = ax0.imshow(mask_img)
+        # plt.savefig(f'mask_{int(threshold_value)}.png')
 
         low = self.low_init
         diff = np.size(img)
