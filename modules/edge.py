@@ -38,7 +38,7 @@ def deltaF(int_list, f_0_win=5):
 
     """
     f_0 = np.mean(int_list[:f_0_win])
-    return [(i - f_0)/f_0 for i in int_list[f_0_win:]]
+    return np.asarray([(i - f_0)/f_0 for i in int_list])
 
 
 def back_rm(img, edge_lim=20, dim=3):

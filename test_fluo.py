@@ -38,13 +38,13 @@ if not os.path.exists(res_path):
 
 # for single file registrations
 all_cells = op.WDPars(data_path,
-                      max_frame=20,    # FluoData parameters
+                      max_frame=10,    # FluoData parameters
                       sigma=1, kernel_size=3, sd_area=40, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)  # hystTool parameters
 
 # # for multiple file registrations, merge all files one by one
 # all_registrations = op.WDPars(data_path, restrict=True)
 
-df = pd.DataFrame(columns=['file', 'cell', 'frame', 'time', 'int'])
+df = pd.DataFrame(columns=['cell', 'stimul', 'frame', 'time', 'mask', 'int', 'delta'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
@@ -59,14 +59,34 @@ for cell_num in range(0, len(all_cells)):
                                          max_frames=[cell.max_frame_num, 5],
                                          sigma=1, kernel_size=3,
                                          output_path=cell_path)
-
     up_int, down_int = cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)
 
-    cell_int = cell.max_mask_int(plot_path=cell_path)
     # control image of the cell with native image of max frame and hysteresis binary mask
+    cell_int = cell.max_mask_int(plot_path=cell_path)
     cell.save_ctrl_img(path=cell_path)
 
-    # frame_int = cell.frame_mask_int(plot_path=res_path)
+    # calc delta F for mask series
+    cell_delta = edge.deltaF(cell_int, f_0_win=10)
+    up_delta = edge.deltaF(up_int, f_0_win=10)
+    down_delta = edge.deltaF(down_int, f_0_win=10)
+
+    # saving results to CSV
+    for val_num in range(len(cell_int)):
+        cell_int_val = cell_int[val_num]
+        cell_delta_val = cell_delta[val_num]
+        df = df.append(pd.Series([cell.img_name, cell.max_frame_num+1, int(val_num+1), round(cell.feature * int(val_num+1), 2), 'cell',  cell_int_val, cell_delta_val],  # ['cell', 'frame', 'time', 'mask', 'int', 'delta']
+                       index=df.columns),
+                       ignore_index=True)
+        up_int_val = up_int[val_num]
+        up_delta_val = up_delta[val_num]
+        df = df.append(pd.Series([cell.img_name, cell.max_frame_num+1, int(val_num+1), round(cell.feature * int(val_num+1), 2), 'up',  up_int_val, up_delta_val],  # ['cell', 'frame', 'time', 'mask', 'int', 'delta']
+                       index=df.columns),
+                       ignore_index=True)
+        down_int_val = down_int[val_num]
+        down_delta_val = down_delta[val_num]
+        df = df.append(pd.Series([cell.img_name, cell.max_frame_num+1, int(val_num+1), round(cell.feature * int(val_num+1), 2), 'down',  down_int_val, down_delta_val],  # ['cell', 'frame', 'time', 'mask', 'int', 'delta']
+                       index=df.columns),
+                       ignore_index=True)
 
     # # pixel-wise F-FO/F0 images
     # delta_int = edge.series_point_delta(cell.img_series,
@@ -101,11 +121,5 @@ for cell_num in range(0, len(all_cells)):
     plt.savefig(f'{res_path}/{cell.img_name}_rel_updown.png')
     plt.close('all')
 
-    # plt.close('all')
-#     for single_num in range(len(series_int)):
-#         single_int = series_int[single_num]
-#         df = df.append(pd.Series([cell.img_name, cell.feature, int(single_num+1), single_int],  # ['file', 'cell', 'frame', 'time', 'int']
-#                        index=df.columns),
-#                        ignore_index=True)
-
-# df.to_csv(f'{res_path}/results.csv', index=False)
+df.to_csv(f'{res_path}/results.csv', index=False)
+logging.info('CSV file saved')
