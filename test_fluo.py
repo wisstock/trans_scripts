@@ -38,7 +38,7 @@ if not os.path.exists(res_path):
 
 # for single file registrations
 all_cells = op.WDPars(data_path,
-                      max_frame=10,    # FluoData parameters
+                      max_frame=20,    # FluoData parameters
                       sigma=1, kernel_size=3, sd_area=40, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)  # hystTool parameters
 
 # # for multiple file registrations, merge all files one by one
@@ -70,23 +70,26 @@ for cell_num in range(0, len(all_cells)):
     up_delta = edge.deltaF(up_int, f_0_win=10)
     down_delta = edge.deltaF(down_int, f_0_win=10)
 
+    # group all results by mask
+    maskres_dict = {'cell':[cell_int, cell_delta],
+                 'up':[up_int, up_delta],
+                 'down':[down_int, down_delta]}
+
     # saving results to CSV
     for val_num in range(len(cell_int)):
-        cell_int_val = cell_int[val_num]
-        cell_delta_val = cell_delta[val_num]
-        df = df.append(pd.Series([cell.img_name, cell.max_frame_num+1, int(val_num+1), round(cell.feature * int(val_num+1), 2), 'cell',  cell_int_val, cell_delta_val],  # ['cell', 'frame', 'time', 'mask', 'int', 'delta']
-                       index=df.columns),
-                       ignore_index=True)
-        up_int_val = up_int[val_num]
-        up_delta_val = up_delta[val_num]
-        df = df.append(pd.Series([cell.img_name, cell.max_frame_num+1, int(val_num+1), round(cell.feature * int(val_num+1), 2), 'up',  up_int_val, up_delta_val],  # ['cell', 'frame', 'time', 'mask', 'int', 'delta']
-                       index=df.columns),
-                       ignore_index=True)
-        down_int_val = down_int[val_num]
-        down_delta_val = down_delta[val_num]
-        df = df.append(pd.Series([cell.img_name, cell.max_frame_num+1, int(val_num+1), round(cell.feature * int(val_num+1), 2), 'down',  down_int_val, down_delta_val],  # ['cell', 'frame', 'time', 'mask', 'int', 'delta']
-                       index=df.columns),
-                       ignore_index=True)
+        for maskres_key in maskres_dict.keys():
+            maskres = maskres_dict.get(maskres_key)
+            int_val = maskres[0][val_num]
+            delta_val = maskres[1][val_num]
+            df = df.append(pd.Series([cell.img_name,  # cell file name
+                                      cell.max_frame_num+1,  # number of stimulation frame
+                                      int(val_num+1),  # number of frame
+                                      round((cell.feature * int(val_num+1)) - (cell.feature * int(cell.max_frame_num+1)), 2),  # relative time, 0 at stimulation point
+                                      maskres_key,  # mask type
+                                      int_val,  # mask mean value
+                                      delta_val],  # mask delta F value
+                           index=df.columns),
+                           ignore_index=True)
 
     # # pixel-wise F-FO/F0 images
     # delta_int = edge.series_point_delta(cell.img_series,
