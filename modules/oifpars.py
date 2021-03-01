@@ -89,7 +89,7 @@ class FluoData():
     """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
 
     """
-    def __init__(self, oif_path, img_name, feature=False, max_frame=6,
+    def __init__(self, oif_path, img_name, feature=False, max_frame=19,
                  background_rm=True, 
                  restrict=False,
                  img_series=False,
@@ -118,15 +118,12 @@ class FluoData():
             else:
                 self.img_series = img_series
             self.img_name = img_name
-            self.max_frame_num = feature
-            self.max_frame = self.img_series[self.max_frame_num,:,:]                       # first frame after 405 nm exposure (max intensity) or first frame (for FP)
-            # self.feature = feature                                                       # variable parameter value from YAML file (loading type, stimulation area, exposure per px et. al)
-            # self.noise_sd = np.std(self.max_frame[:noise_size, :noise_size])             # noise sd in max intensity frame in square region
-            # self.max_gauss = filters.gaussian(self.max_frame, sigma=sigma)               # create gauss blured image for thresholding
+            self.max_frame_num = max_frame - 1                                             # index of the frame exact after stimulation
+            self.feature = feature                                                         # feature from the YAML config file
+            self.max_frame = self.img_series[self.max_frame_num,:,:]                       # first frame after stimulation, maximal translocations frame
 
-            self.cell_detector = hyst.hystTool(self.max_frame, **kwargs)  # detect all cells in max frame
-            self.max_frame_mask = self.cell_detector.cell_mask(self.max_frame)
-            # self.mask_series = self.cell_detector.cell_mask(self.img_series)
+            self.cell_detector = hyst.hystTool(self.max_frame, **kwargs)                   # detect all cells in max frame
+            self.max_frame_mask = self.cell_detector.cell_mask(self.max_frame)             # creating hysteresis mask for max frame
 
     def max_mask_int(self, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
@@ -143,7 +140,7 @@ class FluoData():
             plt.tight_layout()
             plt.savefig(f'{plot_path}/{self.img_name}_max_mask.png')
             plt.close('all')
-        return mean_list
+        return np.asarray(mean_list)
 
     def frame_mask_int(self, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
@@ -152,11 +149,6 @@ class FluoData():
         """
         self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.img_series]
         mean_list = [round(np.sum(ma.masked_where(~self.mask_series[i], self.img_series[i])) / np.sum(self.mask_series[i]), 3) for i in range(len(self.img_series))]
-        # mean_list = []
-        # for i in range(len(self.img_series)):
-        #     img = self.img_series[i]
-        #     mask = self.mask_series[i]
-        #     mean_list.append(round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3))
         if plot_path:  # mask mean intensity plot saving
             plt.figure()
             ax = plt.subplot()
@@ -164,7 +156,7 @@ class FluoData():
             plt.tight_layout()
             plt.savefig(f'{plot_path}/{self.img_name}_frame_mask.png')
             plt.close('all')
-        return mean_list
+        return np.asarray(mean_list)
 
     def custom_mask_int(self, mask, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
@@ -179,7 +171,7 @@ class FluoData():
             plt.tight_layout()
             plt.savefig(f'{plot_path}/{self.img_name}_custom_mask.png')
             plt.close('all')
-        return mean_list
+        return np.asarray(mean_list)
 
     def updown_mask_int(self, up_mask, down_mask, delta=False, plot_path=False):
         """ Calculation mean intensity in masked area along frames series.
@@ -204,7 +196,7 @@ class FluoData():
             # plt.tight_layout()
             plt.savefig(f'{plot_path}/{self.img_name}_up_down_mask.png')
             plt.close('all')
-        return up_list, down_list
+        return np.asarray(up_list), np.asarray(down_list)
 
     def save_int():
         """ Saving mask intensity results to CSV table.

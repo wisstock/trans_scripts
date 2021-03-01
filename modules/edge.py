@@ -69,7 +69,7 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], tolerance=0.05, t_val=200, output_path=False):
+def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], tolerance=0.03, t_val=200, sigma=False, kernel_size=3, output_path=False):
     """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
     Framses indexes for images calc:
 
@@ -79,7 +79,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
          |--|--|
          ^  ^  ^   
          |  |  |      
-         |  |  max_frames[1]
+         |  |  max_frames[0] + max_frame[1]
          |  max_frames[0]
          max_frames[0] - baseline_frames
 
@@ -87,18 +87,24 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
     tolerance - value for low pixel masling, percent from baseline image maximal intensity.
 
     """
-    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-2,:,:], axis=0)
-    max_img = np.mean(series[max_frames[0]:max_frames[1],:,:], axis=0)
+    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-1,:,:], axis=0)
+    max_img = np.mean(series[max_frames[0]:max_frames[0]+max_frames[1],:,:], axis=0)
 
-    delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0  # pixel-wise ΔF/F0
-    vdelta = np.vectorize(delta)
+    if sigma:
+        trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
+        baseline_img = filters.gaussian(baseline_img, sigma=sigma, truncate=trun(kernel_size, sigma))
+        max_img = filters.gaussian(max_img, sigma=sigma, truncate=trun(kernel_size, sigma))
 
     cell_sd = np.std(ma.masked_where(~mask, series[max_frames[0],:,:]))
     logging.info(f'Cell area SD={round(cell_sd, 2)}')
 
     diff_img = max_img - baseline_img
     diff_img = diff_img.astype(np.int)  # convert float difference image to integer
-    delta_img = vdelta(max_img, baseline_img)
+
+    if mask.any():
+        delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0  # pixel-wise ΔF/F0
+        vdelta = np.vectorize(delta)
+        delta_img = ma.masked_where(~mask, vdelta(max_img, baseline_img))
 
     # up/down mask creating
     t_val = np.max(max_img) * tolerance
@@ -106,33 +112,37 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
     down_mask = np.copy(diff_img) < -t_val
 
     if output_path:
-        # px-wise delta F
-        plt.figure()
-        ax = plt.subplot()
-        img = ax.imshow(delta_img, cmap='jet')
-        # img.set_clim(vmin=-1., vmax=1.) 
-        div = make_axes_locatable(ax)
-        cax = div.append_axes('right', size='3%', pad=0.1)
-        plt.colorbar(img, cax=cax)
-        ax.axis('off')
-        plt.tight_layout()
-        plt.savefig(f'{output_path}/alex_deltaF.png')
+        save_path = f'{output_path}/alex_delta'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        if mask.any():
+            # px-wise delta F
+            plt.figure()
+            ax = plt.subplot()
+            img = ax.imshow(delta_img, cmap='seismic')
+            img.set_clim(vmin=-0.6, vmax=0.6) 
+            div = make_axes_locatable(ax)
+            cax = div.append_axes('right', size='3%', pad=0.1)
+            plt.colorbar(img, cax=cax)
+            ax.axis('off')
+            plt.tight_layout()
+            plt.savefig(f'{save_path}/alex_deltaF.png')
         
         # mean frames
         plt.figure()
         ax0 = plt.subplot(121)
         img0 = ax0.imshow(baseline_img)
-        ax0.text(10,10,f'baseline img, frames {max_frames[0]-baseline_frames}-{max_frames[0]-2}',fontsize=8)
+        ax0.text(10,10,f'baseline img, frames {max_frames[0]-baseline_frames}-{max_frames[0]-1}',fontsize=8)
         ax0.axis('off')
         ax1 = plt.subplot(122)
         img1 = ax1.imshow(max_img)
-        ax1.text(10,10,f'max img, frames {max_frames[0]}-{max_frames[1]}',fontsize=8)
+        ax1.text(10,10,f'max img, frames {max_frames[0]}-{max_frames[0]+max_frames[1]}',fontsize=8)
         div1 = make_axes_locatable(ax1)
         cax1 = div1.append_axes('right', size='3%', pad=0.1)
         plt.colorbar(img1, cax=cax1)
         ax1.axis('off')
         plt.tight_layout()
-        plt.savefig(f'{output_path}/alex_ctrl.png')
+        plt.savefig(f'{save_path}/alex_ctrl.png')
         
         # mean frames diff
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img)) # normalazing vmin/vmax around zero for diff_img
@@ -146,7 +156,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
         plt.colorbar(img2, cax=cax2)
         ax2.axis('off')
         plt.tight_layout()
-        plt.savefig(f'{output_path}/alex_diff.png')
+        plt.savefig(f'{save_path}/alex_diff.png')
 
         # up and down masks
         plt.figure()
@@ -159,7 +169,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
         ax1.text(10,10,'down mask', fontsize=8)
         ax1.axis('off')
         plt.tight_layout()
-        plt.savefig(f'{output_path}/alex_mask.png')
+        plt.savefig(f'{save_path}/alex_mask.png')
 
         plt.close('all')
         logging.info('Alex F/F0 mask saved!')
@@ -252,12 +262,15 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
             raise TypeError('NO mask available!')
     logging.info(f'Derivative series len={len(der_series)} (left WOI={left_w}, spacer={space_w}, right WOI={right_w})')
 
+    # abs sum of derivate images intensity for derivate amplitude plot
+    amp_series = [np.sum(np.abs(der_series[i,:,:])) for i in range(len(der_series))]
+
     if output_path:
         save_path = f'{output_path}/blue_red'
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
-        norm = lambda x, min_val, max_val: (x-min_val)/(max_val-min_val)  # normilize derivate series values to 0-1 range
+        norm = lambda x, min_val, max_val: (x-min_val)/(max_val-min_val)  # normalize derivate series values to 0-1 range
         vnorm = np.vectorize(norm)
 
         for i in range(len(der_series)):
@@ -278,6 +291,15 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
             plt.savefig(f'{save_path}/{file_name}_frame_{i+1}.png')
             plt.close('all')
         logging.info('Derivate images saved!')
+        
+        if abs_amplitude:
+                plt.figure()
+                ax = plt.subplot()
+                ax.set_title('derivate absolute amplitude')
+                img = ax.plot(der_amp)
+                plt.tight_layout()
+                plt.savefig(f'{save_path}/{cell.img_name}_der_amp.png')
+                plt.close('all')
         return np.asarray(der_series)
     else:
         return np.asarray(der_series)
