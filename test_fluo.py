@@ -38,13 +38,13 @@ if not os.path.exists(res_path):
 
 # for single file registrations
 all_cells = op.WDPars(data_path,
-                      max_frame=20,    # FluoData parameters
+                      max_frame=20, name_suffix='_22',    # FluoData parameters
                       sigma=1, kernel_size=3, sd_area=40, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)  # hystTool parameters
 
 # # for multiple file registrations, merge all files one by one
 # all_registrations = op.WDPars(data_path, restrict=True)
 
-df = pd.DataFrame(columns=['cell', 'stimul', 'frame', 'time', 'mask', 'int', 'delta'])
+df = pd.DataFrame(columns=['cell', 'stimul', 'frame', 'time', 'mask', 'int', 'delta', 'rel'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
@@ -65,15 +65,19 @@ for cell_num in range(0, len(all_cells)):
     cell_int = cell.max_mask_int(plot_path=cell_path)
     cell.save_ctrl_img(path=cell_path)
 
+    # calc relative amount in up mask
+    up_rel = up_int / cell_int
+    down_rel = down_int / cell_int
+
     # calc delta F for mask series
     cell_delta = edge.deltaF(cell_int, f_0_win=10)
     up_delta = edge.deltaF(up_int, f_0_win=10)
     down_delta = edge.deltaF(down_int, f_0_win=10)
 
     # group all results by mask
-    maskres_dict = {'cell':[cell_int, cell_delta],
-                 'up':[up_int, up_delta],
-                 'down':[down_int, down_delta]}
+    maskres_dict = {'cell':[cell_int, cell_delta, cell_int],
+                 'up':[up_int, up_delta, up_rel],
+                 'down':[down_int, down_delta, down_rel]}
 
     # saving results to CSV
     for val_num in range(len(cell_int)):
@@ -81,13 +85,15 @@ for cell_num in range(0, len(all_cells)):
             maskres = maskres_dict.get(maskres_key)
             int_val = maskres[0][val_num]
             delta_val = maskres[1][val_num]
+            rel_val = maskres[2][val_num]
             df = df.append(pd.Series([cell.img_name,  # cell file name
                                       cell.max_frame_num+1,  # number of stimulation frame
                                       int(val_num+1),  # number of frame
                                       round((cell.feature * int(val_num+1)) - (cell.feature * int(cell.max_frame_num+1)), 2),  # relative time, 0 at stimulation point
                                       maskres_key,  # mask type
                                       int_val,  # mask mean value
-                                      delta_val],  # mask delta F value
+                                      delta_val,  # mask delta F value
+                                      rel_val],  # up/down mask intensity relative to cell mask intensity 
                            index=df.columns),
                            ignore_index=True)
 

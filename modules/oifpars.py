@@ -26,7 +26,7 @@ import edge
 import hyst
 
 
-def WDPars(wd_path, mode='fluo', **kwargs):
+def WDPars(wd_path, mode='fluo', name_suffix=None, **kwargs):
     """ Parser for data dirrectory and YAML methadata file
 
     """
@@ -50,22 +50,22 @@ def WDPars(wd_path, mode='fluo', **kwargs):
                 logging.info(f'File {data_name} in progress')
                 if mode == 'fluo':
                     data_list.append(FluoData(oif_path=data_path,
-                                              img_name=data_name,
+                                              img_name=data_name+name_suffix,
                                               feature=data_metha[data_name],
                                               **kwargs))
                 elif mode == 'z':
                     data_list.append(MembZData(oif_path=data_path,
-                                              img_name=data_name,
+                                              img_name=data_name+name_suffix,
                                               feature=data_metha[data_name],
                                               **kwargs))
                 elif mode == 'memb':
                     data_list.append(MembData(oif_path=data_path,
-                                              img_name=data_name,
+                                              img_name=data_name+name_suffix,
                                               feature=data_metha[data_name],
                                               **kwargs))
                 elif mode == 'FRET':
                     data_list.append(FRETData(oif_path=data_path,
-                                              img_name=data_name,
+                                              img_name=data_name+name_suffix,
                                               feature=data_metha[data_name],
                                               **kwargs))
                 else:
