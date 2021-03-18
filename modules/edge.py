@@ -87,7 +87,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
     tolerance - value for low pixel masling, percent from baseline image maximal intensity.
 
     """
-    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-1,:,:], axis=0)
+    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-2,:,:], axis=0)
     max_img = np.mean(series[max_frames[0]:max_frames[0]+max_frames[1],:,:], axis=0)
 
     if sigma:
@@ -262,9 +262,6 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
             raise TypeError('NO mask available!')
     logging.info(f'Derivative series len={len(der_series)} (left WOI={left_w}, spacer={space_w}, right WOI={right_w})')
 
-    # abs sum of derivate images intensity for derivate amplitude plot
-    amp_series = [np.sum(np.abs(der_series[i,:,:])) for i in range(len(der_series))]
-
     if output_path:
         save_path = f'{output_path}/blue_red'
         if not os.path.exists(save_path):
@@ -293,6 +290,8 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
         logging.info('Derivate images saved!')
         
         if abs_amplitude:
+                # abs sum of derivate images intensity for derivate amplitude plot
+                amp_series = [np.sum(np.abs(der_series[i,:,:])) for i in range(len(der_series))]
                 plt.figure()
                 ax = plt.subplot()
                 ax.set_title('derivate absolute amplitude')

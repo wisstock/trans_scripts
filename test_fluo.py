@@ -38,7 +38,7 @@ if not os.path.exists(res_path):
 
 # for single file registrations
 all_cells = op.WDPars(data_path,
-                      max_frame=20, name_suffix='_22',    # FluoData parameters
+                      max_frame=20, name_suffix='_17',    # FluoData parameters
                       sigma=1, kernel_size=3, sd_area=40, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)  # hystTool parameters
 
 # # for multiple file registrations, merge all files one by one
@@ -56,14 +56,14 @@ for cell_num in range(0, len(all_cells)):
     alex_up, alex_down = edge.alex_delta(cell.img_series,
                                          mask=cell.max_frame_mask,
                                          baseline_frames=5,
-                                         max_frames=[cell.max_frame_num, 5],
+                                         max_frames=[cell.max_frame_num+1, 5],
                                          sigma=1, kernel_size=3,
                                          output_path=cell_path)
     up_int, down_int = cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)
 
     # control image of the cell with native image of max frame and hysteresis binary mask
     cell_int = cell.max_mask_int(plot_path=cell_path)
-    cell.save_ctrl_img(path=cell_path)
+    cell.save_ctrl_img(path=res_path)
 
     # calc relative amount in up mask
     up_rel = up_int / cell_int
@@ -105,28 +105,39 @@ for cell_num in range(0, len(all_cells)):
     #                                     output_path=cell_path)
     
     # blue/red derivate images
-    # der_int = edge.series_derivate(cell.img_series,
-    #                                mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
-    #                                sd_mode='cell',
-    #                                sd_tolerance=False,
-    #                                sigma=1, kernel_size=5,
-    #                                left_w=1, space_w=0, right_w=1)  # ,
-    #                                # output_path=cell_path)
-    # abs sum of derivate images intensity for derivate amplitude plot
+    der_int = edge.series_derivate(cell.img_series,
+                                   mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
+                                   sd_mode='cell',
+                                   sd_tolerance=False,
+                                   sigma=1, kernel_size=3,
+                                   left_w=1, space_w=0, right_w=1)  # ,
+                                   # output_path=cell_path)
+    amp_series = [np.sum(np.abs(der_int[i])) for i in range(len(der_int))]
 
     plt.figure(figsize=(20,10))
-    ax1 = plt.subplot(222)
+    ax1 = plt.subplot(426)
     ax1.set_title('up mask rel')
     img1 = ax1.plot(up_int/cell_int)
-    ax2 = plt.subplot(224)
+
+    ax2 = plt.subplot(428)
     ax2.set_title('down mask rel')
     img2 = ax2.plot(down_int/cell_int)
-    ax3 = plt.subplot(221)
+
+    ax3 = plt.subplot(425)
     ax3.set_title('up mask')
     img3 = ax3.plot(up_int)
-    ax4 = plt.subplot(223)
+
+    ax4 = plt.subplot(427)
     ax4.set_title('down mask')
     img4 = ax4.plot(down_int)
+
+    ax5 = plt.subplot(411)
+    ax5.set_title('cell mask')
+    img5 = ax5.plot(cell_int)
+
+    ax6 = plt.subplot(412)
+    ax6.set_title('abs amplitude')
+    img6 = ax6.plot(amp_series)
     plt.savefig(f'{res_path}/{cell.img_name}_rel_updown.png')
     plt.close('all')
 
