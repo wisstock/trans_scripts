@@ -36,15 +36,22 @@ res_path = os.path.join(sys.path[0], 'fluo_res')
 if not os.path.exists(res_path):
     os.makedirs(res_path)
 
+
+# stand alone options
+max_frame_number = 10  # frames after stimulation
+cell_name_suffix = '_27_01' # suffix with registration date       
+frame_reg_time = 0.2   # frame registration time in seconds
+
+
 # for single file registrations
 all_cells = op.WDPars(data_path,
-                      max_frame=20, name_suffix='_17',    # FluoData parameters
+                      max_frame=max_frame_number, name_suffix=cell_name_suffix,    # FluoData parameters
                       sigma=1, kernel_size=3, sd_area=40, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)  # hystTool parameters
 
 # # for multiple file registrations, merge all files one by one
 # all_registrations = op.WDPars(data_path, restrict=True)
 
-df = pd.DataFrame(columns=['cell', 'stimul', 'frame', 'time', 'mask', 'int', 'delta', 'rel'])
+df = pd.DataFrame(columns=['cell', 'power', 'stimul', 'frame', 'time', 'mask', 'int', 'delta', 'rel'])
 for cell_num in range(0, len(all_cells)):
     cell = all_cells[cell_num]
     logging.info('Image {} in progress'.format(cell.img_name))
@@ -87,9 +94,10 @@ for cell_num in range(0, len(all_cells)):
             delta_val = maskres[1][val_num]
             rel_val = maskres[2][val_num]
             df = df.append(pd.Series([cell.img_name,  # cell file name
+                                      cell.feature,  # 405 nm power
                                       cell.max_frame_num+1,  # number of stimulation frame
                                       int(val_num+1),  # number of frame
-                                      round((cell.feature * int(val_num+1)) - (cell.feature * int(cell.max_frame_num+1)), 2),  # relative time, 0 at stimulation point
+                                      round((frame_reg_time * int(val_num+1)) - (frame_reg_time * int(cell.max_frame_num+1)), 2),  # relative time, 0 at stimulation point
                                       maskres_key,  # mask type
                                       int_val,  # mask mean value
                                       delta_val,  # mask delta F value

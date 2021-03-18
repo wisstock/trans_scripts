@@ -87,7 +87,7 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
     tolerance - value for low pixel masling, percent from baseline image maximal intensity.
 
     """
-    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-2,:,:], axis=0)
+    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-1,:,:], axis=0)
     max_img = np.mean(series[max_frames[0]:max_frames[0]+max_frames[1],:,:], axis=0)
 
     if sigma:
