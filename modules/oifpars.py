@@ -47,7 +47,7 @@ def WDPars(wd_path, mode='fluo', name_suffix=None, **kwargs):
 
             if data_name in data_metha.keys():
                 data_path = os.path.join(root, file)
-                logging.info(f'File {data_name} in progress')
+                logging.info(f'File {data_name} in uploading')
                 if mode == 'fluo':
                     data_list.append(FluoData(oif_path=data_path,
                                               img_name=data_name+name_suffix,

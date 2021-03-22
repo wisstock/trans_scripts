@@ -38,10 +38,10 @@ if not os.path.exists(res_path):
 
 
 # stand alone options
-max_frame_number = 10  # frames after stimulation
+max_frame_number = 20  # frames after stimulation
 cell_name_suffix = '_27_01' # suffix with registration date       
-frame_reg_time = 0.2   # frame registration time in seconds
-
+frame_reg_time = 1.0   # frame registration time in seconds
+save_csv = True
 
 # for single file registrations
 all_cells = op.WDPars(data_path,
@@ -60,58 +60,17 @@ for cell_num in range(0, len(all_cells)):
     if not os.path.exists(cell_path):
         os.makedirs(cell_path)
 
-    alex_up, alex_down = edge.alex_delta(cell.img_series,
-                                         mask=cell.max_frame_mask,
-                                         baseline_frames=5,
-                                         max_frames=[cell.max_frame_num+1, 5],
-                                         sigma=1, kernel_size=3,
-                                         output_path=cell_path)
+    # alex mask images
+    alex_up, alex_down, base_win, max_win = edge.alex_delta(cell.img_series,
+                                                            mask=cell.max_frame_mask,
+                                                            baseline_frames=5,
+                                                            max_frames=[cell.max_frame_num+1, 5],
+                                                            spacer=3,
+                                                            sigma=1, kernel_size=3,
+                                                            output_path=cell_path)
     up_int, down_int = cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)
 
-    # control image of the cell with native image of max frame and hysteresis binary mask
-    cell_int = cell.max_mask_int(plot_path=cell_path)
-    cell.save_ctrl_img(path=res_path)
 
-    # calc relative amount in up mask
-    up_rel = up_int / cell_int
-    down_rel = down_int / cell_int
-
-    # calc delta F for mask series
-    cell_delta = edge.deltaF(cell_int, f_0_win=10)
-    up_delta = edge.deltaF(up_int, f_0_win=10)
-    down_delta = edge.deltaF(down_int, f_0_win=10)
-
-    # group all results by mask
-    maskres_dict = {'cell':[cell_int, cell_delta, cell_int],
-                 'up':[up_int, up_delta, up_rel],
-                 'down':[down_int, down_delta, down_rel]}
-
-    # saving results to CSV
-    for val_num in range(len(cell_int)):
-        for maskres_key in maskres_dict.keys():
-            maskres = maskres_dict.get(maskres_key)
-            int_val = maskres[0][val_num]
-            delta_val = maskres[1][val_num]
-            rel_val = maskres[2][val_num]
-            df = df.append(pd.Series([cell.img_name,  # cell file name
-                                      cell.feature,  # 405 nm power
-                                      cell.max_frame_num+1,  # number of stimulation frame
-                                      int(val_num+1),  # number of frame
-                                      round((frame_reg_time * int(val_num+1)) - (frame_reg_time * int(cell.max_frame_num+1)), 2),  # relative time, 0 at stimulation point
-                                      maskres_key,  # mask type
-                                      int_val,  # mask mean value
-                                      delta_val,  # mask delta F value
-                                      rel_val],  # up/down mask intensity relative to cell mask intensity 
-                           index=df.columns),
-                           ignore_index=True)
-
-    # # pixel-wise F-FO/F0 images
-    # delta_int = edge.series_point_delta(cell.img_series,
-    #                                     mask=cell.mask_series,
-    #                                     sigma=1, kernel_size=1,
-    #                                     baseline_frames=15,
-    #                                     output_path=cell_path)
-    
     # blue/red derivate images
     der_int = edge.series_derivate(cell.img_series,
                                    mask= 'full_frame',  # cell.mask_series[cell.max_frame_num],
@@ -122,14 +81,51 @@ for cell_num in range(0, len(all_cells)):
                                    # output_path=cell_path)
     amp_series = [np.sum(np.abs(der_int[i])) for i in range(len(der_int))]
 
+    # control image of the cell with native image of max frame and hysteresis binary mask
+    cell.save_ctrl_img(path=res_path)
+    cell_int = cell.max_mask_int(plot_path=cell_path)
+
+    # calc relative amount in up mask
+    up_rel = edge.deltaF(up_int / cell_int, f_0_win=10)
+    down_rel = edge.deltaF(down_int / cell_int, f_0_win=10)
+
+    # calc delta F for mask series
+    cell_delta = edge.deltaF(cell_int, f_0_win=10)
+    up_delta = edge.deltaF(up_int, f_0_win=10)
+    down_delta = edge.deltaF(down_int, f_0_win=10)
+    # group all results by mask
+    maskres_dict = {'cell':[cell_int, cell_delta, cell_int],
+                 'up':[up_int, up_delta, up_rel],
+                 'down':[down_int, down_delta, down_rel]}
+
+    # saving results to CSV
+    if save_csv:
+      for val_num in range(len(cell_int)):
+          for maskres_key in maskres_dict.keys():
+              maskres = maskres_dict.get(maskres_key)
+              int_val = maskres[0][val_num]
+              delta_val = maskres[1][val_num]
+              rel_val = maskres[2][val_num]
+              df = df.append(pd.Series([cell.img_name,  # cell file name
+                                        cell.feature,  # 405 nm power
+                                        cell.max_frame_num+1,  # number of stimulation frame
+                                        int(val_num+1),  # number of frame
+                                        round((frame_reg_time * int(val_num+1)) - (frame_reg_time * int(cell.max_frame_num+1)), 2),  # relative time, 0 at stimulation point
+                                        maskres_key,  # mask type
+                                        int_val,  # mask mean value
+                                        delta_val,  # mask delta F value
+                                        rel_val],  # up/down mask intensity relative to cell mask intensity 
+                             index=df.columns),
+                             ignore_index=True)
+
     plt.figure(figsize=(20,10))
     ax1 = plt.subplot(426)
     ax1.set_title('up mask rel')
-    img1 = ax1.plot(up_int/cell_int)
+    img1 = ax1.plot(up_rel)
 
     ax2 = plt.subplot(428)
     ax2.set_title('down mask rel')
-    img2 = ax2.plot(down_int/cell_int)
+    img2 = ax2.plot(down_rel)
 
     ax3 = plt.subplot(425)
     ax3.set_title('up mask')
@@ -141,6 +137,16 @@ for cell_num in range(0, len(all_cells)):
 
     ax5 = plt.subplot(411)
     ax5.set_title('cell mask')
+    ax5.fill_between(x=range(base_win[0], base_win[1], 1),
+                     y1=min(cell_int),
+                     y2=max(cell_int),
+                     alpha=0.35,
+                     label='baseline')
+    ax5.fill_between(x=range(max_win[0], max_win[1], 1),
+                     y1=min(cell_int),
+                     y2=max(cell_int),
+                     alpha=0.35,
+                     label='max')
     img5 = ax5.plot(cell_int)
 
     ax6 = plt.subplot(412)
@@ -149,5 +155,6 @@ for cell_num in range(0, len(all_cells)):
     plt.savefig(f'{res_path}/{cell.img_name}_rel_updown.png')
     plt.close('all')
 
-df.to_csv(f'{res_path}/results.csv', index=False)
-logging.info('CSV file saved')
+if save_csv:
+  df.to_csv(f'{res_path}/results.csv', index=False)
+  logging.info('CSV file saved')

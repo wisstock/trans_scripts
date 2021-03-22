@@ -69,7 +69,7 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], tolerance=0.03, t_val=200, sigma=False, kernel_size=3, output_path=False):
+def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], spacer=0, tolerance=0.03, t_val=200, sigma=False, kernel_size=3, output_path=False):
     """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
     Framses indexes for images calc:
 
@@ -87,8 +87,13 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
     tolerance - value for low pixel masling, percent from baseline image maximal intensity.
 
     """
-    baseline_img = np.mean(series[max_frames[0]-baseline_frames:max_frames[0]-1,:,:], axis=0)
-    max_img = np.mean(series[max_frames[0]:max_frames[0]+max_frames[1],:,:], axis=0)
+    baseline_win = [max_frames[0]-baseline_frames-2, max_frames[0]-2]  # frame indexes for baseline image calc
+    baseline_img = np.mean(series[baseline_win[0]:baseline_win[1]], axis=0)
+
+    max_win = [max_frames[0]+spacer, max_frames[0]+max_frames[1]+spacer]  # frame indexes for maximal translocations image calc
+    max_img = np.mean(series[max_win[0]:max_win[1]], axis=0)
+
+    logging.info(f'Baseline frames indexes:{baseline_win}, max frame indexes:{max_win}')
 
     if sigma:
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
@@ -132,11 +137,11 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
         plt.figure()
         ax0 = plt.subplot(121)
         img0 = ax0.imshow(baseline_img)
-        ax0.text(10,10,f'baseline img, frames {max_frames[0]-baseline_frames}-{max_frames[0]-1}',fontsize=8)
+        ax0.text(10,10,f'baseline img, frames {baseline_win[0]}-{baseline_win[1]}',fontsize=8)
         ax0.axis('off')
         ax1 = plt.subplot(122)
         img1 = ax1.imshow(max_img)
-        ax1.text(10,10,f'max img, frames {max_frames[0]}-{max_frames[0]+max_frames[1]}',fontsize=8)
+        ax1.text(10,10,f'max img, frames {max_win[0]}-{max_win[1]}',fontsize=8)
         div1 = make_axes_locatable(ax1)
         cax1 = div1.append_axes('right', size='3%', pad=0.1)
         plt.colorbar(img1, cax=cax1)
@@ -172,11 +177,10 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], toler
         plt.savefig(f'{save_path}/alex_mask.png')
 
         plt.close('all')
-        logging.info('Alex F/F0 mask saved!')
         
-        return up_mask, down_mask
+        return up_mask, down_mask, baseline_win, max_win
     else:
-        return up_mask, down_mask
+        return up_mask, down_mask, baseline_win, max_win
 
 
 def series_point_delta(series, mask=False, baseline_frames=3, sigma=4, kernel_size=5, output_path=False):
