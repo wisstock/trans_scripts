@@ -59,14 +59,14 @@ for cell_num in range(0, len(all_cells)):
     cell_path = f'{res_path}/{cell.img_name}'
     if not os.path.exists(cell_path):
         os.makedirs(cell_path)
-
+        
     # alex mask images
     alex_up, alex_down, base_win, max_win = edge.alex_delta(cell.img_series,
                                                             mask=cell.max_frame_mask,
                                                             baseline_frames=5,
                                                             max_frames=[cell.max_frame_num+1, 5],
                                                             spacer=3,
-                                                            sigma=1, kernel_size=3,
+                                                            sigma=0.75, kernel_size=10,
                                                             mode='multiple',
                                                             output_path=cell_path)
     up_int, down_int = cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)

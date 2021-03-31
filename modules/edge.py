@@ -121,11 +121,20 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], space
     down_mask = np.copy(diff_img) < -t_val
 
     if mode == 'multiple':
-        connectivity = [[1, 1, 1],
-                        [1, 1, 1],
-                        [1, 1, 1]]
-        up_label_mask, up_features = ndi.label(up_mask, structure=connectivity)
-        lo
+        # label method
+        # connectivity = [[1, 1, 1],
+        #                 [1, 1, 1],
+        #                 [1, 1, 1]]
+        # up_label_mask, up_features = ndi.label(up_mask, structure=connectivity)
+        # for feature_num in range(0, up_features):
+        #     one_up_mask = np.copy(up_label_mask)
+        #     one_up_mask[one_up_mask != feature_num] = 0
+        #     if np.sum(one_up_mask / feature_num) < min_mask_size:
+        #         up_label_mask[up_label_mask == feature_num] = 0
+
+        # gaussian + amplitude filtering method
+        up_label_mask = filters.gaussian(up_mask, sigma = 2)
+        up_label_mask[up_label_mask < np.max(up_label_mask)*0.2] = 0
 
     if output_path:
         save_path = f'{output_path}/alex_delta'
