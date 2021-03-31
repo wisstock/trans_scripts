@@ -69,7 +69,7 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], spacer=0, tolerance=0.03, t_val=200, sigma=False, kernel_size=3, output_path=False):
+def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], spacer=0, tolerance=0.03, t_val=200, sigma=False, kernel_size=3, mode='single', min_mask_size=20, output_path=False):
     """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
     Framses indexes for images calc:
 
@@ -86,6 +86,10 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], space
     It's necessary for decreasing of the cell movement influence.
     tolerance - value for low pixel masling, percent from baseline image maximal intensity.
 
+    Mask modes:
+    - single - create one mask with all up/down regions
+    - multiple - create multiple mask with individual up/down regions, connectivity 8-m, minimal mask size - min_mask_size
+
     """
     baseline_win = [max_frames[0]-baseline_frames-2, max_frames[0]-2]  # frame indexes for baseline image calc
     baseline_img = np.mean(series[baseline_win[0]:baseline_win[1]], axis=0)
@@ -100,8 +104,8 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], space
         baseline_img = filters.gaussian(baseline_img, sigma=sigma, truncate=trun(kernel_size, sigma))
         max_img = filters.gaussian(max_img, sigma=sigma, truncate=trun(kernel_size, sigma))
 
-    cell_sd = np.std(ma.masked_where(~mask, series[max_frames[0],:,:]))
-    logging.info(f'Cell area SD={round(cell_sd, 2)}')
+    # cell_sd = np.std(ma.masked_where(~mask, series[max_frames[0],:,:]))
+    # logging.info(f'Cell area SD={round(cell_sd, 2)}')
 
     diff_img = max_img - baseline_img
     diff_img = diff_img.astype(np.int)  # convert float difference image to integer
@@ -115,6 +119,13 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], space
     t_val = np.max(max_img) * tolerance
     up_mask = np.copy(diff_img) > t_val
     down_mask = np.copy(diff_img) < -t_val
+
+    if mode == 'multiple':
+        connectivity = [[1, 1, 1],
+                        [1, 1, 1],
+                        [1, 1, 1]]
+        up_label_mask, up_features = ndi.label(up_mask, structure=connectivity)
+        lo
 
     if output_path:
         save_path = f'{output_path}/alex_delta'
@@ -175,6 +186,16 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], space
         ax1.axis('off')
         plt.tight_layout()
         plt.savefig(f'{save_path}/alex_mask.png')
+
+        # up regions labels
+        if mode == 'multiple':
+            plt.figure()
+            ax0 = plt.subplot()
+            img0 = ax0.imshow(up_label_mask)
+            ax0.text(10,10,'up regions', fontsize=8)
+            ax0.axis('off')
+            plt.tight_layout()
+            plt.savefig(f'{save_path}/alex_up_label.png')
 
         plt.close('all')
         

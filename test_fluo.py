@@ -67,6 +67,7 @@ for cell_num in range(0, len(all_cells)):
                                                             max_frames=[cell.max_frame_num+1, 5],
                                                             spacer=3,
                                                             sigma=1, kernel_size=3,
+                                                            mode='multiple',
                                                             output_path=cell_path)
     up_int, down_int = cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)
 
