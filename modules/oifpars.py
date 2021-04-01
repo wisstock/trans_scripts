@@ -132,14 +132,6 @@ class FluoData():
         """
         # return edge.series_sum_int(self.img_series, self.max_frame_mask)
         mean_list = [round(np.sum(ma.masked_where(~self.max_frame_mask, img)) / np.sum(self.max_frame_mask), 3) for img in self.img_series]
-        if plot_path:  # mask mean intensity plot saving
-            plt.figure()
-            ax = plt.subplot()
-            ax.set_title('max frame mask')
-            img = ax.plot(mean_list)
-            plt.tight_layout()
-            plt.savefig(f'{plot_path}/{self.img_name}_max_mask.png')
-            plt.close('all')
         return np.asarray(mean_list)
 
     def frame_mask_int(self, plot_path=False):
@@ -185,17 +177,6 @@ class FluoData():
             up_list = edge.deltaF(up_list)
             down_list = edge.deltaF(down_list)
 
-        if plot_path:  # mask mean intensity plot saving
-            plt.figure()
-            ax1 = plt.subplot(211)
-            ax1.set_title('up mask')
-            img1 = ax1.plot(up_list)
-            ax2 = plt.subplot(212)
-            ax2.set_title('down mask')
-            img2 = ax2.plot(down_list)
-            # plt.tight_layout()
-            plt.savefig(f'{plot_path}/{self.img_name}_up_down_mask.png')
-            plt.close('all')
         return np.asarray(up_list), np.asarray(down_list)
 
     def save_int():
