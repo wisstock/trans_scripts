@@ -26,7 +26,7 @@ import edge
 import hyst
 
 
-def WDPars(wd_path, mode='fluo', name_suffix=None, **kwargs):
+def WDPars(wd_path, mode='single', name_suffix=None, **kwargs):
     """ Parser for data dirrectory and YAML methadata file
 
     """
@@ -48,7 +48,7 @@ def WDPars(wd_path, mode='fluo', name_suffix=None, **kwargs):
             if data_name in data_metha.keys():
                 data_path = os.path.join(root, file)
                 logging.info(f'File {data_name} in uploading')
-                if mode == 'fluo':
+                if mode == 'single':
                     data_list.append(FluoData(oif_path=data_path,
                                               img_name=data_name+name_suffix,
                                               feature=data_metha[data_name],

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Copyright © 2020 Borys Olifirov
+""" Copyright © 2020-2021 Borys Olifirov
 
 Detecting cell edge and continue mebrane estimation
 
