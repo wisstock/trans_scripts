@@ -50,10 +50,7 @@ h.settings(sigma=1, kernel_size=3, sd_lvl=5, high=0.8, low_init=0.005, mask_diff
 
 # records paring
 all_cells = op.WDPars(data_path,
-                      max_frame=max_frame_number, name_suffix=cell_name_suffix)  # hystTool parameters
-
-# # for multiple file registrations, merge all files one by one
-# all_registrations = op.WDPars(data_path, restrict=True)
+                      max_frame=max_frame_number, name_suffix=cell_name_suffix)
 
 df = pd.DataFrame(columns=['cell', 'power', 'stimul', 'frame', 'time', 'mask', 'int', 'delta', 'rel'])
 for cell_num in range(0, len(all_cells)):

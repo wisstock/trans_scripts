@@ -27,27 +27,7 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    # sigma = 3                        # sigma of the Gaussian filter
-    # kernel_size = 5            # kernel size of the Gaussian filter
-    # sd_lvl = 2                      # multiplication factor of noise SD value for outside fixed-value mask building
-        
-    # high = 0.8                          # high threshold for all methods
-    # low_init = 0.05                  # initial low threshold for cell detection
-    # low_detection = 0.5        # low threshold for cell counting during initialization
-    # mask_diff = 50                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
-    # inside_mask_diff = 50  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
-    
-
     #### INIT SECTION
-    def __init__(self, img, sd_area=20, roi_area=10, roi_coord=False):
-        """ hystTool class initialization in record instance, indvidual options for ROI building
-
-        """
-        self.img = img                            # image for hystTool initialization and cell counting
-        self.sd_area = sd_area                    # area in px for frame SD calculation
-        self.roi_area = roi_area                  # area in px for square mean cytoplasm intensity ROI
-        self.roi_coord = roi_coord                # coordinate of cytoplasm ROI center
-
     @classmethod
     def settings(cls, 
                  sigma=3, kernel_size=5,
@@ -67,7 +47,16 @@ class hystTool():
         cls.low_detection = low_detection        # low threshold for cell counting during initialization
         cls.mask_diff = mask_diff                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
         cls.inside_mask_diff = inside_mask_diff  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
-        
+
+    def __init__(self, img, sd_area=20, roi_area=10, roi_coord=False):
+        """ hystTool class initialization in record instance, indvidual options for ROI building
+
+        """
+        self.img = img                            # image for hystTool initialization and cell counting
+        self.sd_area = sd_area                    # area in px for frame SD calculation
+        self.roi_area = roi_area                  # area in px for square mean cytoplasm intensity ROI
+        self.roi_coord = roi_coord                # coordinate of cytoplasm ROI center
+
     def detector(self):
         """ Create detector instance for specific record.
 
@@ -162,6 +151,8 @@ class hystTool():
     def cell_mask(self, frame=False):
         """ Create series of masks for each frame.
         If there are more than one cells per frame, create dict with mask series for each cell. 
+        Multiple cell mode for FluoData registrations ONLY!
+
         """
         if not frame:
             frame = self.img
