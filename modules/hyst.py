@@ -27,26 +27,54 @@ class hystTool():
     """ Cells detection with hysteresis thresholding.
 
     """
-    def __init__(self, img, sd_area=20, roi_area=10, mean=False, sd_lvl=2, high=0.8, low_init=0.05, low_detection=0.5, mask_diff=50, inside_mask_diff=50, sigma=3, kernel_size=5):
-        """ Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
+    # sigma = 3                        # sigma of the Gaussian filter
+    # kernel_size = 5            # kernel size of the Gaussian filter
+    # sd_lvl = 2                      # multiplication factor of noise SD value for outside fixed-value mask building
+        
+    # high = 0.8                          # high threshold for all methods
+    # low_init = 0.05                  # initial low threshold for cell detection
+    # low_detection = 0.5        # low threshold for cell counting during initialization
+    # mask_diff = 50                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
+    # inside_mask_diff = 50  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
+    
+
+    #### INIT SECTION
+    def __init__(self, img, sd_area=20, roi_area=10, roi_coord=False):
+        """ hystTool class initialization in record instance, indvidual options for ROI building
 
         """
-        self.img = img                            # image for hystTool initialization and cell counting                   
-        self.high = high                          # high threshold for all methods
-        self.low_init = low_init                  # initial low threshold for cell detection
-        self.low_detection = low_detection        # low threshold for cell counting during initialization
-        self.mask_diff = mask_diff                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
-        self.inside_mask_diff = inside_mask_diff  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
+        self.img = img                            # image for hystTool initialization and cell counting
         self.sd_area = sd_area                    # area in px for frame SD calculation
-        self.roi_area = roi_area                  # area in px for square ROI creating and mean intensity calculation
-        self.sd_lvl = sd_lvl                      # multiplication factor of noise SD value for outside fixed-value mask building
-        self.mean = mean                          # coordinate of cytoplasm ROI center
-        self.kernel_size = kernel_size            # kernel size of the Gaussian filter
-        self.sigma = sigma                        # sigma of the Gaussian filter
+        self.roi_area = roi_area                  # area in px for square mean cytoplasm intensity ROI
+        self.roi_coord = roi_coord                # coordinate of cytoplasm ROI center
 
+    @classmethod
+    def settings(cls, 
+                 sigma=3, kernel_size=5,
+                 sd_lvl=2,
+                 high=0.8, low_init=0.05, low_detection=0.5,
+                 mask_diff=50, inside_mask_diff=50):
+        """ Global options for hystTool, initialize before it before records parsing 
+        Detection of all cells with init lower threshold and save center of mass coordinates for each cell.
+
+        """                   
+        cls.sigma = sigma                        # sigma of the Gaussian filter
+        cls.kernel_size = kernel_size            # kernel size of the Gaussian filter
+        cls.sd_lvl = sd_lvl                      # multiplication factor of noise SD value for outside fixed-value mask building
+        
+        cls.high = high                          # high threshold for all methods
+        cls.low_init = low_init                  # initial low threshold for cell detection
+        cls.low_detection = low_detection        # low threshold for cell counting during initialization
+        cls.mask_diff = mask_diff                # difference between fixed-value and hysteresis masks for outside mask (2SD mask)
+        cls.inside_mask_diff = inside_mask_diff  # difference between fixed-value and hysteresis masks for inside mask (cytoplasm mean mask)
+        
+    def detector(self):
+        """ Create detector instance for specific record.
+
+        """
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for Gaussian fliter according to sigma value and kernel size
         self.truncate = trun(self.kernel_size, self.sigma)
-        self.gauss = filters.gaussian(self.img, sigma=sigma, truncate= self.truncate)
+        self.gauss = filters.gaussian(self.img, sigma=self.sigma, truncate= self.truncate)
 
         self.detection_mask = filters.apply_hysteresis_threshold(self.gauss,
                                                                  low=self.low_detection*np.max(self.gauss),
@@ -61,12 +89,9 @@ class hystTool():
         self.cells_center = [[int(x) for x in i] for i in cells_center_float]
         self.cells_center_dict = dict(zip(range(1, self.cells_num+1), self.cells_center))
 
-        if self.cells_num == 1:               # just for fun c:
-            logging_cell_num = 'cell'
-        else:
-            logging_cell_num = 'cells_labels'
-        logging.info(f'Detected {self.cells_num} {logging_cell_num} with center of mass coord. {self.cells_center_dict}')
+        logging.info(f'Detected {self.cells_num} cell(s) with center of mass coord. {self.cells_center_dict}')
 
+    #### TOOLS
     def __low_calc(self, img, gauss, threshold_value):
         """ Lower threshold calculations for hysteresis detection functions.
 
@@ -121,8 +146,8 @@ class hystTool():
         """ Create ROI mean  mask for image, default create ROI across of cell center of mass.
         """
         img_gauss = filters.gaussian(img, sigma=self.sigma, truncate=self.truncate)
-        if self.mean:
-            roi_center = self.mean
+        if self.roi_coord:
+            roi_center = self.roi_coord
             logging.info(f'Custom ROI center {roi_center}')
         else:
             roi_center = self.cells_center[0]
@@ -134,10 +159,12 @@ class hystTool():
                                                       high=self.high*np.max(img_gauss))
         return img_mask, roi_mean
 
-    def cell_mask(self, frame):
+    def cell_mask(self, frame=False):
         """ Create series of masks for each frame.
         If there are more than one cells per frame, create dict with mask series for each cell. 
         """
+        if not frame:
+            frame = self.img
         if self.cells_num == 1:
             frame_mask, frame_sd = self.__create_sd_mask(frame)
             logging.info(f'Noise SD={round(frame_sd, 3)}')
@@ -198,11 +225,6 @@ class hystTool():
 
         return [sd_mask, roi_mask, cytoplasm_mask, membrane_mask]
 
-    def ctrl_imsave():
-        """ Save control images: fixed-value masks, cells labels etc.
-
-        """
-        pass
 
 if __name__=="__main__":
     pass

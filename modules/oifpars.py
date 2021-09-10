@@ -93,7 +93,7 @@ class FluoData():
                  background_rm=True, 
                  restrict=False,
                  img_series=False,
-                 **kwargs):
+                 sd_area=20):
         # restricted variant for multiple file registration, next step - connect all registration to one FluoData object with fluo_ext function
         if restrict:
             pass
@@ -109,8 +109,8 @@ class FluoData():
         # # full variant for one-file registration
         else:
             if not img_series:
-                self.img_series = oif.OibImread(oif_path)[0,:,:,:]                          # z-stack frames series
-                if background_rm:                                                           # background remove option
+                self.img_series = oif.OibImread(oif_path)[0,:,:,:]             # z-stack frames series
+                if background_rm:                                              # background remove option
                     for frame in range(0, np.shape(self.img_series)[0]):
                         self.img_series[frame] = edge.back_rm(self.img_series[frame],
                                                               edge_lim=10,
@@ -118,12 +118,13 @@ class FluoData():
             else:
                 self.img_series = img_series
             self.img_name = img_name
-            self.max_frame_num = max_frame - 1                                             # index of the frame exact after stimulation
-            self.feature = feature                                                         # feature from the YAML config file
-            self.max_frame = self.img_series[self.max_frame_num,:,:]                       # first frame after stimulation, maximal translocations frame
+            self.max_frame_num = max_frame - 1                                 # index of the frame exact after stimulation
+            self.feature = feature                                             # feature from the YAML config file
+            self.max_frame = self.img_series[self.max_frame_num,:,:]           # first frame after stimulation, maximal translocations frame
 
-            self.cell_detector = hyst.hystTool(self.max_frame, **kwargs)                   # detect all cells in max frame
-            self.max_frame_mask = self.cell_detector.cell_mask(self.max_frame)             # creating hysteresis mask for max frame
+            self.cell_detector = hyst.hystTool(self.max_frame)                 # detect all cells in max frame
+            self.cell_detector.detector()
+            self.max_frame_mask =  self.cell_detector.cell_mask()              # creating hysteresis mask for max frame
 
     def max_mask_int(self, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
@@ -137,6 +138,8 @@ class FluoData():
     def frame_mask_int(self, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
         Mask was created for each frame individually.
+
+        NOT WORKING AFTER 10.09.2021 hystTool REFACTORING!
 
         """
         self.mask_series = [self.cell_detector.cell_mask(frame) for frame in self.img_series]

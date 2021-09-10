@@ -393,7 +393,7 @@ def radiusSlice(img, angl=1, cntr_coord="center"):
 
 
 def lineExtract(img, start_coors, end_coord):
-    """ Returns values ​​of pixels intensity along the line
+    """ Returns values of pixels intensity along the line
     with specified ends coordinates.
 
     Requires cell image, and line ends coordinate (results of lineSlice).

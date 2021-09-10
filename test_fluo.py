@@ -20,6 +20,8 @@ from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('modules')
 import oifpars as op
 import edge
+from hyst import hystTool as h
+
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#272b30'
@@ -37,16 +39,18 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 
-# main options
+# options
 max_frame_number = 20  # frames after stimulation
 cell_name_suffix = '_27_01' # suffix with registration date       
 frame_reg_time = 1.0   # frame registration time in seconds
 save_csv = False
 
-# for single file registrations
+# hystTool global settings set up
+h.settings(sigma=1, kernel_size=3, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)
+
+# records paring
 all_cells = op.WDPars(data_path,
-                      max_frame=max_frame_number, name_suffix=cell_name_suffix,    # FluoData parameters
-                      sigma=1, kernel_size=3, sd_area=40, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)  # hystTool parameters
+                      max_frame=max_frame_number, name_suffix=cell_name_suffix)  # hystTool parameters
 
 # # for multiple file registrations, merge all files one by one
 # all_registrations = op.WDPars(data_path, restrict=True)
