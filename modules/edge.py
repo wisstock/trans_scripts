@@ -69,7 +69,7 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], spacer=0, tolerance=0.03, t_val=200, sigma=False, kernel_size=3, mode='single', min_mask_size=20, output_path=False):
+def alex_delta(series, mask=False, win_index=[5, 10, 15], spacer=0, tolerance=0.03, t_val=200, sigma=False, kernel_size=3, mode='single', min_mask_size=20, output_path=False):
     """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
     Framses indexes for images calc:
 
@@ -79,9 +79,9 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], space
          |--|--|
          ^  ^  ^   
          |  |  |      
-         |  |  max_frames[0] + max_frame[1]
-         |  max_frames[0]
-         max_frames[0] - baseline_frames
+         |  |  win_index[1] + win_index[2] + spacer
+         |  win_index[1]
+         win_index[1] - win_index[0]
 
     It's necessary for decreasing of the cell movement influence.
     tolerance - value for low pixel masling, percent from baseline image maximal intensity.
@@ -91,10 +91,10 @@ def alex_delta(series, mask=False, baseline_frames=5, max_frames=[10, 15], space
     - multiple - create multiple mask with individual up/down regions, connectivity 8-m, minimal mask size - min_mask_size
 
     """
-    baseline_win = [max_frames[0]-baseline_frames-2, max_frames[0]-2]  # frame indexes for baseline image calc
+    baseline_win = [win_index[1]-win_index[0]-2, win_index[1]-2]  # frame indexes for baseline image calc
     baseline_img = np.mean(series[baseline_win[0]:baseline_win[1]], axis=0)
 
-    max_win = [max_frames[0]+spacer, max_frames[0]+max_frames[1]+spacer]  # frame indexes for maximal translocations image calc
+    max_win = [win_index[1]+spacer, win_index[1]+win_index[2]+spacer]  # frame indexes for maximal translocations image calc
     max_img = np.mean(series[max_win[0]:max_win[1]], axis=0)
 
     logging.info(f'Baseline frames indexes:{baseline_win}, max frame indexes:{max_win}')

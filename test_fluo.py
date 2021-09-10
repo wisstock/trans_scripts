@@ -63,8 +63,7 @@ for cell_num in range(0, len(all_cells)):
     # alex mask images
     alex_up, alex_down, base_win, max_win = edge.alex_delta(cell.img_series,
                                                             mask=cell.max_frame_mask,
-                                                            baseline_frames=10,
-                                                            max_frames=[cell.max_frame_num+1, 5],
+                                                            win_index=[10, cell.max_frame_num+1, 5],
                                                             spacer=2,
                                                             sigma=False, kernel_size=10,
                                                             mode='multiple',
