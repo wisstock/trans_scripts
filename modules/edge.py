@@ -91,7 +91,7 @@ def alex_delta(series, mask=False, win_index=[5, 10, 15], spacer=0, tolerance=0.
     - multiple - create multiple mask with individual up/down regions, connectivity 8-m, minimal mask size - min_mask_size
 
     """
-    baseline_win = [win_index[1]-win_index[0]-2, win_index[1]-2]  # frame indexes for baseline image calc
+    baseline_win = [win_index[1]-win_index[0], win_index[1]]  # frame indexes for baseline image calc
     baseline_img = np.mean(series[baseline_win[0]:baseline_win[1]], axis=0)
 
     max_win = [win_index[1]+spacer, win_index[1]+win_index[2]+spacer]  # frame indexes for maximal translocations image calc

@@ -23,6 +23,7 @@ from scipy.ndimage import measurements as msr
 from scipy import signal
 from scipy import ndimage as ndi
 
+
 class hystTool():
     """ Cells detection with hysteresis thresholding.
 
