@@ -46,7 +46,7 @@ frame_reg_time = 1.0   # frame registration time in seconds
 save_csv = False
 
 # hystTool global settings set up
-h.settings(sigma=1, kernel_size=3, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)
+h.settings(sigma=1.5, kernel_size=20, sd_lvl=3, high=0.8, low_init=0.05, mask_diff=30)
 
 # records reading
 all_cells = op.WDPars(data_path,

@@ -159,11 +159,11 @@ class hystTool():
             frame = self.img
         if self.cells_num == 1:
             frame_mask, frame_sd = self.__create_sd_mask(frame)
-            logging.info(f'Noise SD={round(frame_sd, 3)}')
+            logging.info(f'Noise SD={round(frame_sd, 3)}\n')
             return frame_mask
         else:
             # NOT READY FOR MULTIPLE CELLS!
-            logging.fatal('More then one cell, CAN`T create masks series!')
+            logging.fatal('More then one cell, CAN`T create masks series!\n')
 
     def huge_cell_mask(self):
         """ Creating binary mask for homogeneous fluoresced cell by SD thresholding and hysteresis smoothing.
@@ -206,7 +206,7 @@ class hystTool():
         # THIS IS TEMPORARY METHOD, FOR ONE CELL AT IMAGE ONLY!
         sd_mask, frame_sd = self.__create_sd_mask(frame)
         roi_mask, frame_roi = self.__create_roi_mask(frame)
-        logging.info(f'Noise SD={round(frame_sd, 3)}, ROI mean intensity={round(frame_roi, 3)}')
+        logging.info(f'Noise SD={round(frame_sd, 3)}, ROI mean intensity={round(frame_roi, 3)}\n')
 
         # filling external space and create cytoplasmic mask 
         cytoplasm_mask = roi_mask + segmentation.flood(roi_mask, (0, 0))

@@ -50,7 +50,7 @@ class FluoData():
         # # full variant for one-file registration
         else:
             if not img_series:
-                self.img_series = oif.OibImread(oif_path)[0,:,:,:]             # z-stack frames series
+                self.img_series = oif.OibImread(oif_path)[0,:,:,:]             # first channel only (Fluo)
                 if background_rm:                                              # background remove option
                     for frame in range(0, np.shape(self.img_series)[0]):
                         self.img_series[frame] = edge.back_rm(self.img_series[frame],
@@ -132,19 +132,29 @@ class FluoData():
         """ Control images saving.
 
         """
-        plt.figure()
-        ax0 = plt.subplot(121)
-        img0 = ax0.imshow(self.max_frame)
-        ax0.axis('off')
-        ax0.text(10,10,f'max int frame {self.max_frame_num}',fontsize=8)
-        ax1 = plt.subplot(122)
-        img1 = ax1.imshow(self.max_frame_mask)
-        ax1.axis('off')
-        ax1.text(10,10,f'binary mask',fontsize=8)
-        plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_ctrl.png')
-        logging.info(f'{self.img_name} control image saved!\n')
-        plt.close('all')
+        try:
+            plt.figure()
+            ax0 = plt.subplot(121)
+            img0 = ax0.imshow(self.max_frame)
+            ax0.axis('off')
+            ax0.text(10,10,f'max int frame {self.max_frame_num}',fontsize=8)
+            ax1 = plt.subplot(122)
+            img1 = ax1.imshow(self.max_frame_mask)
+            ax1.axis('off')
+            ax1.text(10,10,f'binary mask',fontsize=8)
+            plt.tight_layout()
+            plt.savefig(f'{path}/{self.img_name}_ctrl.png')
+            logging.info(f'{self.img_name} control image saved!\n')
+            plt.close('all')
+        except TypeError:
+            logging.fatal(f'{self.img_name} has some trouble with cell mask!')
+            return
+        else:
+            pass
+        finally:
+            pass
+
+
 
     
 class MembZData():
