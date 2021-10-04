@@ -40,13 +40,13 @@ if not os.path.exists(res_path):
 
 
 # options
-max_frame_number = 5  # frames after stimulation
-cell_name_suffix = '_30_10' # suffix with registration date       
+max_frame_number = 21  # frames after stimulation
+cell_name_suffix = '_29_09' # suffix with registration date       
 frame_reg_time = 1.0   # frame registration time in seconds
-save_csv = False
+save_csv = True
 
 # hystTool global settings set up
-h.settings(sigma=1.5, kernel_size=20, sd_lvl=3, high=0.8, low_init=0.05, mask_diff=30)
+h.settings(sigma=1, kernel_size=20, sd_lvl=5, high=0.8, low_init=0.05, mask_diff=30)
 
 # records reading
 all_cells = op.WDPars(data_path,
@@ -58,8 +58,8 @@ for cell_num in range(0, len(all_cells)):
     logging.info('Image {} in progress'.format(cell.img_name))
 
     cell_path = f'{res_path}/{cell.img_name}'
-    if not os.path.exists(cell_path):
-        os.makedirs(cell_path)
+    # if not os.path.exists(cell_path):
+        # os.makedirs(cell_path)
 
     # blue/red derivate images
     der_int = edge.series_derivate(cell.img_series,
@@ -67,7 +67,7 @@ for cell_num in range(0, len(all_cells)):
                                    sd_mode='cell',
                                    sd_tolerance=False,
                                    sigma=1, kernel_size=3,
-                                   left_w=1, space_w=0, right_w=1)  #,
+                                   left_w=2, space_w=1, right_w=2)  #,
                                    # output_path=cell_path)
     amp_series = [np.sum(np.abs(der_int[i])) for i in range(len(der_int))]
 
@@ -115,5 +115,5 @@ for cell_num in range(0, len(all_cells)):
     plt.close('all')
 
 if save_csv:
-  df.to_csv(f'{res_path}/results.csv', index=False)
+  df.to_csv(f'{res_path}/results_{cell_name_suffix}.csv', index=False)
   logging.info('CSV file saved')
