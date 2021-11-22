@@ -30,6 +30,23 @@ class FluoData():
     """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
 
     """
+    @classmethod
+    def settings(cls, max_frame_num, th_method='hyst',
+                 dot_on=False, dot_mode='mean', dot_sigma=1, dot_kernel_size=20, dot_return_extra=False):
+        """ Global options for image series preprocessing and segmentation, initialize before it before records parsing 
+
+        """
+        # registration type options
+        cls.max_frame_num = max_frame_num - 1
+        cls.th_method = th_method
+
+        # settings for dot artefact remove, mask_point_artefact function from edge
+        cls.dot_on = dot_on  # preprocessing switch
+        cls.dot_mode = dot_mode
+        cls.dot_sigma = dot_sigma
+        cls.dot_kernel_size = dot_kernel_size
+        cls.dot_return_extra = dot_return_extra
+
     def __init__(self, oif_path, img_name, feature=False, max_frame=19,
                  background_rm=True, 
                  restrict=False,
@@ -59,13 +76,35 @@ class FluoData():
             else:
                 self.img_series = img_series
             self.img_name = img_name
-            self.max_frame_num = max_frame - 1                                 # index of the frame exact after stimulation
             self.feature = feature                                             # feature from the YAML config file
             self.max_frame = self.img_series[self.max_frame_num,:,:]           # first frame after stimulation, maximal translocations frame
 
-            self.cell_detector = hyst.hystTool(self.max_frame)                 # detect all cells in max frame
-            self.cell_detector.detector()
-            self.max_frame_mask =  self.cell_detector.cell_mask()              # creating hysteresis mask for max frame
+            if self.th_method == 'hyst':
+                # optional image preprocessing, dot artefact removing
+                if self.dot_on:
+                    self.detection_img, self.element_label, self.artefact_mask = edge.mask_point_artefact(self.img_series,
+                                                                                                          img_mode=self.dot_mode,
+                                                                                                          sigma=self.dot_sigma,
+                                                                                                          kernel_size=self.dot_kernel_size,
+                                                                                                          return_extra=self.dot_return_extra)
+                else:
+                    self.detection_img = self.max_frame
+
+                # apply hysteresis thresholding
+                self.cell_detector = hyst.hystTool(img=self.detection_img)
+                self.cell_detector.detector()
+                self.max_frame_mask =  self.cell_detector.cell_mask()
+
+            # use Otsu thresholding (for inhomogeneus cells)
+            elif self.th_method == 'otsu':
+                logging.info('Otsu thresholding mode')
+                self.detection_img = np.mean(self.img_series, axis=0)
+                otsu = filters.threshold_otsu(self.detection_img)
+                draft_mask = self.detection_img > otsu
+                self.element_label = measure.label(draft_mask)
+                detection_label = np.copy(self.element_label)
+                element_area = {element.area : element.label for element in measure.regionprops(detection_label)}
+                self.max_frame_mask = detection_label == element_area[max(element_area.keys())]
 
     def max_mask_int(self, plot_path=False):
         """ Calculation mean intensity  in masked area along frames series.
@@ -122,12 +161,6 @@ class FluoData():
 
         return np.asarray(up_list), np.asarray(down_list)
 
-    def save_int():
-        """ Saving mask intensity results to CSV table.
-
-        """
-        pass
-
     def save_ctrl_img(self, path):
         """ Control images saving.
 
@@ -144,17 +177,32 @@ class FluoData():
             ax1.text(10,10,f'binary mask',fontsize=8)
             plt.tight_layout()
             plt.savefig(f'{path}/{self.img_name}_ctrl.png')
-            logging.info(f'{self.img_name} control image saved!\n')
             plt.close('all')
+            
+            if self.dot_on:      
+                fig, axes =  plt.subplots(ncols=3, figsize=(20,10))
+                ax = axes.ravel()
+                ax[0].imshow(self.max_frame, vmin=self.max_frame.min(), vmax=self.max_frame.max())
+                ax[0].text(10,10,'init img',fontsize=10)
+                ax[0].axis('off')
+                ax[1].imshow(self.detection_img, vmin=self.max_frame.min(), vmax=self.max_frame.max())
+                ax[1].text(10,10,'detection img',fontsize=10)
+                ax[1].axis('off')
+                ax[2].imshow(self.element_label, cmap='jet')
+                ax[2].text(10,10,'otsu label',fontsize=10)
+                ax[2].axis('off')
+                # ax[3].imshow(self.artefact_mask, cmap='jet')
+                # ax[3].text(10,10,'artefact mask',fontsize=10)
+                # ax[3].axis('off')
+
+                plt.tight_layout()
+                plt.savefig(f'{path}/{self.img_name}_dot_artefact.png')
+                plt.close('all')
+
+            logging.info(f'{self.img_name} control image saved!\n')
         except TypeError:
-            logging.fatal(f'{self.img_name} has some trouble with cell mask!')
-            return
-        else:
-            pass
-        finally:
-            pass
-
-
+            logging.fatal(f'{self.img_name} has some trouble with cell mask, CAN`T save control image!')
+            return 
 
     
 class MembZData():

@@ -2,11 +2,13 @@
 
 """ Copyright © 2020-2021 Borys Olifirov
 Toolkit.
-- Function for series analysis (require image series):
-  back_rm
-  series_sum_int
+- Function for series analysis:
+  alex_delta
   series_point_delta
   series_derivate
+- Function for image preprocessing:
+  back_rm
+  mask_point_artefact
 
 Optimised at confocal images of HEK 293 cells.
 
@@ -336,6 +338,41 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
         return np.asarray(der_series)
     else:
         return np.asarray(der_series)
+
+
+def mask_point_artefact(series, img_mode='mean', sigma=1, kernel_size=20, return_extra=False):
+    """ Mask dot fluorescence artefact by mean image intensity.
+    Return mean intensity image along time axis.
+    img_mode - variant of control image; 'mean' - create mean image of series, or number of frame
+    If return_extra is True additionally return element label mask and artefact boolean mask
+
+    """
+    if img_mode == 'mean':
+        img_ctrl = np.mean(series, axis=0)
+    else:
+        img_ctrl = series[img_mode,:,:]
+
+    trun = lambda k, sd: (((k - 1)/2)-0.5)/sd
+    img_ctrl_gaus = filters.gaussian(img_ctrl, sigma=sigma, truncate=trun(kernel_size, sigma))
+
+    otsu = filters.threshold_otsu(img_ctrl_gaus)
+    mask = img_ctrl_gaus > otsu
+
+    element_label, element_num = measure.label(mask, return_num=True)
+    full_label = np.copy(element_label)
+    logging.info(f'Detected {element_num} objects')
+
+    element_area = {element.area : element.label for element in measure.regionprops(element_label)}
+    element_label[element_label == element_area[max(element_area.keys())]] = 0
+    artefact_mask = element_label > 0
+
+    img_ctrl_masked = np.copy(img_ctrl)
+    img_ctrl_masked[artefact_mask] = np.mean(img_ctrl_masked)
+
+    if return_extra:
+        return img_ctrl_masked, full_label, artefact_mask
+    else:
+        return img_ctrl_masked
 
 
 if __name__=="__main__":

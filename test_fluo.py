@@ -21,6 +21,7 @@ sys.path.append('modules')
 import oifpars as op
 import edge
 from hyst import hystTool as h
+from reg_type import FluoData
 
 
 plt.style.use('dark_background')
@@ -40,17 +41,20 @@ if not os.path.exists(res_path):
 
 
 # options
-max_frame_number = 21  # frames after stimulation
-cell_name_suffix = '_29_09' # suffix with registration date       
+max_frame_number = 21
+date_name_suffix = '_22_11' # suffix with registration date       
 frame_reg_time = 1.0   # frame registration time in seconds
 save_csv = True
 
 # hystTool global settings set up
-h.settings(sigma=1, kernel_size=20, sd_lvl=5, high=0.8, low_init=0.05, mask_diff=30)
+h.settings(sigma=1.5, kernel_size=20, sd_lvl=2, high=0.8, low_init=0.05, mask_diff=50)
+
+# registration type FluoData global settings set up
+FluoData.settings(max_frame_num=max_frame_number, th_method='otsu',
+                  dot_on=True, dot_mode='mean', dot_sigma=1, dot_kernel_size=20, dot_return_extra=True)
 
 # records reading
-all_cells = op.WDPars(data_path,
-                      max_frame=max_frame_number, name_suffix=cell_name_suffix)
+all_cells = op.WDPars(data_path, name_suffix=date_name_suffix)
 
 df = pd.DataFrame(columns=['cell', 'power', 'stimul', 'frame', 'time', 'int', 'delta'])
 for cell_num in range(0, len(all_cells)):
@@ -115,5 +119,5 @@ for cell_num in range(0, len(all_cells)):
     plt.close('all')
 
 if save_csv:
-  df.to_csv(f'{res_path}/results_{cell_name_suffix}.csv', index=False)
+  df.to_csv(f'{res_path}/results{date_name_suffix}.csv', index=False)
   logging.info('CSV file saved')
