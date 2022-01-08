@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Copyright © 2020-2021 Borys Olifirov
+""" Copyright © 2020-2022 Borys Olifirov
 
 links:
 https://webdevblog.ru/obyasnenie-classmethod-i-staticmethod-v-python/
@@ -48,10 +48,6 @@ ax[1].set_title('Artefact mask')
 ax[2].imshow(img_drop, vmin=img_mean.min(), vmax=img_mean.max())
 ax[2].set_title('Masked img')
 plt.show()
-
-# fig, ax = try_all_threshold(full_mean_gaus, figsize=(10, 8), verbose=False)
-# plt.show()
-
 
 
 

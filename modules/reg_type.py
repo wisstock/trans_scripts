@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Copyright © 2020-2021 Borys Olifirov
+""" Copyright © 2020-2022 Borys Olifirov
 
 Registrations types.
 
@@ -28,6 +28,8 @@ import hyst
 
 class FluoData():
     """ Time series of homogeneous fluoresced cells (Fluo-4,  low range of the HPCA translocation).
+
+    Require oifpars module.
 
     """
     @classmethod
@@ -209,6 +211,8 @@ class MembZData():
     """ Registration of static co-transferenced (HPCA-TagRFP + EYFP-Mem) cells.
     T-axis of file represent excitation laser combination (HPCA+label, HPCA, label).
 
+    Require oifpars module.
+
     Multi channel time series dimensions structure:
     (ch, z-axis, t, x-axis, y-axis)
 
@@ -282,29 +286,39 @@ class MembZData():
         plt.show()
 
 
-class MembData():
-    """
+class MultiData():
+    """ Time series with simultaneous HPCA transfection and calcium dye loading.
+    Multiple stimulation during registration.
+
+    Does NOT requires oifpars module.
 
     """
-    def __init__(self):
-        pass
+    def __init__(self, oif_path, img_name, meta_dict):
+        self.img_name = img_name
+        self.stim_power = meta_dict['power']
 
+        self.baseline_frames = meta_dict['base']
+        self.stim_frames = meta_dict['stimul']
+        self.stim_loop_num = meta_dict['loop']
+        self.tail_frames = meta_dict['tail']
+        self.max_ca_frame = self.baseline_frames + self.stim_frames * self.stim_loop_num # index of frame after last stimulation
 
-class ColocData():
-    """ Colocalization of two fluorescence target.
+        # record OIF files combining
+        base_path = f'{oif_path}/{img_name}_01.oif'
+        self.img_series = oif.OibImread(base_path)  # read baseline record
 
-    """
-    def __init__(self):
-        pass
-
-
-class FRETData():
-    """ Time series of FRET registration. Include both donor and acceptor image series.
-
-    """
-    def __init__(self):
-        pass
+        for loop_num in range(2, self.stim_loop_num+2):
+            loop_path = f'{oif_path}/{img_name}_0{loop_num}.oif'
+            self.img_series = np.concatenate((self.img_series, oif.OibImread(loop_path)), axis=1)  # add each stimulation loop record
         
+        tail_path = f'{oif_path}/{img_name}_0{loop_num+1}.oif'
+        self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
+
+        # channel separation
+        self.ca_series = self.img_series[0]       # calcium dye channel array
+        self.prot_series = self.img_series[1]  # fluorescent labeled protein channel array
+
+        logging.info(f'Record {self.img_name} ({self.stim_power}%, {self.baseline_frames}|{self.stim_frames}x{self.stim_loop_num}|{self.tail_frames}) uploaded')
 
 if __name__=="__main__":
   pass

@@ -1,19 +1,9 @@
-.ipynb_checkpoints/
 .temp/
-logs/
-confocal_data/
-motoneuron/
-raw_data/
-fluo_data/
-_fluo_data/
-fluo_res/
-memb_res/
-data/
 .data/
+data/
+results/
 
 __pycache__/
 
 *.log
-*.sublime-project
-*.sublime-workspace
 *.zip

@@ -21,6 +21,7 @@ sys.path.append('modules')
 import oifpars as op
 import edge
 from hyst import hystTool as h
+from reg_type import FluoData
 
 
 plt.style.use('dark_background')
@@ -32,8 +33,8 @@ logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
 
-data_path = os.path.join(sys.path[0], 'fluo_data')
-res_path = os.path.join(sys.path[0], 'fluo_res')
+data_path = os.path.join(sys.path[0], 'trans_data')
+res_path = os.path.join(sys.path[0], 'trans_res')
 
 if not os.path.exists(res_path):
     os.makedirs(res_path)
@@ -41,16 +42,20 @@ if not os.path.exists(res_path):
 
 # options
 max_frame_number = 20  # frames after stimulation
-cell_name_suffix = '_27_01' # suffix with registration date       
+cell_name_suffix = '_26_11' # suffix with registration date       
 frame_reg_time = 1.0   # frame registration time in seconds
 save_csv = False
 
 # hystTool global settings set up
 h.settings(sigma=1, kernel_size=3, sd_lvl=5, high=0.8, low_init=0.005, mask_diff=50)
 
+# registration type FluoData global settings set up
+FluoData.settings(max_frame_num=max_frame_number, th_method='hyst',
+                  dot_on=True, dot_mode='mean', dot_sigma=1, dot_kernel_size=20, dot_return_extra=True)
+
+
 # records paring
-all_cells = op.WDPars(data_path,
-                      max_frame=max_frame_number, name_suffix=cell_name_suffix)
+all_cells = op.WDPars(data_path, name_suffix=cell_name_suffix)
 
 df = pd.DataFrame(columns=['cell', 'power', 'stimul', 'frame', 'time', 'mask', 'int', 'delta', 'rel'])
 for cell_num in range(0, len(all_cells)):
@@ -64,9 +69,9 @@ for cell_num in range(0, len(all_cells)):
     # alex mask images
     alex_up, alex_down, base_win, max_win = edge.alex_delta(cell.img_series,
                                                             mask=cell.max_frame_mask,
-                                                            win_index=[10, cell.max_frame_num+1, 5],
-                                                            spacer=2,
-                                                            sigma=False, kernel_size=10,
+                                                            win_index=[12, cell.max_frame_num+1, 5],
+                                                            spacer=5,
+                                                            sigma=2, kernel_size=20,
                                                             mode='multiple',
                                                             output_path=cell_path)
     up_int, down_int = cell.updown_mask_int(up_mask=alex_up, down_mask=alex_down, plot_path=cell_path)
