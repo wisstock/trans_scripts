@@ -315,10 +315,27 @@ class MultiData():
         self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
 
         # channel separation
-        self.ca_series = self.img_series[0]       # calcium dye channel array
+        self.ca_series = self.img_series[0]    # calcium dye channel array
         self.prot_series = self.img_series[1]  # fluorescent labeled protein channel array
 
         logging.info(f'Record {self.img_name} ({self.stim_power}%, {self.baseline_frames}|{self.stim_frames}x{self.stim_loop_num}|{self.tail_frames}) uploaded')
+
+    def get_master_mask(self, sigma=1, kernel_size=5):
+        """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
+        Filters greater element of draft Otsu mask and return master mask array.
+
+        """
+        trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
+        self.detection_img = filters.gaussian(self.ca_series[self.max_ca_frame], sigma=sigma, truncate=trun(kernel_size, sigma))
+        otsu = filters.threshold_otsu(self.detection_img)
+        draft_mask = self.detection_img > otsu
+        self.element_label, self.element_num = measure.label(draft_mask, return_num=True)
+        logging.info(f'{self.element_num} Otsu mask elements detected')
+
+        detection_label = np.copy(self.element_label)
+        element_area = {element.area : element.label for element in measure.regionprops(detection_label)}
+        self.master_mask = detection_label == element_area[max(element_area.keys())]
+
 
 if __name__=="__main__":
   pass

@@ -71,7 +71,7 @@ def back_rm(img, edge_lim=20, dim=3):
         return img
 
 
-def alex_delta(series, mask=False, win_index=[5, 10, 15], spacer=0, tolerance=0.03, t_val=200, sigma=False, kernel_size=3, mode='single', min_mask_size=20, output_path=False):
+def alex_delta(series, mask=False, baseline_win=[0, 5], max_win=[25, 30], tolerance=0.03, t_val=200, sigma=False, kernel_size=3, mode='single', min_mask_size=20, output_path=False):
     """ Detecting increasing and decreasing areas, detection limit - sd_tolerance * sd_cell.
     Framses indexes for images calc:
 
@@ -93,10 +93,10 @@ def alex_delta(series, mask=False, win_index=[5, 10, 15], spacer=0, tolerance=0.
     - multiple - create multiple mask with individual up/down regions, connectivity 8-m, minimal mask size - min_mask_size
 
     """
-    baseline_win = [win_index[1]-win_index[0], win_index[1]]  # frame indexes for baseline image calc
+    # baseline_win = [win_index[1]-win_index[0], win_index[1]]  # frame indexes for baseline image calc
     baseline_img = np.mean(series[baseline_win[0]:baseline_win[1]], axis=0)
 
-    max_win = [win_index[1]+spacer, win_index[1]+win_index[2]+spacer]  # frame indexes for maximal translocations image calc
+    # max_win = [win_index[1]+spacer, win_index[1]+win_index[2]+spacer]  # frame indexes for maximal translocations image calc
     max_img = np.mean(series[max_win[0]:max_win[1]], axis=0)
 
     logging.info(f'Baseline frames indexes:{baseline_win}, max frame indexes:{max_win}')
@@ -335,9 +335,9 @@ def series_derivate(series, mask=False, mask_num=0, sigma=4, kernel_size=3, sd_m
                 plt.tight_layout()
                 plt.savefig(f'{save_path}/{cell.img_name}_der_amp.png')
                 plt.close('all')
-        return np.asarray(der_series)
+        return np.asarray(der_series), np.asarray([np.sum(np.abs(der_series[i])) for i in range(len(der_series))])
     else:
-        return np.asarray(der_series)
+        return np.asarray(der_series), np.asarray([np.sum(np.abs(der_series[i])) for i in range(len(der_series))])
 
 
 def mask_point_artefact(series, img_mode='mean', sigma=1, kernel_size=20, return_extra=False):
