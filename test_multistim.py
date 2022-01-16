@@ -102,13 +102,18 @@ for record in record_list:
 
     # ANALYSIS SECTION
     # cell mask building, Ca dye channel
-    record.get_master_mask(sigma=2, kernel_size=5)
-    ca_int_profile = [round(np.sum(ma.masked_where(record.master_mask, img)) / np.sum(record.master_mask), 3) for img in record.ca_series]
+    record.get_master_mask(sigma=3.5, kernel_size=10)
+    record.ca_profile()
+    record.prot_profile()
+    record.get_delta_mask(sigma=3.5, kernel_size=10, loop_win_frames=2, path=res_path)
+    record.save_ctrl_img(path=res_path, time_scale=0.5)
 
-    # up/down masks building, fluorescent protein channel
-    alex_up, alex_down, base_win, max_win = edge.alex_delta(record.prot_series,
-                                                            mask=record.master_mask,
-                                                            baseline_win=[0, 5],
-                                                            max_win=[25, 30],
-                                                            sigma=2, kernel_size=20,
-                                                            output_path=record_path)
+    # save_ctrl_img(path=res_path)
+
+    # # up/down masks building, fluorescent protein channel
+    # alex_up, alex_down, base_win, max_win = edge.alex_delta(record.prot_series,
+    #                                                         mask=record.master_mask,
+    #                                                         baseline_win=[0, 5],
+    #                                                         max_win=[25, 30],
+    #                                                         sigma=2, kernel_size=20,
+    #                                                         output_path=record_path)

@@ -43,7 +43,7 @@ def deltaF(int_list, f_0_win=5):
     return np.asarray([(i - f_0)/f_0 for i in int_list])
 
 
-def back_rm(img, edge_lim=20, dim=3):
+def back_rm(img, edge_lim=20, dim=2):
     """ Background extraction in TIFF series
 
     For confocal Z-stacks only!

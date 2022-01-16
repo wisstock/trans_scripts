@@ -12,10 +12,16 @@ import logging
 
 import numpy as np
 import numpy.ma as ma
+
+from scipy.ndimage import distance_transform_edt
+
 import yaml
 import pandas as pd
+
 from skimage import filters
 from skimage import measure
+from skimage import morphology
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -315,12 +321,12 @@ class MultiData():
         self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
 
         # channel separation
-        self.ca_series = self.img_series[0]    # calcium dye channel array
-        self.prot_series = self.img_series[1]  # fluorescent labeled protein channel array
+        self.ca_series = edge.back_rm(self.img_series[0])    # calcium dye channel array
+        self.prot_series = edge.back_rm(self.img_series[1])  # fluorescent labeled protein channel array
 
         logging.info(f'Record {self.img_name} ({self.stim_power}%, {self.baseline_frames}|{self.stim_frames}x{self.stim_loop_num}|{self.tail_frames}) uploaded')
 
-    def get_master_mask(self, sigma=1, kernel_size=5):
+    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=10):
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
         Filters greater element of draft Otsu mask and return master mask array.
 
@@ -336,6 +342,96 @@ class MultiData():
         element_area = {element.area : element.label for element in measure.regionprops(detection_label)}
         self.master_mask = detection_label == element_area[max(element_area.keys())]
 
+        # mask expansion
+        distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
+        self.master_mask = distances <= 10
+
+    def get_delta_mask(self, sigma=1, kernel_size=5, baseline_win=[0, 5], loop_win_frames=3, tolerance=200, path=False):
+        """ Mask for up and down regions of FP channel data.
+        baseline_win - indexes of frames for baseline image creation
+        tolerance - tolerance value in au for mask creation, down < -tolerance, up > tolerance
+
+        """
+        trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
+        prot_series_sigma = [filters.gaussian(i, sigma=sigma, truncate=trun(kernel_size, sigma)) for i in self.prot_series]
+        baseline_prot_img = np.mean(prot_series_sigma[baseline_win[0]:baseline_win[1]], axis=0)
+
+        self.loop_diff_img = []
+        for loop_num in range(0, self.stim_loop_num):
+            loop_start_index = self.baseline_frames + self.stim_frames*loop_num
+            loop_fin_index = loop_start_index + loop_win_frames
+            # logging.info(f'Loop mean frame index: {loop_start_index}-{loop_fin_index}')
+
+            loop_prot_img = np.mean(prot_series_sigma[loop_start_index:loop_fin_index], axis=0)
+
+            self.loop_diff_img.append(loop_prot_img - baseline_prot_img)
+
+        centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
+
+        _, axs = plt.subplots(1, self.stim_loop_num, figsize=(12, 12))
+        axs = axs.flatten()
+        for diff_img, ax in zip(self.loop_diff_img, axs):
+            mask_img = ma.masked_where(~self.master_mask, diff_img)
+            img = ax.imshow(mask_img, cmap='bwr')
+            img.set_clim(vmin=-centr(diff_img), vmax=centr(diff_img))
+            div = make_axes_locatable(ax)
+            cax = div.append_axes('right', size='3%', pad=0.1)
+            ax.axis('off')
+            plt.colorbar(img, cax=cax)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_loop_delta.png')
+
+
+    def ca_profile(self, mask=False):
+        if not mask:
+            mask = self.master_mask
+        self.ca_profile = [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.ca_series]
+
+    def prot_profile(self, mask=False):
+        if not mask:
+            mask = self.master_mask
+        self.prot_profile = [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series]
+
+    def save_ctrl_img(self, path, time_scale=1):
+        time_line = [i*time_scale for i in range(0,len(self.ca_profile))]
+
+        plt.figure(figsize=(9,10))
+
+        ax0 = plt.subplot(421)
+        ax0.set_title('Ca dye base img')
+        img0 = ax0.imshow(np.mean(self.ca_series[0:self.baseline_frames], axis=0))
+        ax0.axis('off')
+
+        ax1 = plt.subplot(422)
+        ax1.set_title('FP base img')
+        img1 = ax1.imshow(np.mean(self.prot_series[0:self.baseline_frames], axis=0))
+        ax1.axis('off')
+
+        ax2 = plt.subplot(423)
+        ax2.set_title('Ca dye Otsu elements')
+        img2 = ax2.imshow(self.element_label, cmap='jet')
+        ax2.axis('off')
+
+        ax4 = plt.subplot(424)
+        ax4.set_title('Ca dye master mask')
+        img4 = ax4.imshow(self.master_mask, cmap='jet')
+        ax4.axis('off')
+
+        ax3 = plt.subplot(413)
+        ax3.set_title('Ca dye profile')
+        img3 = ax3.plot(time_line, self.ca_profile)
+
+        ax5 = plt.subplot(414)
+        ax5.set_title('FP master mask profile')
+        img5 = ax5.plot(time_line, self.prot_profile)
+
+        plt.suptitle(f'{self.img_name}, {self.stim_power}%, {self.baseline_frames}|{self.stim_frames}x{self.stim_loop_num}l|{self.tail_frames}')
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_ctrl_img.png')
+
+        plt.close('all')
+
+        logging.info(f'{self.img_name} control image saved!')
 
 if __name__=="__main__":
   pass
