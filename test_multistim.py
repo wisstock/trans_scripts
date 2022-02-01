@@ -43,7 +43,7 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 # options
-date_name_suffix = '_12_3_2021' # suffix with recording date       
+date_name_suffix = '_11_27_2021' # suffix with recording date       
 frame_reg_time = 2.0   # frame rate, inter frame time in seconds
 save_csv = True
 
@@ -67,7 +67,7 @@ for root, dirs, files in os.walk(data_path):  # loop over OIF files
             record_list.append(one_record)
 
 for record in record_list:
-    record_path = f'{res_path}/{record.img_name}'
+    record_path = f'{res_path}/{record.img_name}{date_name_suffix}'
     if not os.path.exists(record_path):
         os.makedirs(record_path)
 
@@ -95,18 +95,18 @@ for record in record_list:
     ax1.set_title('FP channel derivate')
     img1 = ax1.plot(prot_der_profile)
 
-    plt.suptitle(f'{record.img_name}, {record.stim_power}%, {record.baseline_frames}|{record.stim_frames}x{record.stim_loop_num}l|{record.tail_frames}')
+    plt.suptitle(f'{record.img_name}{date_name_suffix}, {record.stim_power}%, {record.baseline_frames}|{record.stim_loop_num}x {record.stim_frames}|{record.tail_frames}')
     plt.tight_layout()
-    plt.savefig(f'{res_path}/{record.img_name}{date_name_suffix}_total_der.png')
+    plt.savefig(f'{record_path}/{record.img_name}{date_name_suffix}_total_der.png')
     plt.close('all')
 
     # ANALYSIS SECTION
     # cell mask building, Ca dye channel
-    record.get_master_mask(sigma=3.5, kernel_size=10)
+    record.get_master_mask(sigma=3.5, kernel_size=10, mask_ext=5)
     record.ca_profile()
     record.prot_profile()
-    record.get_delta_mask(sigma=3.5, kernel_size=10, loop_win_frames=2, path=res_path)
-    record.save_ctrl_img(path=res_path, time_scale=0.5)
+    record.get_delta_mask(sigma=3.5, kernel_size=10, stim_shift=1, loop_win_frames=2, path=record_path)
+    record.save_ctrl_img(path=record_path, time_scale=0.5)
 
     # save_ctrl_img(path=res_path)
 

@@ -324,11 +324,13 @@ class MultiData():
         self.ca_series = edge.back_rm(self.img_series[0])    # calcium dye channel array
         self.prot_series = edge.back_rm(self.img_series[1])  # fluorescent labeled protein channel array
 
-        logging.info(f'Record {self.img_name} ({self.stim_power}%, {self.baseline_frames}|{self.stim_frames}x{self.stim_loop_num}|{self.tail_frames}) uploaded')
+        logging.info(f'Record {self.img_name} ({self.stim_power}%, {self.baseline_frames}|{self.stim_loop_num}x {self.stim_frames}|{self.tail_frames}) uploaded')
 
     def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=10):
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
         Filters greater element of draft Otsu mask and return master mask array.
+
+        mask_ext - otsu mask extension value in px
 
         """
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
@@ -346,9 +348,10 @@ class MultiData():
         distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
         self.master_mask = distances <= 10
 
-    def get_delta_mask(self, sigma=1, kernel_size=5, baseline_win=[0, 5], loop_win_frames=3, tolerance=200, path=False):
+    def get_delta_mask(self, sigma=1, kernel_size=5, baseline_win=[0, 5], stim_shift=0, loop_win_frames=3, tolerance=200, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
+        stim_shift - additional value for loop_start_index
         tolerance - tolerance value in au for mask creation, down < -tolerance, up > tolerance
 
         """
@@ -358,7 +361,7 @@ class MultiData():
 
         self.loop_diff_img = []
         for loop_num in range(0, self.stim_loop_num):
-            loop_start_index = self.baseline_frames + self.stim_frames*loop_num
+            loop_start_index = self.baseline_frames + self.stim_frames*loop_num + stim_shift
             loop_fin_index = loop_start_index + loop_win_frames
             # logging.info(f'Loop mean frame index: {loop_start_index}-{loop_fin_index}')
 
@@ -425,7 +428,7 @@ class MultiData():
         ax5.set_title('FP master mask profile')
         img5 = ax5.plot(time_line, self.prot_profile)
 
-        plt.suptitle(f'{self.img_name}, {self.stim_power}%, {self.baseline_frames}|{self.stim_frames}x{self.stim_loop_num}l|{self.tail_frames}')
+        plt.suptitle(f'{self.img_name}, {self.stim_power}%, {self.baseline_frames}|{self.stim_loop_num}x {self.stim_frames}|{self.tail_frames}')
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_ctrl_img.png')
 
