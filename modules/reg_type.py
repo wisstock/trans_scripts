@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-
 """ Copyright © 2020-2022 Borys Olifirov
-
 Registrations types.
 
 """
@@ -13,6 +11,7 @@ import logging
 import numpy as np
 import numpy.ma as ma
 
+from scipy.signal import find_peaks
 from scipy.ndimage import distance_transform_edt
 
 import yaml
@@ -299,34 +298,50 @@ class MultiData():
     Does NOT requires oifpars module.
 
     """
-    def __init__(self, oif_path, img_name, meta_dict):
+    def __init__(self, oif_path, img_name, meta_dict, ca_dye='fluo'):
         self.img_name = img_name
         self.stim_power = meta_dict['power']
 
-        self.baseline_frames = meta_dict['base']
-        self.stim_frames = meta_dict['stimul']
-        self.stim_loop_num = meta_dict['loop']
-        self.tail_frames = meta_dict['tail']
-        self.max_ca_frame = self.baseline_frames + self.stim_frames * self.stim_loop_num # index of frame after last stimulation
-
-        # record OIF files combining
-        base_path = f'{oif_path}/{img_name}_01.oif'
-        self.img_series = oif.OibImread(base_path)  # read baseline record
-
-        for loop_num in range(2, self.stim_loop_num+2):
-            loop_path = f'{oif_path}/{img_name}_0{loop_num}.oif'
-            self.img_series = np.concatenate((self.img_series, oif.OibImread(loop_path)), axis=1)  # add each stimulation loop record
-        
-        tail_path = f'{oif_path}/{img_name}_0{loop_num+1}.oif'
-        self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
+        base_path = f'{oif_path}/{img_name}_01.oif'  # default OIF index 01
+        self.img_series = oif.OibImread(base_path)
+        logging.info(f'Record {self.img_name} uploaded!')  # ({self.stim_power}%, {self.baseline_frames}|{self.stim_loop_num}x {self.stim_frames}|{self.tail_frames}) uploaded')
 
         # channel separation
-        self.ca_series = edge.back_rm(self.img_series[0])    # calcium dye channel array
-        self.prot_series = edge.back_rm(self.img_series[1])  # fluorescent labeled protein channel array
+        if ca_dye == 'fluo':
+            self.ca_series = edge.back_rm(self.img_series[0])    # calcium dye channel array (Fluo-4)
+            self.prot_series = edge.back_rm(self.img_series[1])  # fluorescent labeled protein channel array (HPCA-TagRFP)
+        else:
+            self.ca_series = edge.back_rm(self.img_series[1])    # calcium dye channel array (Fluo-4)
+            self.prot_series = edge.back_rm(self.img_series[0])  # fluorescent labeled protein channel array (HPCA-TagRFP)
 
-        logging.info(f'Record {self.img_name} ({self.stim_power}%, {self.baseline_frames}|{self.stim_loop_num}x {self.stim_frames}|{self.tail_frames}) uploaded')
+        # create derevative series
+        zero_end = np.vstack((self.ca_series, np.zeros_like(self.ca_series[0:1])))                     # array with last 0 frame
+        zero_start = np.vstack((np.zeros_like(self.ca_series[0:1]), self.ca_series))                   # array with first 0 frame
+        self.derivate_series = np.subtract(zero_end, zero_start)[1:-1]                                 # derivative frames series
+        self.derivate_profile = np.asarray([np.sum(np.abs(frame)) for frame in self.derivate_series])  # sum of abs values of derivative frames
+        
+        # ONE OIF-FILE RECORDING WITH INTERNAL STIMULUS
 
-    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=10):
+        # # LOOP STIMULATION PROTOCOL WITH SEPARATED OIF-FILES FOR EACH RECORDING PART
+        # self.baseline_frames = meta_dict['base']
+        # self.stim_frames = meta_dict['stimul']
+        # self.stim_loop_num = meta_dict['loop']
+        # self.tail_frames = meta_dict['tail']
+        # self.max_ca_frame = self.baseline_frames + self.stim_frames * self.stim_loop_num # index of frame after last stimulation
+
+        # # record OIF files combining
+        # base_path = f'{oif_path}/{img_name}_01.oif'
+        # self.img_series = oif.OibImread(base_path)  # read baseline record
+        # self.img_series = self.img_series.astype(int) 
+
+        # for loop_num in range(2, self.stim_loop_num+2):
+        #     loop_path = f'{oif_path}/{img_name}_0{loop_num}.oif'
+        #     self.img_series = np.concatenate((self.img_series, oif.OibImread(loop_path)), axis=1)  # add each stimulation loop record
+        
+        # tail_path = f'{oif_path}/{img_name}_0{loop_num+1}.oif'
+        # self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
+
+    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5):
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
         Filters greater element of draft Otsu mask and return master mask array.
 
@@ -334,7 +349,9 @@ class MultiData():
 
         """
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
-        self.detection_img = filters.gaussian(self.ca_series[self.max_ca_frame], sigma=sigma, truncate=trun(kernel_size, sigma))
+
+        self.detection_img = filters.gaussian(np.mean(self.prot_series, axis=0), sigma=sigma, truncate=trun(kernel_size, sigma))
+
         otsu = filters.threshold_otsu(self.detection_img)
         draft_mask = self.detection_img > otsu
         self.element_label, self.element_num = measure.label(draft_mask, return_num=True)
@@ -346,13 +363,22 @@ class MultiData():
 
         # mask expansion
         distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
-        self.master_mask = distances <= 10
+        self.master_mask = distances <= mask_ext
 
-    def get_delta_mask(self, sigma=1, kernel_size=5, baseline_win=[0, 5], stim_shift=0, loop_win_frames=3, tolerance=200, path=False):
+    def find_stimul_peak(self, dist=4):
+        """ Require master_mask, results of get_master_mask!
+
+        """
+        self.stimul_peak = find_peaks(self.derivate_profile, distance=dist)[0]
+        logging.info(f'Detected peaks: {self.stimul_peak}')
+
+    def get_delta_frames(self, sigma=1, kernel_size=5, baseline_win=[0, 5], stim_shift=0, loop_win_frames=3, tolerance=200, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
         stim_shift - additional value for loop_start_index
         tolerance - tolerance value in au for mask creation, down < -tolerance, up > tolerance
+
+        LOOP STIMULATION PROTOCOL WITH SEPARATED OIF-FILES FOR EACH RECORDING PART
 
         """
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
@@ -388,49 +414,74 @@ class MultiData():
     def ca_profile(self, mask=False):
         if not mask:
             mask = self.master_mask
-        self.ca_profile = [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.ca_series]
+        return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.ca_series])
 
     def prot_profile(self, mask=False):
         if not mask:
             mask = self.master_mask
-        self.prot_profile = [round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series]
+        return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series])
 
-    def save_ctrl_img(self, path, time_scale=1):
-        time_line = [i*time_scale for i in range(0,len(self.ca_profile))]
+    def save_ctrl_img(self, path, time_scale=1, baseline_frames=3):
+        # cell img
+        plt.figure(figsize=(15,8))
 
-        plt.figure(figsize=(9,10))
-
-        ax0 = plt.subplot(421)
+        ax0 = plt.subplot(121)
         ax0.set_title('Ca dye base img')
-        img0 = ax0.imshow(np.mean(self.ca_series[0:self.baseline_frames], axis=0))
+        img0 = ax0.imshow(np.mean(self.ca_series[0:baseline_frames], axis=0))
+        div0 = make_axes_locatable(ax0)
+        cax0 = div0.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img0, cax=cax0)
         ax0.axis('off')
 
-        ax1 = plt.subplot(422)
+        ax1 = plt.subplot(122)
         ax1.set_title('FP base img')
-        img1 = ax1.imshow(np.mean(self.prot_series[0:self.baseline_frames], axis=0))
+        img1 = ax1.imshow(np.mean(self.prot_series[0:baseline_frames], axis=0))
+        div1 = make_axes_locatable(ax1)
+        cax1 = div1.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img1, cax=cax1)
         ax1.axis('off')
 
-        ax2 = plt.subplot(423)
-        ax2.set_title('Ca dye Otsu elements')
-        img2 = ax2.imshow(self.element_label, cmap='jet')
-        ax2.axis('off')
-
-        ax4 = plt.subplot(424)
-        ax4.set_title('Ca dye master mask')
-        img4 = ax4.imshow(self.master_mask, cmap='jet')
-        ax4.axis('off')
-
-        ax3 = plt.subplot(413)
-        ax3.set_title('Ca dye profile')
-        img3 = ax3.plot(time_line, self.ca_profile)
-
-        ax5 = plt.subplot(414)
-        ax5.set_title('FP master mask profile')
-        img5 = ax5.plot(time_line, self.prot_profile)
-
-        plt.suptitle(f'{self.img_name}, {self.stim_power}%, {self.baseline_frames}|{self.stim_loop_num}x {self.stim_frames}|{self.tail_frames}')
+        plt.suptitle(f'Baseline image ({baseline_frames} frames), {self.img_name}, {self.stim_power}%', fontsize=20)
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_ctrl_img.png')
+        plt.savefig(f'{path}/{self.img_name}_baseline_img.png')
+
+        # cell master mask
+        plt.figure(figsize=(15,8))
+
+        ax0 = plt.subplot(121)
+        ax0.set_title('Otsu mask elements')
+        ax0.imshow(self.element_label, cmap='jet')
+        ax0.axis('off')
+
+        ax1 = plt.subplot(122)
+        ax1.set_title('Cell master mask')
+        ax1.imshow(self.master_mask, cmap='jet')
+        ax1.axis('off')
+
+        plt.suptitle(f'Master mask, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_master_mask.png')
+
+        # Ca profile and dye derivate profile
+        time_line = np.asarray([i/time_scale for i in range(0,len(self.ca_series))])
+
+        ca_deltaF = edge.deltaF(self.ca_profile())
+        derivate_deltaF = edge.deltaF(self.derivate_profile)
+
+        plt.figure(figsize=(15,4))
+        plt.plot(time_line, ca_deltaF, label='Ca dye profile')
+        plt.plot(time_line[1:], derivate_deltaF, label='Ca dye derivate')
+        plt.vlines(np.take(time_line[1:], self.stimul_peak), ymin=0, ymax=np.max(ca_deltaF))
+        plt.grid(visible=True, linestyle=':')
+        plt.xlabel('Time (s)')
+        plt.ylabel('ΔF/F')
+        plt.xticks(np.arange(0, np.max(time_line)+2, step=1/time_scale))
+        plt.legend()
+        plt.tight_layout()
+
+        plt.suptitle(f'Ca profile, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_ca_profile.png')
 
         plt.close('all')
 
