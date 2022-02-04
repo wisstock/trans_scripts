@@ -365,41 +365,43 @@ class MultiData():
         distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
         self.master_mask = distances <= mask_ext
 
-    def find_stimul_peak(self, dist=4):
+    def find_stimul_peak(self, h=0.15, d=3):
         """ Require master_mask, results of get_master_mask!
+        Find peaks on deltaF/F Fluo-4 derivate profile.
+        h - minimal peaks height, in ΔF/F0
+        d - minimal distance between peaks, in frames
 
         """
-        self.stimul_peak = find_peaks(self.derivate_profile, distance=dist)[0]
-        logging.info(f'Detected peaks: {self.stimul_peak}')
+        self.stim_peak = find_peaks(edge.deltaF(self.derivate_profile), height=h, distance=d)[0]
+        logging.info(f'Detected peaks: {self.stim_peak}')
 
-    def get_delta_frames(self, sigma=1, kernel_size=5, baseline_win=[0, 5], stim_shift=0, loop_win_frames=3, tolerance=200, path=False):
+    def get_delta_frames(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, tolerance=200, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
         stim_shift - additional value for loop_start_index
         tolerance - tolerance value in au for mask creation, down < -tolerance, up > tolerance
 
-        LOOP STIMULATION PROTOCOL WITH SEPARATED OIF-FILES FOR EACH RECORDING PART
+        REQUIRE peaks position (find_stim_peak).
 
         """
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
         prot_series_sigma = [filters.gaussian(i, sigma=sigma, truncate=trun(kernel_size, sigma)) for i in self.prot_series]
-        baseline_prot_img = np.mean(prot_series_sigma[baseline_win[0]:baseline_win[1]], axis=0)
+        baseline_prot_img = np.mean(prot_series_sigma[:baseline_win], axis=0)
 
-        self.loop_diff_img = []
-        for loop_num in range(0, self.stim_loop_num):
-            loop_start_index = self.baseline_frames + self.stim_frames*loop_num + stim_shift
-            loop_fin_index = loop_start_index + loop_win_frames
+        self.stim_diff_series = []
+        for stim_position in self.stim_peak:
             # logging.info(f'Loop mean frame index: {loop_start_index}-{loop_fin_index}')
-
-            loop_prot_img = np.mean(prot_series_sigma[loop_start_index:loop_fin_index], axis=0)
-
-            self.loop_diff_img.append(loop_prot_img - baseline_prot_img)
+            diff_frames_start = stim_position + stim_shift
+            diff_frames_end = stim_position + stim_shift + stim_win
+            stim_diff_img = np.mean(prot_series_sigma[diff_frames_start:diff_frames_end], axis=0)
+            
+            self.stim_diff_series.append(stim_diff_img - baseline_prot_img)
 
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
 
-        _, axs = plt.subplots(1, self.stim_loop_num, figsize=(12, 12))
+        _, axs = plt.subplots(1, len(self.stim_peak), figsize=(12, 12))
         axs = axs.flatten()
-        for diff_img, ax in zip(self.loop_diff_img, axs):
+        for diff_img, ax in zip(self.stim_diff_series, axs):
             mask_img = ma.masked_where(~self.master_mask, diff_img)
             img = ax.imshow(mask_img, cmap='bwr')
             img.set_clim(vmin=-centr(diff_img), vmax=centr(diff_img))
@@ -471,7 +473,7 @@ class MultiData():
         plt.figure(figsize=(15,4))
         plt.plot(time_line, ca_deltaF, label='Ca dye profile')
         plt.plot(time_line[1:], derivate_deltaF, label='Ca dye derivate')
-        plt.vlines(np.take(time_line[1:], self.stimul_peak), ymin=0, ymax=np.max(ca_deltaF))
+        plt.vlines(np.take(time_line[1:], self.stim_peak), ymin=0, ymax=np.max(ca_deltaF))
         plt.grid(visible=True, linestyle=':')
         plt.xlabel('Time (s)')
         plt.ylabel('ΔF/F')

@@ -34,7 +34,7 @@ from scipy import signal
 from scipy import ndimage as ndi
 
 
-def deltaF(int_list, f_0_win=5):
+def deltaF(int_list, f_0_win=3):
     """ Function for colculation ΔF/F0 for data series.
     f_0_win - window for F0 calculation (mean of first 2 values by defoult).
 

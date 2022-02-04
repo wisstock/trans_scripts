@@ -74,4 +74,5 @@ for record in record_list:
 
     record.get_master_mask(mask_ext=3)
     record.find_stimul_peak()
+    record.get_delta_frames(path=record_path)
     record.save_ctrl_img(path=record_path, time_scale=0.5)
