@@ -76,3 +76,11 @@ for record in record_list:
     record.find_stimul_peak()
     record.get_delta_frames(path=record_path)
     record.save_ctrl_img(path=record_path, time_scale=0.5)
+
+    # plt.figure(figsize=(15,4))
+    # plt.plot(edge.deltaF(record.prot_profile()), label='FP')
+    # plt.plot(edge.deltaF(record.ca_profile()), label='Ca')
+    # plt.grid(visible=True, linestyle=':')
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()

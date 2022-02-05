@@ -399,12 +399,12 @@ class MultiData():
 
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
 
-        _, axs = plt.subplots(1, len(self.stim_peak), figsize=(12, 12))
+        _, axs = plt.subplots(1, len(self.stim_peak), figsize=(12, 6))
         axs = axs.flatten()
         for diff_img, ax in zip(self.stim_diff_series, axs):
             mask_img = ma.masked_where(~self.master_mask, diff_img)
             img = ax.imshow(mask_img, cmap='bwr')
-            img.set_clim(vmin=-centr(diff_img), vmax=centr(diff_img))
+            img.set_clim(vmin=-500, vmax=500)  # (vmin=-centr(diff_img), vmax=centr(diff_img))
             div = make_axes_locatable(ax)
             cax = div.append_axes('right', size='3%', pad=0.1)
             ax.axis('off')
@@ -468,11 +468,14 @@ class MultiData():
         time_line = np.asarray([i/time_scale for i in range(0,len(self.ca_series))])
 
         ca_deltaF = edge.deltaF(self.ca_profile())
+        prot_deltaF = edge.deltaF(self.prot_profile())
         derivate_deltaF = edge.deltaF(self.derivate_profile)
 
         plt.figure(figsize=(15,4))
         plt.plot(time_line, ca_deltaF, label='Ca dye profile')
+        plt.plot(time_line, prot_deltaF, label='FP profile')
         plt.plot(time_line[1:], derivate_deltaF, label='Ca dye derivate')
+        
         plt.vlines(np.take(time_line[1:], self.stim_peak), ymin=0, ymax=np.max(ca_deltaF))
         plt.grid(visible=True, linestyle=':')
         plt.xlabel('Time (s)')
@@ -481,7 +484,7 @@ class MultiData():
         plt.legend()
         plt.tight_layout()
 
-        plt.suptitle(f'Ca profile, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_ca_profile.png')
 
