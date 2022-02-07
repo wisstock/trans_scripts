@@ -20,6 +20,7 @@ import pandas as pd
 from skimage import filters
 from skimage import measure
 from skimage import morphology
+from skimage.color import label2rgb
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -375,7 +376,7 @@ class MultiData():
         self.stim_peak = find_peaks(edge.deltaF(self.derivate_profile), height=h, distance=d)[0]
         logging.info(f'Detected peaks: {self.stim_peak}')
 
-    def get_delta_frames(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, tolerance=200, path=False):
+    def get_delta_frames(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
         stim_shift - additional value for loop_start_index
@@ -397,21 +398,88 @@ class MultiData():
             
             self.stim_diff_series.append(stim_diff_img - baseline_prot_img)
 
-        centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
+        centr = lambda img: abs(np.max(img))*0.5 if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
 
         _, axs = plt.subplots(1, len(self.stim_peak), figsize=(12, 6))
         axs = axs.flatten()
         for diff_img, ax in zip(self.stim_diff_series, axs):
             mask_img = ma.masked_where(~self.master_mask, diff_img)
             img = ax.imshow(mask_img, cmap='bwr')
-            img.set_clim(vmin=-500, vmax=500)  # (vmin=-centr(diff_img), vmax=centr(diff_img))
+            img.set_clim(vmin=-centr(diff_img), vmax=centr(diff_img))
             div = make_axes_locatable(ax)
             cax = div.append_axes('right', size='3%', pad=0.1)
             ax.axis('off')
             plt.colorbar(img, cax=cax)
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_loop_delta.png')
+        plt.savefig(f'{path}/{self.img_name}_stim_diff.png')
 
+
+    def get_px_deltaF(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, tolerance=200, path=False):
+        """ Pixel-wise ΔF/F0 calculation.
+        baseline_frames - numbers of frames for mean baseline image calculation (from first to baseline_frames value frames)
+
+        WARNING! The function is sensitive to cell shift during long registrations!
+
+        """
+        trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
+        prot_series_sigma = [filters.gaussian(i, sigma=sigma, truncate=trun(kernel_size, sigma)) for i in self.prot_series]
+        baseline_prot_img = np.mean(prot_series_sigma[:baseline_win], axis=0)
+
+        delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
+        vdelta = np.vectorize(delta)
+
+        stim_mean_series = []
+        for stim_position in self.stim_peak:
+            delta_frames_start = stim_position + stim_shift
+            delta_frames_end = stim_position + stim_shift + stim_win
+            stim_mean_series.append(np.mean(prot_series_sigma[delta_frames_start:delta_frames_end], axis=0))
+
+        self.stim_delta_series = np.asarray([ma.masked_where(~self.master_mask, vdelta(i, baseline_prot_img)) for i in stim_mean_series])
+
+        # _, axs = plt.subplots(1, len(self.stim_peak), figsize=(12, 6))
+        # axs = axs.flatten()
+        # for delta_img, ax in zip(self.stim_delta_series, axs):
+        #     mask_img = ma.masked_where(~self.master_mask, delta_img)
+        #     img = ax.imshow(mask_img, cmap='jet')
+        #     img.set_clim(vmin=-0.75, vmax=0.75)
+        #     div = make_axes_locatable(ax)
+        #     cax = div.append_axes('right', size='3%', pad=0.1)
+        #     ax.axis('off')
+        #     plt.colorbar(img, cax=cax)
+        # plt.tight_layout()
+        # plt.savefig(f'{path}/{self.img_name}_stim_delta.png')
+
+        for img_num in range(0, len(self.stim_delta_series)):
+            delta_img = self.stim_delta_series[img_num]
+            stim_frame_num = self.stim_peak[img_num]
+
+            img_vs_mask = label2rgb(self.master_mask, image=(self.prot_series[self.stim_peak[img_num]] * 255).astype(np.uint8), bg_label=0, alpha=0.5)
+
+            # plt.figure(figsize=(15,8))
+            # ax = plt.subplot()
+            # img = ax.imshow(ma.masked_where(~self.master_mask, delta_img), cmap='jet')
+            # img.set_clim(vmin=-0.75, vmax=0.75)
+            # div = make_axes_locatable(ax)
+            # cax = div.append_axes('right', size='3%', pad=0.1)
+            # ax.set_title(f'{self.img_name} pixel-wise ΔF/F0, stim {stim_frame}')
+            # ax.axis('off')
+
+            ax0 = plt.subplot(121)
+            ax0.set_title('Ca dye base img')
+            img0 = ax0.imshow(ma.masked_where(~self.master_mask, delta_img), cmap='jet')
+            img0.set_clim(vmin=-0.75, vmax=0.75)
+            div0 = make_axes_locatable(ax0)
+            cax0 = div0.append_axes('right', size='3%', pad=0.1)
+            plt.colorbar(img0, cax=cax0)
+            ax0.axis('off')
+
+            ax1 = plt.subplot(122)
+            ax1.set_title('FP base img')
+            ax1.imshow(img_vs_mask)
+            ax1.axis('off')
+
+            plt.tight_layout()
+            plt.savefig(f'{path}/{self.img_name}_frame_{stim_frame_num}_stim_delta.png')
 
     def ca_profile(self, mask=False):
         if not mask:
@@ -474,7 +542,7 @@ class MultiData():
         plt.figure(figsize=(15,4))
         plt.plot(time_line, ca_deltaF, label='Ca dye profile')
         plt.plot(time_line, prot_deltaF, label='FP profile')
-        plt.plot(time_line[1:], derivate_deltaF, label='Ca dye derivate')
+        plt.plot(time_line[1:], derivate_deltaF, label='Ca dye derivate', linestyle='--')
         
         plt.vlines(np.take(time_line[1:], self.stim_peak), ymin=0, ymax=np.max(ca_deltaF))
         plt.grid(visible=True, linestyle=':')
