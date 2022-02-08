@@ -26,6 +26,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib import colors
 
 import oiffile as oif
 import edge
@@ -299,7 +300,7 @@ class MultiData():
     Does NOT requires oifpars module.
 
     """
-    def __init__(self, oif_path, img_name, meta_dict, ca_dye='fluo'):
+    def __init__(self, oif_path, img_name, meta_dict, ca_dye='fluo', prot_bleach_correction=True):
         self.img_name = img_name
         self.stim_power = meta_dict['power']
 
@@ -315,14 +316,17 @@ class MultiData():
             self.ca_series = edge.back_rm(self.img_series[1])    # calcium dye channel array (Fluo-4)
             self.prot_series = edge.back_rm(self.img_series[0])  # fluorescent labeled protein channel array (HPCA-TagRFP)
 
+        # FP bleaching corrections
+        if prot_bleach_correction:
+            native_total_intensity = np.sum(np.mean(self.prot_series[:2], axis=0))
+            self.prot_series = np.asarray([frame / (np.sum(frame)/native_total_intensity) for frame in self.prot_series])
+
         # create derevative series
         zero_end = np.vstack((self.ca_series, np.zeros_like(self.ca_series[0:1])))                     # array with last 0 frame
         zero_start = np.vstack((np.zeros_like(self.ca_series[0:1]), self.ca_series))                   # array with first 0 frame
         self.derivate_series = np.subtract(zero_end, zero_start)[1:-1]                                 # derivative frames series
         self.derivate_profile = np.asarray([np.sum(np.abs(frame)) for frame in self.derivate_series])  # sum of abs values of derivative frames
         
-        # ONE OIF-FILE RECORDING WITH INTERNAL STIMULUS
-
         # # LOOP STIMULATION PROTOCOL WITH SEPARATED OIF-FILES FOR EACH RECORDING PART
         # self.baseline_frames = meta_dict['base']
         # self.stim_frames = meta_dict['stimul']
@@ -363,10 +367,10 @@ class MultiData():
         self.master_mask = detection_label == element_area[max(element_area.keys())]
 
         # mask expansion
-        distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
-        self.master_mask = distances <= mask_ext
+        self.distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
+        self.master_mask = self.distances <= mask_ext
 
-    def find_stimul_peak(self, h=0.15, d=3):
+    def find_stimul_peak(self, h=0.15, d=3, l_lim=5, r_lim=18):
         """ Require master_mask, results of get_master_mask!
         Find peaks on deltaF/F Fluo-4 derivate profile.
         h - minimal peaks height, in ΔF/F0
@@ -374,9 +378,10 @@ class MultiData():
 
         """
         self.stim_peak = find_peaks(edge.deltaF(self.derivate_profile), height=h, distance=d)[0]
+        self.stim_peak = self.stim_peak[(self.stim_peak >= l_lim) & (self.stim_peak <= r_lim)]  # filter outer peaks
         logging.info(f'Detected peaks: {self.stim_peak}')
 
-    def get_delta_frames(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, path=False):
+    def peak_img_diff(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
         stim_shift - additional value for loop_start_index
@@ -389,34 +394,26 @@ class MultiData():
         prot_series_sigma = [filters.gaussian(i, sigma=sigma, truncate=trun(kernel_size, sigma)) for i in self.prot_series]
         baseline_prot_img = np.mean(prot_series_sigma[:baseline_win], axis=0)
 
-        self.stim_diff_series = []
+        self.peak_diff_series = []
         for stim_position in self.stim_peak:
             # logging.info(f'Loop mean frame index: {loop_start_index}-{loop_fin_index}')
             diff_frames_start = stim_position + stim_shift
             diff_frames_end = stim_position + stim_shift + stim_win
-            stim_diff_img = np.mean(prot_series_sigma[diff_frames_start:diff_frames_end], axis=0)
+            stim_mean_img = np.mean(prot_series_sigma[diff_frames_start:diff_frames_end], axis=0)
+            stim_diff_img = stim_mean_img - baseline_prot_img
+
+            # centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
+
+            norm = lambda img: img/np.max(np.abs(img))  # normalizing in 0-1 interval
             
-            self.stim_diff_series.append(stim_diff_img - baseline_prot_img)
+            stim_diff_img[self.distances >= 60] = 0  # select master mask neighbour only for differential image normalizing, `distances` from get_master_mask
+            self.peak_diff_series.append(norm(stim_diff_img))
 
-        centr = lambda img: abs(np.max(img))*0.5 if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
-
-        _, axs = plt.subplots(1, len(self.stim_peak), figsize=(12, 6))
-        axs = axs.flatten()
-        for diff_img, ax in zip(self.stim_diff_series, axs):
-            mask_img = ma.masked_where(~self.master_mask, diff_img)
-            img = ax.imshow(mask_img, cmap='bwr')
-            img.set_clim(vmin=-centr(diff_img), vmax=centr(diff_img))
-            div = make_axes_locatable(ax)
-            cax = div.append_axes('right', size='3%', pad=0.1)
-            ax.axis('off')
-            plt.colorbar(img, cax=cax)
-        plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_stim_diff.png')
-
-
-    def get_px_deltaF(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, tolerance=200, path=False):
+    def peak_img_deltaF(self, mode='delta', sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, tolerance=200, path=False):
         """ Pixel-wise ΔF/F0 calculation.
         baseline_frames - numbers of frames for mean baseline image calculation (from first to baseline_frames value frames)
+
+        mode: `delta` - pixel-wise ΔF/F0, `diff` - differential image
 
         WARNING! The function is sensitive to cell shift during long registrations!
 
@@ -427,59 +424,28 @@ class MultiData():
 
         delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
         vdelta = np.vectorize(delta)
+        centr = lambda img: abs(np.max(img))*0.5 if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
 
         stim_mean_series = []
         for stim_position in self.stim_peak:
-            delta_frames_start = stim_position + stim_shift
-            delta_frames_end = stim_position + stim_shift + stim_win
-            stim_mean_series.append(np.mean(prot_series_sigma[delta_frames_start:delta_frames_end], axis=0))
+            peak_frames_start = stim_position + stim_shift
+            peak_frames_end = stim_position + stim_shift + stim_win
+            stim_mean_series.append(np.mean(prot_series_sigma[peak_frames_start:peak_frames_end], axis=0))
 
-        self.stim_delta_series = np.asarray([ma.masked_where(~self.master_mask, vdelta(i, baseline_prot_img)) for i in stim_mean_series])
+        self.peak_deltaF_series = np.asarray([ma.masked_where(~self.master_mask, vdelta(i, baseline_prot_img)) for i in stim_mean_series])
 
-        # _, axs = plt.subplots(1, len(self.stim_peak), figsize=(12, 6))
-        # axs = axs.flatten()
-        # for delta_img, ax in zip(self.stim_delta_series, axs):
-        #     mask_img = ma.masked_where(~self.master_mask, delta_img)
-        #     img = ax.imshow(mask_img, cmap='jet')
-        #     img.set_clim(vmin=-0.75, vmax=0.75)
-        #     div = make_axes_locatable(ax)
-        #     cax = div.append_axes('right', size='3%', pad=0.1)
-        #     ax.axis('off')
-        #     plt.colorbar(img, cax=cax)
-        # plt.tight_layout()
-        # plt.savefig(f'{path}/{self.img_name}_stim_delta.png')
+        # self.up_delta_mask = np.copy(self.peak_deltaF_series[-1])
+        # self.up_delta_mask = self.up_delta_mask >= 0.2
 
-        for img_num in range(0, len(self.stim_delta_series)):
-            delta_img = self.stim_delta_series[img_num]
-            stim_frame_num = self.stim_peak[img_num]
+    def up_down_mask(self, deltaF_up=0.14, deltaF_down=-0.1, diff_up=0.3, delta_diff_overlap=True):
+        """ Creating masks for up and down regions of FP channel.
 
-            img_vs_mask = label2rgb(self.master_mask, image=(self.prot_series[self.stim_peak[img_num]] * 255).astype(np.uint8), bg_label=0, alpha=0.5)
+        """
+        self.up_delta_mask = np.copy(self.peak_deltaF_series)
+        self.up_delta_mask = self.up_delta_mask >= deltaF_up
 
-            # plt.figure(figsize=(15,8))
-            # ax = plt.subplot()
-            # img = ax.imshow(ma.masked_where(~self.master_mask, delta_img), cmap='jet')
-            # img.set_clim(vmin=-0.75, vmax=0.75)
-            # div = make_axes_locatable(ax)
-            # cax = div.append_axes('right', size='3%', pad=0.1)
-            # ax.set_title(f'{self.img_name} pixel-wise ΔF/F0, stim {stim_frame}')
-            # ax.axis('off')
-
-            ax0 = plt.subplot(121)
-            ax0.set_title('Ca dye base img')
-            img0 = ax0.imshow(ma.masked_where(~self.master_mask, delta_img), cmap='jet')
-            img0.set_clim(vmin=-0.75, vmax=0.75)
-            div0 = make_axes_locatable(ax0)
-            cax0 = div0.append_axes('right', size='3%', pad=0.1)
-            plt.colorbar(img0, cax=cax0)
-            ax0.axis('off')
-
-            ax1 = plt.subplot(122)
-            ax1.set_title('FP base img')
-            ax1.imshow(img_vs_mask)
-            ax1.axis('off')
-
-            plt.tight_layout()
-            plt.savefig(f'{path}/{self.img_name}_frame_{stim_frame_num}_stim_delta.png')
+        self.up_diff_mask = np.copy(self.peak_deltaF_series)
+        self.up_diff_mask = self.up_diff_mask >= diff_up
 
     def ca_profile(self, mask=False):
         if not mask:
@@ -492,7 +458,7 @@ class MultiData():
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series])
 
     def save_ctrl_img(self, path, time_scale=1, baseline_frames=3):
-        # cell img
+        # BASELINE IMG
         plt.figure(figsize=(15,8))
 
         ax0 = plt.subplot(121)
@@ -515,7 +481,7 @@ class MultiData():
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_baseline_img.png')
 
-        # cell master mask
+        # MASTER MASK
         plt.figure(figsize=(15,8))
 
         ax0 = plt.subplot(121)
@@ -532,7 +498,7 @@ class MultiData():
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_master_mask.png')
 
-        # Ca profile and dye derivate profile
+        # MASTER MASK PROFILES + DERIVATE PROFILE
         time_line = np.asarray([i/time_scale for i in range(0,len(self.ca_series))])
 
         ca_deltaF = edge.deltaF(self.ca_profile())
@@ -543,22 +509,70 @@ class MultiData():
         plt.plot(time_line, ca_deltaF, label='Ca dye profile')
         plt.plot(time_line, prot_deltaF, label='FP profile')
         plt.plot(time_line[1:], derivate_deltaF, label='Ca dye derivate', linestyle='--')
+        plt.plot(np.take(time_line[1:], self.stim_peak), np.take(derivate_deltaF, self.stim_peak), 'v', label='stimulation peak', markersize=10)
         
-        plt.vlines(np.take(time_line[1:], self.stim_peak), ymin=0, ymax=np.max(ca_deltaF))
         plt.grid(visible=True, linestyle=':')
         plt.xlabel('Time (s)')
         plt.ylabel('ΔF/F')
         plt.xticks(np.arange(0, np.max(time_line)+2, step=1/time_scale))
         plt.legend()
         plt.tight_layout()
-
         plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_ca_profile.png')
 
+        # COMPARISON IMG
+        centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
+
+        for peak_num in range(0, len(self.stim_peak)):
+            delta_img = self.peak_deltaF_series[peak_num]
+            diff_img = self.peak_diff_series[peak_num]
+
+            plt.figure(figsize=(15,8))
+
+            ax0 = plt.subplot(121)
+            ax0.set_title('ΔF/F0')
+            img0 = ax0.imshow(ma.masked_where(~self.master_mask, delta_img), cmap='seismic')  # , norm=colors.LogNorm(vmin=-1.0, vmax=1.0))
+            img0.set_clim(vmin=-1, vmax=1)
+            div0 = make_axes_locatable(ax0)
+            cax0 = div0.append_axes('right', size='3%', pad=0.1)
+            plt.colorbar(img0, cax=cax0)
+            ax0.axis('off')
+
+            ax1 = plt.subplot(122)
+            ax1.set_title('Differential')
+            img1 = ax1.imshow(diff_img, cmap='seismic')
+            img1.set_clim(vmin=-1, vmax=1)
+            div1 = make_axes_locatable(ax1)
+            cax1 = div1.append_axes('right', size='3%', pad=0.1)
+            plt.colorbar(img1, cax=cax1)
+            ax1.axis('off')
+
+            plt.suptitle(f'{self.img_name} baseline-peak comparison, peak frame {self.stim_peak[peak_num]}', fontsize=20)
+            plt.tight_layout()
+            plt.savefig(f'{path}/{self.img_name}_comparison_peak_{self.stim_peak[peak_num]}.png')
+
+
+        # UP/DOWN REGIONS MASKS
+        plt.figure(figsize=(15,8))
+
+        ax0 = plt.subplot(121)
+        ax0.set_title('Otsu mask elements')
+        ax0.imshow(self.element_label, cmap='jet')
+        ax0.axis('off')
+
+        ax1 = plt.subplot(122)
+        ax1.set_title('Cell master mask')
+        ax1.imshow(self.master_mask, cmap='jet')
+        ax1.axis('off')
+
+        plt.suptitle(f'Master mask, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_master_mask.png')
+
         plt.close('all')
 
-        logging.info(f'{self.img_name} control image saved!')
+        logging.info(f'{self.img_name} control images saved!')
 
 if __name__=="__main__":
   pass

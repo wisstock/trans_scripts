@@ -72,10 +72,10 @@ for record in record_list:
     if not os.path.exists(record_path):
         os.makedirs(record_path)
 
-    record.get_master_mask(mask_ext=4)
+    record.get_master_mask(mask_ext=5)
     record.find_stimul_peak()
-    record.get_delta_frames(path=record_path)
-    record.get_px_deltaF(path=record_path)
+    record.peak_img_diff(sigma=2, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3, path=record_path)
+    record.peak_img_deltaF(sigma=1, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3, path=record_path)
     record.save_ctrl_img(path=record_path, time_scale=0.5)
 
     # plt.figure(figsize=(15,4))
