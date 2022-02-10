@@ -21,12 +21,15 @@ from skimage import filters
 from skimage import measure
 from skimage import morphology
 from skimage.color import label2rgb
+from skimage import util
+from skimage import exposure
 
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import colors
+from matplotlib.colors import LinearSegmentedColormap
 
 import oiffile as oif
 import edge
@@ -310,8 +313,8 @@ class MultiData():
 
         # channel separation
         if ca_dye == 'fluo':
-            self.ca_series = edge.back_rm(self.img_series[0])    # calcium dye channel array (Fluo-4)
-            self.prot_series = edge.back_rm(self.img_series[1])  # fluorescent labeled protein channel array (HPCA-TagRFP)
+            self.ca_series = np.array(edge.back_rm(self.img_series[0]), dtype='float')    # calcium dye channel array (Fluo-4)
+            self.prot_series = np.array(edge.back_rm(self.img_series[1]), dtype='float')  # fluorescent labeled protein channel array (HPCA-TagRFP)
         else:
             self.ca_series = edge.back_rm(self.img_series[1])    # calcium dye channel array (Fluo-4)
             self.prot_series = edge.back_rm(self.img_series[0])  # fluorescent labeled protein channel array (HPCA-TagRFP)
@@ -346,7 +349,7 @@ class MultiData():
         # tail_path = f'{oif_path}/{img_name}_0{loop_num+1}.oif'
         # self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
 
-    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5):
+    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5, multi_otsu_nucleus_mask=False):
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
         Filters greater element of draft Otsu mask and return master mask array.
 
@@ -370,6 +373,12 @@ class MultiData():
         self.distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
         self.master_mask = self.distances <= mask_ext
 
+        # multi Otsu mask for nucleus detection
+        self.multi_otsu_nucleus_mask = multi_otsu_nucleus_mask
+        if self.multi_otsu_nucleus_mask:
+            multi_otsu = filters.threshold_multiotsu(self.detection_img, classes=3)
+            self.cell_regions = np.digitize(self.detection_img, bins=multi_otsu)
+
     def find_stimul_peak(self, h=0.15, d=3, l_lim=5, r_lim=18):
         """ Require master_mask, results of get_master_mask!
         Find peaks on deltaF/F Fluo-4 derivate profile.
@@ -381,7 +390,7 @@ class MultiData():
         self.stim_peak = self.stim_peak[(self.stim_peak >= l_lim) & (self.stim_peak <= r_lim)]  # filter outer peaks
         logging.info(f'Detected peaks: {self.stim_peak}')
 
-    def peak_img_diff(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, path=False):
+    def peak_img_diff(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, up_min_tolerance=0.2, up_max_tolerance=0.75, down_min_tolerance=2, down_max_tolerance=0.75, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
         stim_shift - additional value for loop_start_index
@@ -395,6 +404,9 @@ class MultiData():
         baseline_prot_img = np.mean(prot_series_sigma[:baseline_win], axis=0)
 
         self.peak_diff_series = []
+        self.up_diff_mask = []
+        self.down_diff_mask = []
+        self.comb_diff_mask = []
         for stim_position in self.stim_peak:
             # logging.info(f'Loop mean frame index: {loop_start_index}-{loop_fin_index}')
             diff_frames_start = stim_position + stim_shift
@@ -402,14 +414,25 @@ class MultiData():
             stim_mean_img = np.mean(prot_series_sigma[diff_frames_start:diff_frames_end], axis=0)
             stim_diff_img = stim_mean_img - baseline_prot_img
 
-            # centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
+            stim_diff_img[self.distances >= 30] = 0 
+            stim_diff_img = stim_diff_img/np.max(np.abs(stim_diff_img))
+            self.peak_diff_series.append(stim_diff_img)
 
-            norm = lambda img: img/np.max(np.abs(img))  # normalizing in 0-1 interval
-            
-            stim_diff_img[self.distances >= 60] = 0  # select master mask neighbour only for differential image normalizing, `distances` from get_master_mask
-            self.peak_diff_series.append(norm(stim_diff_img))
+            frame_diff_up_mask = filters.apply_hysteresis_threshold(stim_diff_img,
+                                                                    low=up_min_tolerance,
+                                                                    high=up_max_tolerance)
+            self.up_diff_mask.append(measure.label(frame_diff_up_mask))
 
-    def peak_img_deltaF(self, mode='delta', sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, tolerance=200, path=False):
+            frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
+                                                                    low=down_min_tolerance,
+                                                                    high=down_max_tolerance)
+            self.down_diff_mask.append(frame_diff_down_mask)
+
+            self.comb_diff_mask.append((frame_diff_up_mask*2) + (frame_diff_down_mask))
+
+        # find better mask (with maximal area)
+
+    def peak_img_deltaF(self, mode='delta', sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, deltaF_up=0.14, deltaF_down=-0.1, path=False):
         """ Pixel-wise ΔF/F0 calculation.
         baseline_frames - numbers of frames for mean baseline image calculation (from first to baseline_frames value frames)
 
@@ -424,7 +447,7 @@ class MultiData():
 
         delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
         vdelta = np.vectorize(delta)
-        centr = lambda img: abs(np.max(img))*0.5 if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
+        # centr = lambda img: abs(np.max(img))*0.5 if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
 
         stim_mean_series = []
         for stim_position in self.stim_peak:
@@ -433,19 +456,9 @@ class MultiData():
             stim_mean_series.append(np.mean(prot_series_sigma[peak_frames_start:peak_frames_end], axis=0))
 
         self.peak_deltaF_series = np.asarray([ma.masked_where(~self.master_mask, vdelta(i, baseline_prot_img)) for i in stim_mean_series])
-
-        # self.up_delta_mask = np.copy(self.peak_deltaF_series[-1])
-        # self.up_delta_mask = self.up_delta_mask >= 0.2
-
-    def up_down_mask(self, deltaF_up=0.14, deltaF_down=-0.1, diff_up=0.3, delta_diff_overlap=True):
-        """ Creating masks for up and down regions of FP channel.
-
-        """
         self.up_delta_mask = np.copy(self.peak_deltaF_series)
         self.up_delta_mask = self.up_delta_mask >= deltaF_up
-
-        self.up_diff_mask = np.copy(self.peak_deltaF_series)
-        self.up_diff_mask = self.up_diff_mask >= diff_up
+        self.up_delta_mask[~np.broadcast_to(self.master_mask, np.shape(self.up_delta_mask))] = 0
 
     def ca_profile(self, mask=False):
         if not mask:
@@ -524,6 +537,21 @@ class MultiData():
         # COMPARISON IMG
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
 
+
+        cdict_blue_red = {
+              'red':(
+                (0.0, 0.0, 0.0),
+                (0.52, 0.0, 0.0),
+                (1.0, 1.0, 1.0)),
+              'blue':(
+                (0.0, 0.0, 0.0),
+                (1.0, 0.0, 0.0)),
+              'green':(
+                (0.0, 1.0, 1.0),
+                (0.48, 0.0, 0.0),
+                (1.0, 0.0, 0.0))
+            }
+
         for peak_num in range(0, len(self.stim_peak)):
             delta_img = self.peak_deltaF_series[peak_num]
             diff_img = self.peak_diff_series[peak_num]
@@ -541,8 +569,8 @@ class MultiData():
 
             ax1 = plt.subplot(122)
             ax1.set_title('Differential')
-            img1 = ax1.imshow(diff_img, cmap='seismic')
-            img1.set_clim(vmin=-1, vmax=1)
+            img1 = ax1.imshow(diff_img, cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
+            img1.set_clim(vmin=-centr(diff_img), vmax=centr(diff_img))
             div1 = make_axes_locatable(ax1)
             cax1 = div1.append_axes('right', size='3%', pad=0.1)
             plt.colorbar(img1, cax=cax1)
@@ -554,21 +582,55 @@ class MultiData():
 
 
         # UP/DOWN REGIONS MASKS
-        plt.figure(figsize=(15,8))
+        for peak_num in range(0, len(self.stim_peak)):
+            delta_up_mask = self.up_delta_mask[peak_num] 
 
-        ax0 = plt.subplot(121)
-        ax0.set_title('Otsu mask elements')
-        ax0.imshow(self.element_label, cmap='jet')
-        ax0.axis('off')
+            diff_up_mask = self.up_diff_mask[peak_num] 
+            diff_down_mask = self.down_diff_mask[peak_num]
+            diff_comb_mask = self.comb_diff_mask[peak_num]
 
-        ax1 = plt.subplot(122)
-        ax1.set_title('Cell master mask')
-        ax1.imshow(self.master_mask, cmap='jet')
-        ax1.axis('off')
+            plt.figure(figsize=(15,8))
 
-        plt.suptitle(f'Master mask, {self.img_name}, {self.stim_power}%', fontsize=20)
+            ax0 = plt.subplot(121)
+            ax0.set_title('Differential up/down masks')
+            ax0.imshow(diff_comb_mask, cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
+            ax0.axis('off')
+
+            ax1 = plt.subplot(122)
+            ax1.set_title('Up mask elements')
+            ax1.imshow(diff_up_mask, cmap='jet')
+            ax1.axis('off')
+
+            plt.suptitle(f'{self.img_name} up mask, peak frame {self.stim_peak[peak_num]}', fontsize=20)
+            plt.tight_layout()
+            plt.savefig(f'{path}/{self.img_name}_up_mask_{self.stim_peak[peak_num]}.png')
+
+        # UP REGION ENUMERATION
+        up_mask_prop = measure.regionprops(self.up_diff_mask[-1])
+
+        plt.figure(figsize=(8, 8))
+        ax = plt.subplot()
+        ax.imshow(self.up_diff_mask[-1], cmap='jet')
+        for up_region in up_mask_prop:
+            ax.annotate(up_region.label, xy=(up_region.centroid[1], up_region.centroid[0]),
+                        fontweight='heavy', fontsize=15, color='black')
+        ax.axis('off')
+        plt.suptitle(f'{self.img_name} up regions enumeration', fontsize=20)
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_master_mask.png')
+        plt.savefig(f'{path}/{self.img_name}_up_regions.png')
+
+        # CTRL IMG OF UP/DOWN MASKS
+        ctrl_img = util.img_as_ubyte(self.detection_img/np.max(np.abs(self.detection_img)))
+        ctrl_img = exposure.equalize_adapthist(ctrl_img)
+        plt.figure(figsize=(8, 8))
+        ax = plt.subplot()
+        ax.imshow(label2rgb(self.comb_diff_mask[-1],
+                            image=ctrl_img,
+                            colors=['green', 'red'], bg_label=1, alpha=0.4))
+        ax.axis('off')
+        plt.suptitle(f'{self.img_name} up/down mask ctrl img', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_up_down_ctrl.png')
 
         plt.close('all')
 

@@ -72,16 +72,13 @@ for record in record_list:
     if not os.path.exists(record_path):
         os.makedirs(record_path)
 
-    record.get_master_mask(mask_ext=5)
+    record.get_master_mask(mask_ext=5, multi_otsu_nucleus_mask=False)
     record.find_stimul_peak()
-    record.peak_img_diff(sigma=2, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3, path=record_path)
-    record.peak_img_deltaF(sigma=1, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3, path=record_path)
+    record.peak_img_diff(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
+                         up_min_tolerance=0.2, up_max_tolerance=0.75,
+                         down_min_tolerance=-0.2, down_max_tolerance=-0.1,
+                         path=record_path)
+    record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
+                           deltaF_up=0.1, deltaF_down=-0.1,
+                           path=record_path)
     record.save_ctrl_img(path=record_path, time_scale=0.5)
-
-    # plt.figure(figsize=(15,4))
-    # plt.plot(edge.deltaF(record.prot_profile()), label='FP')
-    # plt.plot(edge.deltaF(record.ca_profile()), label='Ca')
-    # plt.grid(visible=True, linestyle=':')
-    # plt.legend()
-    # plt.tight_layout()
-    # plt.show()
