@@ -406,6 +406,7 @@ class MultiData():
         self.peak_diff_series = []
         self.up_diff_mask = []
         self.down_diff_mask = []
+        self.up_diff_mask_prop = []
         self.comb_diff_mask = []
         for stim_position in self.stim_peak:
             # logging.info(f'Loop mean frame index: {loop_start_index}-{loop_fin_index}')
@@ -421,7 +422,9 @@ class MultiData():
             frame_diff_up_mask = filters.apply_hysteresis_threshold(stim_diff_img,
                                                                     low=up_min_tolerance,
                                                                     high=up_max_tolerance)
-            self.up_diff_mask.append(measure.label(frame_diff_up_mask))
+            frame_diff_up_mask_elements = measure.label(frame_diff_up_mask)
+            self.up_diff_mask.append(frame_diff_up_mask_elements)
+            self.up_diff_mask_prop.append(measure.regionprops(frame_diff_up_mask_elements))
 
             frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
                                                                     low=down_min_tolerance,
@@ -430,7 +433,9 @@ class MultiData():
 
             self.comb_diff_mask.append((frame_diff_up_mask*2) + (frame_diff_down_mask))
 
-        # find better mask (with maximal area)
+        # find better up mask (with maximal area)
+        for one_up_region in self.up_diff_mask_prop:
+            one_up_region = one_up_region[0]
 
     def peak_img_deltaF(self, mode='delta', sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, deltaF_up=0.14, deltaF_down=-0.1, path=False):
         """ Pixel-wise ΔF/F0 calculation.
