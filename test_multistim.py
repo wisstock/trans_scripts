@@ -77,6 +77,6 @@ for record in record_list:
     record.peak_img_diff(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
                          up_min_tolerance=0.2, up_max_tolerance=0.75,
                          down_min_tolerance=-0.2, down_max_tolerance=-0.1)
-    # record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
-    #                        deltaF_up=0.1, deltaF_down=-0.1)
-    # record.save_ctrl_img(path=record_path, time_scale=0.5)
+    record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
+                           deltaF_up=0.1, deltaF_down=-0.1)
+    record.save_ctrl_img(path=record_path, time_scale=0.5)

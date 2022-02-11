@@ -424,18 +424,17 @@ class MultiData():
                                                                     high=up_max_tolerance)
             frame_diff_up_mask_elements = measure.label(frame_diff_up_mask)
             self.up_diff_mask.append(frame_diff_up_mask_elements)
-            self.up_diff_mask_prop.append(measure.regionprops(frame_diff_up_mask_elements))
 
             frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
                                                                     low=down_min_tolerance,
                                                                     high=down_max_tolerance)
             self.down_diff_mask.append(frame_diff_down_mask)
 
-            self.comb_diff_mask.append((frame_diff_up_mask*2) + (frame_diff_down_mask))
+            self.comb_diff_mask.append((frame_diff_up_mask*2) + (frame_diff_down_mask-2)*-1)
 
         # find better up mask (with maximal area)
-        for one_up_region in self.up_diff_mask_prop:
-            one_up_region = one_up_region[0]
+        self.best_up_mask_index = np.argmax([np.sum(u_m != 0) for u_m in self.up_diff_mask])
+        logging.info(f'Best up mask {self.best_up_mask_index+1} (stim frame {self.stim_peak[self.best_up_mask_index]})')
 
     def peak_img_deltaF(self, mode='delta', sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, deltaF_up=0.14, deltaF_down=-0.1, path=False):
         """ Pixel-wise ΔF/F0 calculation.
@@ -470,11 +469,9 @@ class MultiData():
             mask = self.master_mask
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.ca_series])
 
-    def prot_profile(self, mask=False):
-        if not mask:
-            mask = self.master_mask
+    def prot_profile(self, mask=None):
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series])
-
+        
     def save_ctrl_img(self, path, time_scale=1, baseline_frames=3):
         # BASELINE IMG
         plt.figure(figsize=(15,8))
@@ -520,7 +517,7 @@ class MultiData():
         time_line = np.asarray([i/time_scale for i in range(0,len(self.ca_series))])
 
         ca_deltaF = edge.deltaF(self.ca_profile())
-        prot_deltaF = edge.deltaF(self.prot_profile())
+        prot_deltaF = edge.deltaF(self.prot_profile(mask=self.master_mask))
         derivate_deltaF = edge.deltaF(self.derivate_profile)
 
         plt.figure(figsize=(15,4))
@@ -537,25 +534,52 @@ class MultiData():
         plt.tight_layout()
         plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_ca_profile.png')
+        plt.savefig(f'{path}/{self.img_name}_profile_ca.png')
+
+        # UP REGIONS PROFILES + CA PROFILE
+        best_mask = self.up_diff_mask[self.best_up_mask_index]
+        best_mask_total = best_mask != 0
+
+        plt.figure(figsize=(15, 4))
+        # plt.plot(time_line, ca_deltaF, label='Ca dye profile', linestyle='--', linewidth=1.5)
+        plt.plot(time_line, edge.deltaF(self.prot_profile(mask=best_mask_total)), label='total up mask', linestyle='--', linewidth=3)
+       
+
+        plt.plot(np.take(time_line[1:], self.stim_peak), [0.5 for i in self.stim_peak], 'v', label='stimulation peak', markersize=10)
+
+        for up_region_lab in range(1, np.max(best_mask)+1):
+            up_region_mask = best_mask == up_region_lab
+            up_region_profile = edge.deltaF(self.prot_profile(mask=up_region_mask))
+            plt.plot(time_line, up_region_profile, label=f'region {up_region_lab}')
+
+        plt.grid(visible=True, linestyle=':')
+        plt.xlabel('Time (s)')
+        plt.ylabel('ΔF/F')
+        plt.xticks(np.arange(0, np.max(time_line)+2, step=1/time_scale))
+        plt.legend()
+        plt.tight_layout()
+        plt.suptitle(f'Best up mask regions profiles, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_profile_up.png')
 
         # COMPARISON IMG
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
 
-
         cdict_blue_red = {
-              'red':(
-                (0.0, 0.0, 0.0),
-                (0.52, 0.0, 0.0),
-                (1.0, 1.0, 1.0)),
-              'blue':(
-                (0.0, 0.0, 0.0),
-                (1.0, 0.0, 0.0)),
-              'green':(
-                (0.0, 1.0, 1.0),
-                (0.48, 0.0, 0.0),
-                (1.0, 0.0, 0.0))
-            }
+                          'red':(
+                            (0.0, 0.0, 0.0),
+                            (0.52, 0.0, 0.0),
+                            (0.55, 0.3, 0.3),
+                            (1.0, 1.0, 1.0)),
+                          'blue':(
+                            (0.0, 0.0, 0.0),
+                            (1.0, 0.0, 0.0)),
+                          'green':(
+                            (0.0, 1.0, 1.0),
+                            (0.45, 0.3, 0.3),
+                            (0.48, 0.0, 0.0),
+                            (1.0, 0.0, 0.0))
+                            }
 
         for peak_num in range(0, len(self.stim_peak)):
             delta_img = self.peak_deltaF_series[peak_num]
@@ -611,11 +635,11 @@ class MultiData():
             plt.savefig(f'{path}/{self.img_name}_up_mask_{self.stim_peak[peak_num]}.png')
 
         # UP REGION ENUMERATION
-        up_mask_prop = measure.regionprops(self.up_diff_mask[-1])
+        up_mask_prop = measure.regionprops(self.up_diff_mask[self.best_up_mask_index])
 
         plt.figure(figsize=(8, 8))
         ax = plt.subplot()
-        ax.imshow(self.up_diff_mask[-1], cmap='jet')
+        ax.imshow(self.up_diff_mask[self.best_up_mask_index], cmap='jet')
         for up_region in up_mask_prop:
             ax.annotate(up_region.label, xy=(up_region.centroid[1], up_region.centroid[0]),
                         fontweight='heavy', fontsize=15, color='black')
@@ -629,7 +653,7 @@ class MultiData():
         ctrl_img = exposure.equalize_adapthist(ctrl_img)
         plt.figure(figsize=(8, 8))
         ax = plt.subplot()
-        ax.imshow(label2rgb(self.comb_diff_mask[-1],
+        ax.imshow(label2rgb(self.comb_diff_mask[self.best_up_mask_index],
                             image=ctrl_img,
                             colors=['green', 'red'], bg_label=1, alpha=0.4))
         ax.axis('off')

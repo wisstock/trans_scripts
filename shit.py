@@ -50,19 +50,40 @@ logging.basicConfig(level=logging.INFO,
 # ax[2].set_title('Masked img')
 # plt.show()
 
-cdict_blue_red = {
+# CUSTOM COLOR MAP VISUALIZATION
+cdict = {
       'red':(
         (0.0, 0.0, 0.0),
-        (0.6, 0.0, 0.0),
+        (0.52, 0.0, 0.0),
+        (0.55, 0.3, 0.3),
         (1.0, 1.0, 1.0)),
       'blue':(
-        (0.0, 1.0, 1.0),
-        (0.4, 0.0, 0.0),
+        (0.0, 0.0, 0.0),
         (1.0, 0.0, 0.0)),
       'green':(
-        (0.0, 0.0, 0.0),
+        (0.0, 1.0, 1.0),
+        (0.45, 0.3, 0.3),
+        (0.48, 0.0, 0.0),
         (1.0, 0.0, 0.0))
-    }
+        }
+
+# cdict1 = {
+#       'red':(
+#         (0.0, 0.0, 0.0),
+#         (0.5, 0.0, 0.0),
+#         (0.6, 0.5, 0.5),
+#         (1.0, 1.0, 1.0)),
+
+#       'green':(
+#         (0.0, 1.0, 1.0),
+#         (0.4, 0.5, 0.5),
+#         (0.5, 0.0, 0.0),
+#         (1.0, 0.0, 0.0)),
+
+#       'blue':(
+#         (0.0, 0.0, 0.0),
+#         (1.0, 0.0, 0.0))
+#     }
 
 def plot_linearmap(cdict):
     newcmp = LinearSegmentedColormap('testCmap', segmentdata=cdict, N=256)
