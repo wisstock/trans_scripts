@@ -47,6 +47,18 @@ date_name_suffix = '_11_27_2021' # suffix with recording date
 frame_reg_time = 2.0   # frame rate, inter frame time in seconds
 save_csv = False
 
+# data frame init
+df = pd.DataFrame(columns=['ID',           # recording ID
+                           'power',        # 405 nm stimulation power (%)
+                           'ch',           # channel (FP or Ca dye)
+                           'frame',        # frame num
+                           'time',         # frame time (s)
+                           'mask',         # mask type (master, up, down)
+                           'mask_region',  # mask region (1 for master or down)
+                           'mean',         # mask mean intensity
+                           'delta',        # mask ΔF/F
+                           'rel'])         # mask mean / master mask mean
+
 # metadata YAML file reading
 for root, dirs, files in os.walk(data_path):
     for file in files:
@@ -63,7 +75,8 @@ for root, dirs, files in os.walk(data_path):  # loop over OIF files
         if one_dir in meta_data.keys():
             one_record = rt.MultiData(oif_path=os.path.join(root, one_dir),
                                       img_name=one_dir,
-                                      meta_dict=meta_data[one_dir])
+                                      meta_dict=meta_data[one_dir],
+                                      time_scale=0.5)
             record_list.append(one_record)
 
 for record in record_list:
@@ -75,8 +88,9 @@ for record in record_list:
     record.get_master_mask(mask_ext=5, multi_otsu_nucleus_mask=False)
     record.find_stimul_peak()
     record.peak_img_diff(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
-                         up_min_tolerance=0.2, up_max_tolerance=0.75,
+                         up_min_tolerance=0.2, up_max_tolerance=0.7,
                          down_min_tolerance=-0.2, down_max_tolerance=-0.1)
     record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
                            deltaF_up=0.1, deltaF_down=-0.1)
-    record.save_ctrl_img(path=record_path, time_scale=0.5)
+    record.save_ctrl_profiles(path=record_path)
+    record.save_ctrl_img(path=record_path)

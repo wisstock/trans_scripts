@@ -303,7 +303,7 @@ class MultiData():
     Does NOT requires oifpars module.
 
     """
-    def __init__(self, oif_path, img_name, meta_dict, ca_dye='fluo', prot_bleach_correction=True):
+    def __init__(self, oif_path, img_name, meta_dict, time_scale=1,ca_dye='fluo', prot_bleach_correction=True):
         self.img_name = img_name
         self.stim_power = meta_dict['power']
 
@@ -318,6 +318,9 @@ class MultiData():
         else:
             self.ca_series = edge.back_rm(self.img_series[1])    # calcium dye channel array (Fluo-4)
             self.prot_series = edge.back_rm(self.img_series[0])  # fluorescent labeled protein channel array (HPCA-TagRFP)
+
+        self.time_scale = time_scale
+        self.time_line = np.asarray([i/time_scale for i in range(0,len(self.ca_series))])
 
         # FP bleaching corrections
         if prot_bleach_correction:
@@ -471,8 +474,84 @@ class MultiData():
 
     def prot_profile(self, mask=None):
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series])
+
+    def safe_profile_df(self, path, id_suffix):
+        """ Masked regions intensity profiles data frame saving
+
+        """
+        self.profile_df = pd.DataFrame(columns=['ID',           # recording ID
+                                                'power',        # 405 nm stimulation power (%)
+                                                'ch',           # channel (FP or Ca dye)
+                                                'frame',        # frame number
+                                                'time',         # frame time (s)
+                                                'mask',         # mask type (master, up, down)
+                                                'mask_region',  # mask region (1 for master or down)
+                                                'mean',         # mask mean intensity
+                                                'delta',        # mask ΔF/F
+                                                'rel'])         # mask mean / master mask mean
+        profile_dict = 
+        results_dict = {'fp',
+                        'ca',
+                        'down'}
+
+        # for val_num in range(len(self.ca_series)):
+
+    def save_ctrl_profiles(self, path, baseline_frames=3):
+        """ Masks intensity profiles
+
+        """
+        # MASTER MASK PROFILES + DERIVATE PROFILE
+        ca_deltaF = edge.deltaF(self.ca_profile())
+        prot_deltaF = edge.deltaF(self.prot_profile(mask=self.master_mask))
+        derivate_deltaF = edge.deltaF(self.derivate_profile)
+
+        plt.figure(figsize=(15,4))
+        plt.plot(self.time_line, ca_deltaF, label='Ca dye profile')
+        plt.plot(self.time_line, prot_deltaF, label='FP profile')
+        plt.plot(self.time_line[1:], derivate_deltaF, label='Ca dye derivate', linestyle='--')
+        plt.plot(np.take(self.time_line[1:], self.stim_peak), np.take(derivate_deltaF, self.stim_peak), 'v',
+                 label='stimulation peak', markersize=10, color='red')
         
-    def save_ctrl_img(self, path, time_scale=1, baseline_frames=3):
+        plt.grid(visible=True, linestyle=':')
+        plt.xlabel('Time (s)')
+        plt.ylabel('ΔF/F')
+        plt.xticks(np.arange(0, np.max(self.time_line)+2, step=1/self.time_scale))
+        plt.legend()
+        plt.tight_layout()
+        plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_profile_ca.png')
+
+        # UP REGIONS PROFILES + CA PROFILE
+        best_mask = self.up_diff_mask[self.best_up_mask_index]
+        best_mask_total = best_mask != 0
+
+        plt.figure(figsize=(15, 4))
+        plt.plot(self.time_line, edge.deltaF(self.prot_profile(mask=best_mask_total)),
+                 label='total up mask', linestyle='--', linewidth=3, color='white')
+        plt.plot(np.take(self.time_line[1:], self.stim_peak), [0.5 for i in self.stim_peak], 'v',
+                 label='stimulation peak', markersize=10, color='red')
+
+        for up_region_lab in range(1, np.max(best_mask)+1):
+            up_region_mask = best_mask == up_region_lab
+            up_region_profile = edge.deltaF(self.prot_profile(mask=up_region_mask))
+            plt.plot(self.time_line, up_region_profile, label=f'region {up_region_lab}', linewidth=0.75)
+
+        plt.grid(visible=True, linestyle=':')
+        plt.xlabel('Time (s)')
+        plt.ylabel('ΔF/F')
+        plt.xticks(np.arange(0, np.max(self.time_line)+2, step=1/self.time_scale))
+        plt.legend()
+        plt.tight_layout()
+        plt.suptitle(f'Best up mask regions profiles, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_profile_up.png')
+
+
+        plt.close('all')
+        logging.info(f'{self.img_name} control profiles saved!')
+        
+    def save_ctrl_img(self, path, baseline_frames=5):
         # BASELINE IMG
         plt.figure(figsize=(15,8))
 
@@ -492,7 +571,7 @@ class MultiData():
         plt.colorbar(img1, cax=cax1)
         ax1.axis('off')
 
-        plt.suptitle(f'Baseline image ({baseline_frames} frames), {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.suptitle(f'{self.img_name}, {self.stim_power}%, baseline image ({baseline_frames+1} frames)', fontsize=20)
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_baseline_img.png')
 
@@ -509,58 +588,9 @@ class MultiData():
         ax1.imshow(self.master_mask, cmap='jet')
         ax1.axis('off')
 
-        plt.suptitle(f'Master mask, {self.img_name}, {self.stim_power}%', fontsize=20)
+        plt.suptitle(f'{self.img_name} master mask', fontsize=20)
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_master_mask.png')
-
-        # MASTER MASK PROFILES + DERIVATE PROFILE
-        time_line = np.asarray([i/time_scale for i in range(0,len(self.ca_series))])
-
-        ca_deltaF = edge.deltaF(self.ca_profile())
-        prot_deltaF = edge.deltaF(self.prot_profile(mask=self.master_mask))
-        derivate_deltaF = edge.deltaF(self.derivate_profile)
-
-        plt.figure(figsize=(15,4))
-        plt.plot(time_line, ca_deltaF, label='Ca dye profile')
-        plt.plot(time_line, prot_deltaF, label='FP profile')
-        plt.plot(time_line[1:], derivate_deltaF, label='Ca dye derivate', linestyle='--')
-        plt.plot(np.take(time_line[1:], self.stim_peak), np.take(derivate_deltaF, self.stim_peak), 'v', label='stimulation peak', markersize=10)
-        
-        plt.grid(visible=True, linestyle=':')
-        plt.xlabel('Time (s)')
-        plt.ylabel('ΔF/F')
-        plt.xticks(np.arange(0, np.max(time_line)+2, step=1/time_scale))
-        plt.legend()
-        plt.tight_layout()
-        plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
-        plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_profile_ca.png')
-
-        # UP REGIONS PROFILES + CA PROFILE
-        best_mask = self.up_diff_mask[self.best_up_mask_index]
-        best_mask_total = best_mask != 0
-
-        plt.figure(figsize=(15, 4))
-        # plt.plot(time_line, ca_deltaF, label='Ca dye profile', linestyle='--', linewidth=1.5)
-        plt.plot(time_line, edge.deltaF(self.prot_profile(mask=best_mask_total)), label='total up mask', linestyle='--', linewidth=3)
-       
-
-        plt.plot(np.take(time_line[1:], self.stim_peak), [0.5 for i in self.stim_peak], 'v', label='stimulation peak', markersize=10)
-
-        for up_region_lab in range(1, np.max(best_mask)+1):
-            up_region_mask = best_mask == up_region_lab
-            up_region_profile = edge.deltaF(self.prot_profile(mask=up_region_mask))
-            plt.plot(time_line, up_region_profile, label=f'region {up_region_lab}')
-
-        plt.grid(visible=True, linestyle=':')
-        plt.xlabel('Time (s)')
-        plt.ylabel('ΔF/F')
-        plt.xticks(np.arange(0, np.max(time_line)+2, step=1/time_scale))
-        plt.legend()
-        plt.tight_layout()
-        plt.suptitle(f'Best up mask regions profiles, {self.img_name}, {self.stim_power}%', fontsize=20)
-        plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_profile_up.png')
+        plt.savefig(f'{path}/{self.img_name}_master_mask.png')  
 
         # COMPARISON IMG
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
@@ -589,7 +619,7 @@ class MultiData():
 
             ax0 = plt.subplot(121)
             ax0.set_title('ΔF/F0')
-            img0 = ax0.imshow(ma.masked_where(~self.master_mask, delta_img), cmap='seismic')  # , norm=colors.LogNorm(vmin=-1.0, vmax=1.0))
+            img0 = ax0.imshow(ma.masked_where(~self.master_mask, delta_img), cmap='jet')  # , norm=colors.LogNorm(vmin=-1.0, vmax=1.0))
             img0.set_clim(vmin=-1, vmax=1)
             div0 = make_axes_locatable(ax0)
             cax0 = div0.append_axes('right', size='3%', pad=0.1)
@@ -609,42 +639,47 @@ class MultiData():
             plt.tight_layout()
             plt.savefig(f'{path}/{self.img_name}_comparison_peak_{self.stim_peak[peak_num]}.png')
 
+        # # UP/DOWN REGIONS MASKS
+        # for peak_num in range(0, len(self.stim_peak)):
+        #     delta_up_mask = self.up_delta_mask[peak_num] 
 
-        # UP/DOWN REGIONS MASKS
-        for peak_num in range(0, len(self.stim_peak)):
-            delta_up_mask = self.up_delta_mask[peak_num] 
+        #     diff_up_mask = self.up_diff_mask[peak_num] 
+        #     diff_down_mask = self.down_diff_mask[peak_num]
+        #     diff_comb_mask = self.comb_diff_mask[peak_num]
 
-            diff_up_mask = self.up_diff_mask[peak_num] 
-            diff_down_mask = self.down_diff_mask[peak_num]
-            diff_comb_mask = self.comb_diff_mask[peak_num]
+        #     plt.figure(figsize=(15,8))
 
-            plt.figure(figsize=(15,8))
+        #     ax0 = plt.subplot(121)
+        #     ax0.set_title('Differential up/down masks')
+        #     ax0.imshow(diff_comb_mask, cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
+        #     ax0.axis('off')
 
-            ax0 = plt.subplot(121)
-            ax0.set_title('Differential up/down masks')
-            ax0.imshow(diff_comb_mask, cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
-            ax0.axis('off')
+        #     ax1 = plt.subplot(122)
+        #     ax1.set_title('Up mask elements')
+        #     ax1.imshow(diff_up_mask, cmap='jet')
+        #     ax1.axis('off')
 
-            ax1 = plt.subplot(122)
-            ax1.set_title('Up mask elements')
-            ax1.imshow(diff_up_mask, cmap='jet')
-            ax1.axis('off')
-
-            plt.suptitle(f'{self.img_name} up mask, peak frame {self.stim_peak[peak_num]}', fontsize=20)
-            plt.tight_layout()
-            plt.savefig(f'{path}/{self.img_name}_up_mask_{self.stim_peak[peak_num]}.png')
+        #     plt.suptitle(f'{self.img_name} up mask, peak frame {self.stim_peak[peak_num]}', fontsize=20)
+        #     plt.tight_layout()
+        #     plt.savefig(f'{path}/{self.img_name}_up_mask_{self.stim_peak[peak_num]}.png')
 
         # UP REGION ENUMERATION
         up_mask_prop = measure.regionprops(self.up_diff_mask[self.best_up_mask_index])
+        best_up_delta_img = self.peak_deltaF_series[self.best_up_mask_index] 
+        best_up_mask_total = self.up_diff_mask[self.best_up_mask_index] != 0
 
         plt.figure(figsize=(8, 8))
         ax = plt.subplot()
-        ax.imshow(self.up_diff_mask[self.best_up_mask_index], cmap='jet')
+        img = ax.imshow(ma.masked_where(~best_up_mask_total, best_up_delta_img), cmap='jet')
+        img.set_clim(vmin=-1, vmax=1)
+        div = make_axes_locatable(ax)
+        cax = div.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img, cax=cax)
         for up_region in up_mask_prop:
-            ax.annotate(up_region.label, xy=(up_region.centroid[1], up_region.centroid[0]),
-                        fontweight='heavy', fontsize=15, color='black')
+            ax.annotate(up_region.label, xy=(up_region.centroid[1]+10, up_region.centroid[0]),
+                        fontweight='heavy', fontsize=15, color='white')
         ax.axis('off')
-        plt.suptitle(f'{self.img_name} up regions enumeration', fontsize=20)
+        plt.suptitle(f'{self.img_name} up regions ΔF/F', fontsize=20)
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_up_regions.png')
 
@@ -655,14 +690,14 @@ class MultiData():
         ax = plt.subplot()
         ax.imshow(label2rgb(self.comb_diff_mask[self.best_up_mask_index],
                             image=ctrl_img,
-                            colors=['green', 'red'], bg_label=1, alpha=0.4))
+                            colors=['green', 'red'], bg_label=1, alpha=0.5))
         ax.axis('off')
         plt.suptitle(f'{self.img_name} up/down mask ctrl img', fontsize=20)
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_up_down_ctrl.png')
 
-        plt.close('all')
 
+        plt.close('all')
         logging.info(f'{self.img_name} control images saved!')
 
 if __name__=="__main__":
