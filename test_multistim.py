@@ -94,3 +94,7 @@ for record in record_list:
                            deltaF_up=0.1, deltaF_down=-0.1)
     record.save_ctrl_profiles(path=record_path)
     record.save_ctrl_img(path=record_path)
+
+    df = df.append(record.safe_profile_df(id_suffix=date_name_suffix), ignore_index=True)
+
+df.to_csv(f'{res_path}/profile.csv', index=False)

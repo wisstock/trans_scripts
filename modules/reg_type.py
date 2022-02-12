@@ -303,7 +303,7 @@ class MultiData():
     Does NOT requires oifpars module.
 
     """
-    def __init__(self, oif_path, img_name, meta_dict, time_scale=1,ca_dye='fluo', prot_bleach_correction=True):
+    def __init__(self, oif_path, img_name, meta_dict, time_scale=1, baseline_frames=5, prot_bleach_correction=True):
         self.img_name = img_name
         self.stim_power = meta_dict['power']
 
@@ -312,15 +312,14 @@ class MultiData():
         logging.info(f'Record {self.img_name} uploaded!')  # ({self.stim_power}%, {self.baseline_frames}|{self.stim_loop_num}x {self.stim_frames}|{self.tail_frames}) uploaded')
 
         # channel separation
-        if ca_dye == 'fluo':
-            self.ca_series = np.array(edge.back_rm(self.img_series[0]), dtype='float')    # calcium dye channel array (Fluo-4)
-            self.prot_series = np.array(edge.back_rm(self.img_series[1]), dtype='float')  # fluorescent labeled protein channel array (HPCA-TagRFP)
-        else:
-            self.ca_series = edge.back_rm(self.img_series[1])    # calcium dye channel array (Fluo-4)
-            self.prot_series = edge.back_rm(self.img_series[0])  # fluorescent labeled protein channel array (HPCA-TagRFP)
+        self.ca_series = np.array(edge.back_rm(self.img_series[0]), dtype='float')    # calcium dye channel array (Fluo-4)
+        self.prot_series = np.array(edge.back_rm(self.img_series[1]), dtype='float')  # fluorescent labeled protein channel array (HPCA-TagRFP)
 
+        # frames time line
         self.time_scale = time_scale
         self.time_line = np.asarray([i/time_scale for i in range(0,len(self.ca_series))])
+
+        self.baseline_frames = baseline_frames
 
         # FP bleaching corrections
         if prot_bleach_correction:
@@ -475,7 +474,7 @@ class MultiData():
     def prot_profile(self, mask=None):
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series])
 
-    def safe_profile_df(self, path, id_suffix):
+    def safe_profile_df(self, id_suffix):
         """ Masked regions intensity profiles data frame saving
 
         """
@@ -489,10 +488,86 @@ class MultiData():
                                                 'mean',         # mask mean intensity
                                                 'delta',        # mask ΔF/F
                                                 'rel'])         # mask mean / master mask mean
-        profile_dict = 
-        results_dict = {'fp',
-                        'ca',
-                        'down'}
+        # Ca dye
+        ca_profile = self.ca_profile()
+        ca_profile_delta = edge.deltaF(ca_profile, f_0_win=self.baseline_frames)
+        for ca_val in range(0, len(self.ca_series)):
+            point_series = pd.Series([f'{self.img_name}{id_suffix}', # recording ID
+                                              self.stim_power,               # 405 nm stimulation power (%)
+                                              'ca',                          # channel (FP or Ca dye)
+                                              ca_val+1,                        # frame number
+                                              self.time_line[ca_val],        # frame time (s)
+                                              'master',                      # mask type (only master for Ca dye channel)
+                                              1,                             # mask region (1 for master or down)
+                                              ca_profile[ca_val],            # mask mean intensity
+                                              ca_profile_delta[ca_val],      # mask ΔF/F
+                                              1],                            # mask mean / master mask mean (1 for Ca dye channel)
+                                      index=self.profile_df.columns)
+            self.profile_df = self.profile_df.append(point_series, ignore_index=True)
+        
+        # FP intensity
+        fp_master_profile = self.prot_profile(mask=self.master_mask)
+        fp_master_profile_delta = edge.deltaF(fp_master_profile, f_0_win=self.baseline_frames)
+        for fp_val in range(0, len(self.prot_series)):
+            point_series = pd.Series([f'{self.img_name}{id_suffix}',            # recording ID
+                                              self.stim_power,                  # 405 nm stimulation power (%)
+                                              'fp',                             # channel (FP or Ca dye)
+                                              fp_val+1,                         # frame number
+                                              self.time_line[fp_val],           # frame time (s)
+                                              'master',                         # mask type (only master for Ca dye channel)
+                                              1,                                # mask region (1 for master or down)
+                                              fp_master_profile[fp_val],        # mask mean intensity
+                                              fp_master_profile_delta[fp_val],  # mask ΔF/F
+                                              1],                               # mask mean / master mask mean (1 for Ca dye channel)
+                                     index=self.profile_df.columns)
+            self.profile_df = self.profile_df.append(point_series, ignore_index=True)
+            
+        # FP down regions
+        fp_down_profile = self.prot_profile(mask=self.down_diff_mask[self.best_up_mask_index])
+        fp_down_profile_delta = edge.deltaF(fp_down_profile, f_0_win=self.baseline_frames)
+        for fp_val in range(0, len(self.prot_series)):
+            point_series = pd.Series([f'{self.img_name}{id_suffix}',                               # recording ID
+                                              self.stim_power,                                     # 405 nm stimulation power (%)
+                                              'fp',                                                # channel (FP or Ca dye)
+                                              fp_val+1,                                            # frame number
+                                              self.time_line[fp_val],                              # frame time (s)
+                                              'down',                                              # mask type (only master for Ca dye channel)
+                                              1,                                                   # mask region (1 for master or down)
+                                              fp_down_profile[fp_val],                             # mask mean intensity
+                                              fp_down_profile_delta[fp_val],                       # mask ΔF/F
+                                              fp_down_profile[fp_val]/fp_master_profile[fp_val]],  # mask mean / master mask mean (1 for Ca dye channel)
+                                     index=self.profile_df.columns)
+            self.profile_df = self.profile_df.append(point_series, ignore_index=True)
+
+        # FP up regions
+        best_up_mask = self.up_diff_mask[self.best_up_mask_index]
+        best_up_mask_prop = measure.regionprops(best_up_mask)
+
+        fp_up_profile_dict = {}
+        for i in best_up_mask_prop:  # calculate profiles for each up region
+            best_up_mask_region = best_up_mask == i.label
+            fp_up_profile = self.prot_profile(mask=best_up_mask_region)
+            fp_up_profile_delta = edge.deltaF(fp_up_profile, f_0_win=self.baseline_frames)
+            fp_up_profile_dict.update({i.label: [fp_up_profile, fp_up_profile_delta]})
+        for fp_val in range(0, len(self.prot_series)):
+            for up_region_key in fp_up_profile_dict.keys():
+                up_region = fp_up_profile_dict.get(up_region_key)
+
+                point_series = pd.Series([f'{self.img_name}{id_suffix}',                    # recording ID
+                                          self.stim_power,                                  # 405 nm stimulation power (%)
+                                          'fp',                                             # channel (FP or Ca dye)
+                                          fp_val+1,                                         # frame number
+                                          self.time_line[fp_val],                           # frame time (s)
+                                          'up',                                             # mask type (only master for Ca dye channel)
+                                          up_region_key,                                    # mask region (1 for master or down)
+                                          up_region[0][fp_val],                             # mask mean intensity
+                                          up_region[1][fp_val],                             # mask ΔF/F
+                                          up_region[0][fp_val]/fp_master_profile[fp_val]],  # mask mean / master mask mean (1 for Ca dye channel)
+                                        index=self.profile_df.columns)
+                self.profile_df = self.profile_df.append(point_series, ignore_index=True)
+
+        logging.info(f'Recording profile data frame ({self.profile_df.shape}) done!')
+        return self.profile_df
 
         # for val_num in range(len(self.ca_series)):
 
@@ -525,10 +600,13 @@ class MultiData():
         # UP REGIONS PROFILES + CA PROFILE
         best_mask = self.up_diff_mask[self.best_up_mask_index]
         best_mask_total = best_mask != 0
+        # best_mask_down = self.down_diff_mask[self.best_up_mask_index]
 
         plt.figure(figsize=(15, 4))
         plt.plot(self.time_line, edge.deltaF(self.prot_profile(mask=best_mask_total)),
                  label='total up mask', linestyle='--', linewidth=3, color='white')
+        # plt.plot(self.time_line, edge.deltaF(self.prot_profile(mask=best_mask_down)),
+        #          label='total down mask', linestyle=':', linewidth=3, color='white')
         plt.plot(np.take(self.time_line[1:], self.stim_peak), [0.5 for i in self.stim_peak], 'v',
                  label='stimulation peak', markersize=10, color='red')
 
