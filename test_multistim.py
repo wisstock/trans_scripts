@@ -59,10 +59,11 @@ df_profile = pd.DataFrame(columns=['ID',           # recording ID
                                    'delta',        # mask ΔF/F
                                    'rel'])         # mask mean / master mask mean
 
-df_area = pd.DataFrame(columns=['ID',           # recording ID
-                                'stim_frame',   # stimulation frame number
-                                'mask',         # mask type (up or down)
-                                'area'])        # mask region area (in px)
+df_area = pd.DataFrame(columns=['ID',          # recording ID
+                                'stim_frame',  # stimulation frame number
+                                'mask',        # mask type (up or down)
+                                'area',        # mask region area (in px)
+                                'rel_area'])   # mask relative area (mask / master mask)
 
 # metadata YAML file uploading
 for root, dirs, files in os.walk(data_path):
@@ -105,6 +106,6 @@ for record in record_list:
 
     df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
 
-# data frames saving
+data frames saving
 df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
 df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)

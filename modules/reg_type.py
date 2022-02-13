@@ -495,7 +495,7 @@ class MultiData():
             point_series = pd.Series([f'{self.img_name}{id_suffix}', # recording ID
                                               self.stim_power,               # 405 nm stimulation power (%)
                                               'ca',                          # channel (FP or Ca dye)
-                                              ca_val+1,                        # frame number
+                                              ca_val+1,                      # frame number
                                               self.time_line[ca_val],        # frame time (s)
                                               'master',                      # mask type (only master for Ca dye channel)
                                               1,                             # mask region (1 for master or down)
@@ -575,28 +575,50 @@ class MultiData():
         """ FP channel masked regions area data frame
 
         """
-        self.area_df = pd.DataFrame(columns=['ID',           # recording ID
-                                             'stim_frame',   # stimulation frame number
-                                             'mask',         # mask type (up or down)
-                                             'area'])        # mask region area (in px)
+        self.area_df = pd.DataFrame(columns=['ID',          # recording ID
+                                             'stim_frame',  # stimulation frame number
+                                             'mask',        # mask type (up or down)
+                                             'area',        # mask area (in px)
+                                             'rel_area'])   # mask relative area (mask / master mask) 
 
         # down mask area
         for mask_num in range(0, len(self.stim_peak)):
-            point_series = pd.Series([f'{self.img_name}{id_suffix}',           # recording ID
-                                      self.stim_peak[mask_num],                # stimulation frame number
-                                      'down',                                  # mask type (up or down)
-                                      np.sum(self.down_diff_mask[mask_num])],  # mask region area (in px)
+            down_mask_area = np.sum(self.down_diff_mask[mask_num])
+            cell_region_down_mask = np.copy(self.down_diff_mask[mask_num])
+            cell_region_down_mask[cell_region_down_mask != self.master_mask] = 0
+            down_mask_rel_area = np.sum(cell_region_down_mask) / np.sum(self.master_mask)  # relative area only for master mask region
+            point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                      self.stim_peak[mask_num],       # stimulation frame number
+                                      'down',                         # mask type (up or down)
+                                      down_mask_area,                 # mask area (in px)
+                                      down_mask_rel_area],            # mask relative area (mask / master mask) 
                                     index=self.area_df.columns)
             self.area_df = self.area_df.append(point_series, ignore_index=True)
 
         # up mask area
         for mask_num in range(0, len(self.stim_peak)):
-            point_series = pd.Series([f'{self.img_name}{id_suffix}',           # recording ID
-                                      self.stim_peak[mask_num],                # stimulation frame number
-                                      'up',                                    # mask type (up or down)
-                                      np.sum(self.up_diff_mask[mask_num] != 0)],  # mask region area (in px)
-                                    index=self.area_df.columns)
+            up_mask_area = np.sum(self.up_diff_mask[mask_num] != 0)
+            cell_region_up_mask = np.copy(self.up_diff_mask[mask_num])
+            cell_region_up_mask != 0
+            cell_region_up_mask[cell_region_up_mask != self.master_mask] = 0
+            up_mask_rel_area = np.sum(cell_region_up_mask) / np.sum(self.master_mask)
+            point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                      self.stim_peak[mask_num],       # stimulation frame number
+                                      'up',                           # mask type (up or down)
+                                      up_mask_area,                   # mask area (in px)
+                                      up_mask_rel_area],              # mask relative area (mask / master mask) 
+                                    index=self.area_df.columns) 
             self.area_df = self.area_df.append(point_series, ignore_index=True)
+
+        # master mask area
+        self.area_df = self.area_df.append(pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                                      0,                              # stimulation frame number
+                                                      'master',                       # mask type (up or down)
+                                                      np.sum(self.master_mask),       # mask area (in px)
+                                                      1],                             # mask relative area (mask / master mask) 
+                                                    index=self.area_df.columns),
+                                           ignore_index=True)
+        
 
         logging.info(f'Recording profile data frame {self.area_df.shape} created')
         return self.area_df
