@@ -35,7 +35,7 @@ logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
 
-# I/O
+# I/O options
 data_path = os.path.join(sys.path[0], 'data')
 res_path = os.path.join(sys.path[0], 'results')
 
@@ -43,23 +43,29 @@ if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 # options
-date_name_suffix = '_11_27_2021' # suffix with recording date       
+date_name_suffix = '_02_2_2022' # suffix with recording date       
 frame_reg_time = 2.0   # frame rate, inter frame time in seconds
 save_csv = False
 
 # data frame init
-df = pd.DataFrame(columns=['ID',           # recording ID
-                           'power',        # 405 nm stimulation power (%)
-                           'ch',           # channel (FP or Ca dye)
-                           'frame',        # frame num
-                           'time',         # frame time (s)
-                           'mask',         # mask type (master, up, down)
-                           'mask_region',  # mask region (1 for master or down)
-                           'mean',         # mask mean intensity
-                           'delta',        # mask ΔF/F
-                           'rel'])         # mask mean / master mask mean
+df_profile = pd.DataFrame(columns=['ID',           # recording ID
+                                   'power',        # 405 nm stimulation power (%)
+                                   'ch',           # channel (FP or Ca dye)
+                                   'frame',        # frame num
+                                   'time',         # frame time (s)
+                                   'mask',         # mask type (master, up, down)
+                                   'mask_region',  # mask region (1 for master or down)
+                                   'mean',         # mask mean intensity
+                                   'delta',        # mask ΔF/F
+                                   'rel'])         # mask mean / master mask mean
 
-# metadata YAML file reading
+df_area = pd.DataFrame(columns=['ID',           # recording ID
+                                'stim_frame',   # stimulation frame number
+                                'mask',         # mask type (up or down)
+                                'mask_region',  # mask region (1 only for down)
+                                'area'])        # mask region area (in px)
+
+# metadata YAML file uploading
 for root, dirs, files in os.walk(data_path):
     for file in files:
         if file.endswith('.yml') or file.endswith('.yaml'):
@@ -79,6 +85,7 @@ for root, dirs, files in os.walk(data_path):  # loop over OIF files
                                       time_scale=0.5)
             record_list.append(one_record)
 
+# records analysis
 for record in record_list:
     logging.info(f'Record {record.img_name} in progress')
     record_path = f'{res_path}/{record.img_name}{date_name_suffix}'
@@ -92,9 +99,13 @@ for record in record_list:
                          down_min_tolerance=-0.2, down_max_tolerance=-0.1)
     record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
                            deltaF_up=0.1, deltaF_down=-0.1)
-    record.save_ctrl_profiles(path=record_path)
-    record.save_ctrl_img(path=record_path)
+    # record.save_ctrl_profiles(path=record_path)
+    # record.save_ctrl_img(path=record_path)
 
-    df = df.append(record.safe_profile_df(id_suffix=date_name_suffix), ignore_index=True)
+    df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
 
-df.to_csv(f'{res_path}/profile.csv', index=False)
+    df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
+
+# data frames saving
+df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
+df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)

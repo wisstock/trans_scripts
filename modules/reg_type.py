@@ -474,8 +474,8 @@ class MultiData():
     def prot_profile(self, mask=None):
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series])
 
-    def safe_profile_df(self, id_suffix):
-        """ Masked regions intensity profiles data frame saving
+    def save_profile_df(self, id_suffix):
+        """ Masked regions intensity profiles data frame
 
         """
         self.profile_df = pd.DataFrame(columns=['ID',           # recording ID
@@ -566,10 +566,39 @@ class MultiData():
                                         index=self.profile_df.columns)
                 self.profile_df = self.profile_df.append(point_series, ignore_index=True)
 
-        logging.info(f'Recording profile data frame ({self.profile_df.shape}) done!')
+        logging.info(f'Recording profile data frame {self.profile_df.shape} created')
         return self.profile_df
 
         # for val_num in range(len(self.ca_series)):
+
+    def save_area_df(self, id_suffix):
+        """ FP channel masked regions area data frame
+
+        """
+        self.area_df = pd.DataFrame(columns=['ID',           # recording ID
+                                             'stim_frame',   # stimulation frame number
+                                             'mask',         # mask type (up or down)
+                                             'mask_region',  # mask region (1 only for down)
+                                             'area'])        # mask region area (in px)
+
+        # down mask area
+        for mask_num in range(0, len(self.stim_peak)):
+            point_series = pd.Series([f'{self.img_name}{id_suffix}',           # recording ID
+                                      self.stim_peak[mask_num],                # stimulation frame number
+                                      'down',                                  # mask type (up or down)
+                                      1,                                       # mask region (1 only for down)
+                                      np.sum(self.down_diff_mask[mask_num])],  # mask region area (in px)
+                                    index=self.area_df.columns)
+            self.area_df = self.area_df.append(point_series, ignore_index=True)
+
+        # # up mask area
+        # up_region_area_dict = {}
+        # for mask_num in range(0, len(self.stim_peak)):
+        #     peak_up_mask_prop = measure.regionprops(self.up_diff_mask[mask_num])
+        #     for up_mask_prop in peak_up_mask_prop
+
+        # logging.info(f'Recording profile data frame {self.area_df.shape} created')
+        # return self.area_df
 
     def save_ctrl_profiles(self, path, baseline_frames=3):
         """ Masks intensity profiles
