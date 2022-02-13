@@ -62,7 +62,6 @@ df_profile = pd.DataFrame(columns=['ID',           # recording ID
 df_area = pd.DataFrame(columns=['ID',           # recording ID
                                 'stim_frame',   # stimulation frame number
                                 'mask',         # mask type (up or down)
-                                'mask_region',  # mask region (1 only for down)
                                 'area'])        # mask region area (in px)
 
 # metadata YAML file uploading
@@ -99,8 +98,8 @@ for record in record_list:
                          down_min_tolerance=-0.2, down_max_tolerance=-0.1)
     record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
                            deltaF_up=0.1, deltaF_down=-0.1)
-    # record.save_ctrl_profiles(path=record_path)
-    # record.save_ctrl_img(path=record_path)
+    record.save_ctrl_profiles(path=record_path)
+    record.save_ctrl_img(path=record_path)
 
     df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
 

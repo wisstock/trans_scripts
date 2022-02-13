@@ -578,7 +578,6 @@ class MultiData():
         self.area_df = pd.DataFrame(columns=['ID',           # recording ID
                                              'stim_frame',   # stimulation frame number
                                              'mask',         # mask type (up or down)
-                                             'mask_region',  # mask region (1 only for down)
                                              'area'])        # mask region area (in px)
 
         # down mask area
@@ -586,19 +585,21 @@ class MultiData():
             point_series = pd.Series([f'{self.img_name}{id_suffix}',           # recording ID
                                       self.stim_peak[mask_num],                # stimulation frame number
                                       'down',                                  # mask type (up or down)
-                                      1,                                       # mask region (1 only for down)
                                       np.sum(self.down_diff_mask[mask_num])],  # mask region area (in px)
                                     index=self.area_df.columns)
             self.area_df = self.area_df.append(point_series, ignore_index=True)
 
-        # # up mask area
-        # up_region_area_dict = {}
-        # for mask_num in range(0, len(self.stim_peak)):
-        #     peak_up_mask_prop = measure.regionprops(self.up_diff_mask[mask_num])
-        #     for up_mask_prop in peak_up_mask_prop
+        # up mask area
+        for mask_num in range(0, len(self.stim_peak)):
+            point_series = pd.Series([f'{self.img_name}{id_suffix}',           # recording ID
+                                      self.stim_peak[mask_num],                # stimulation frame number
+                                      'up',                                    # mask type (up or down)
+                                      np.sum(self.up_diff_mask[mask_num] != 0)],  # mask region area (in px)
+                                    index=self.area_df.columns)
+            self.area_df = self.area_df.append(point_series, ignore_index=True)
 
-        # logging.info(f'Recording profile data frame {self.area_df.shape} created')
-        # return self.area_df
+        logging.info(f'Recording profile data frame {self.area_df.shape} created')
+        return self.area_df
 
     def save_ctrl_profiles(self, path, baseline_frames=3):
         """ Masks intensity profiles
