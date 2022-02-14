@@ -576,6 +576,7 @@ class MultiData():
 
         """
         self.area_df = pd.DataFrame(columns=['ID',          # recording ID
+                                             'stim_num',    # stimulation number
                                              'stim_frame',  # stimulation frame number
                                              'mask',        # mask type (up or down)
                                              'area',        # mask area (in px)
@@ -588,6 +589,7 @@ class MultiData():
             cell_region_down_mask[cell_region_down_mask != self.master_mask] = 0
             down_mask_rel_area = np.sum(cell_region_down_mask) / np.sum(self.master_mask)  # relative area only for master mask region
             point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                      mask_num+1,                       # stimulation number
                                       self.stim_peak[mask_num],       # stimulation frame number
                                       'down',                         # mask type (up or down)
                                       down_mask_area,                 # mask area (in px)
@@ -603,6 +605,7 @@ class MultiData():
             cell_region_up_mask[cell_region_up_mask != self.master_mask] = 0
             up_mask_rel_area = np.sum(cell_region_up_mask) / np.sum(self.master_mask)
             point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                      mask_num+1,                       # stimulation number
                                       self.stim_peak[mask_num],       # stimulation frame number
                                       'up',                           # mask type (up or down)
                                       up_mask_area,                   # mask area (in px)
@@ -612,6 +615,7 @@ class MultiData():
 
         # master mask area
         self.area_df = self.area_df.append(pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                                      0,                              # stimulation number
                                                       0,                              # stimulation frame number
                                                       'master',                       # mask type (up or down)
                                                       np.sum(self.master_mask),       # mask area (in px)

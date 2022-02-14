@@ -60,6 +60,7 @@ df_profile = pd.DataFrame(columns=['ID',           # recording ID
                                    'rel'])         # mask mean / master mask mean
 
 df_area = pd.DataFrame(columns=['ID',          # recording ID
+                                'stim_num',    # stimulation number
                                 'stim_frame',  # stimulation frame number
                                 'mask',        # mask type (up or down)
                                 'area',        # mask region area (in px)
@@ -106,6 +107,6 @@ for record in record_list:
 
     df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
 
-data frames saving
+# data frames saving
 df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
 df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
