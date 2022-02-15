@@ -66,6 +66,11 @@ df_area = pd.DataFrame(columns=['ID',          # recording ID
                                 'area',        # mask region area (in px)
                                 'rel_area'])   # mask relative area (mask / master mask)
 
+df_px = pd.DataFrame(columns=['ID',           # recording ID
+                              'mask_region',  # mask region (1 for master or down)
+                              'int',          # px mean intensity
+                              'delta'])       # px ΔF/F
+
 # metadata YAML file uploading
 for root, dirs, files in os.walk(data_path):
     for file in files:
@@ -104,9 +109,10 @@ for record in record_list:
     record.save_ctrl_img(path=record_path)
 
     df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
-
     df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
+    df_px = df_px.append(record.save_px_df(id_suffix=date_name_suffix), ignore_index=True)
 
 # data frames saving
 df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
 df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
+df_px.to_csv(f'{res_path}/px{date_name_suffix}.csv', index=False)

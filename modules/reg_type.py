@@ -455,13 +455,13 @@ class MultiData():
         vdelta = np.vectorize(delta)
         # centr = lambda img: abs(np.max(img))*0.5 if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
 
-        stim_mean_series = []
+        self.stim_mean_series = []
         for stim_position in self.stim_peak:
             peak_frames_start = stim_position + stim_shift
             peak_frames_end = stim_position + stim_shift + stim_win
-            stim_mean_series.append(np.mean(prot_series_sigma[peak_frames_start:peak_frames_end], axis=0))
+            self.stim_mean_series.append(np.mean(prot_series_sigma[peak_frames_start:peak_frames_end], axis=0))
 
-        self.peak_deltaF_series = np.asarray([ma.masked_where(~self.master_mask, vdelta(i, baseline_prot_img)) for i in stim_mean_series])
+        self.peak_deltaF_series = np.asarray([ma.masked_where(~self.master_mask, vdelta(i, baseline_prot_img)) for i in self.stim_mean_series])
         self.up_delta_mask = np.copy(self.peak_deltaF_series)
         self.up_delta_mask = self.up_delta_mask >= deltaF_up
         self.up_delta_mask[~np.broadcast_to(self.master_mask, np.shape(self.up_delta_mask))] = 0
@@ -506,6 +506,7 @@ class MultiData():
             self.profile_df = self.profile_df.append(point_series, ignore_index=True)
         
         # FP intensity
+        # FP master
         fp_master_profile = self.prot_profile(mask=self.master_mask)
         fp_master_profile_delta = edge.deltaF(fp_master_profile, f_0_win=self.baseline_frames)
         for fp_val in range(0, len(self.prot_series)):
@@ -626,6 +627,35 @@ class MultiData():
 
         logging.info(f'Recording profile data frame {self.area_df.shape} created')
         return self.area_df
+
+    def save_px_df(self, id_suffix):
+        """ Save up regions intensity pixel-wise, for best mask and corresponding pixel-wise ΔF/F image
+
+        """
+        self.px_df = pd.DataFrame(columns=['ID',           # recording ID
+                                           'mask_region',  # mask region (1 for master or down)
+                                           'int',          # px intensity
+                                           'delta'])       # px ΔF/F
+
+        best_delta_img = self.peak_deltaF_series[self.best_up_mask_index]
+        best_img = self.stim_mean_series[self.best_up_mask_index]
+
+        best_up_mask = self.up_diff_mask[self.best_up_mask_index]
+        best_up_mask_prop = measure.regionprops(best_up_mask)
+
+        for i in best_up_mask_prop:  # calculate profiles for each up region
+            best_up_mask_region = best_up_mask == i.label 
+            for px_int, px_delta in zip(ma.compressed(ma.masked_where(~best_up_mask_region, best_img)),
+                                        ma.compressed(ma.masked_where(~best_up_mask_region, best_delta_img))): 
+                point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                          i.label,                         # mask region
+                                          px_int,                         # px intensity
+                                          px_delta],                            # px ΔF/F
+                                        index=self.px_df.columns)
+                self.px_df = self.px_df.append(point_series, ignore_index=True)
+
+        logging.info(f'Recording profile data frame {self.px_df.shape} created')
+        return self.px_df
 
     def save_ctrl_profiles(self, path, baseline_frames=3):
         """ Masks intensity profiles
