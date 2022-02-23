@@ -57,7 +57,7 @@ df_profile = pd.DataFrame(columns=['ID',           # recording ID
                                    'mask_region',  # mask region (1 for master or down)
                                    'mean',         # mask mean intensity
                                    'delta',        # mask ΔF/F
-                                   'rel'])         # mask mean / master mask mean
+                                   'rel'])         # mask sum / master mask sum
 
 df_area = pd.DataFrame(columns=['ID',          # recording ID
                                 'stim_num',    # stimulation number

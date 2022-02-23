@@ -487,7 +487,7 @@ class MultiData():
                                                 'mask_region',  # mask region (1 for master or down)
                                                 'mean',         # mask mean intensity
                                                 'delta',        # mask ΔF/F
-                                                'rel'])         # mask mean / master mask mean
+                                                'rel'])         # mask sum / master mask sum
         # Ca dye
         ca_profile = self.ca_profile()
         ca_profile_delta = edge.deltaF(ca_profile, f_0_win=self.baseline_frames)
@@ -501,7 +501,7 @@ class MultiData():
                                               1,                             # mask region (1 for master or down)
                                               ca_profile[ca_val],            # mask mean intensity
                                               ca_profile_delta[ca_val],      # mask ΔF/F
-                                              1],                            # mask mean / master mask mean (1 for Ca dye channel)
+                                              1],                            # mask sum / master mask sum (1 for Ca dye channel)
                                       index=self.profile_df.columns)
             self.profile_df = self.profile_df.append(point_series, ignore_index=True)
         
@@ -509,6 +509,8 @@ class MultiData():
         # FP master
         fp_master_profile = self.prot_profile(mask=self.master_mask)
         fp_master_profile_delta = edge.deltaF(fp_master_profile, f_0_win=self.baseline_frames)
+        fp_master_sum = np.asarray([round(np.sum(ma.masked_where(~self.master_mask, img)), 3) for img in self.prot_series]) # intensity sum for master mask
+
         for fp_val in range(0, len(self.prot_series)):
             point_series = pd.Series([f'{self.img_name}{id_suffix}',            # recording ID
                                               self.stim_power,                  # 405 nm stimulation power (%)
@@ -519,13 +521,17 @@ class MultiData():
                                               1,                                # mask region (1 for master or down)
                                               fp_master_profile[fp_val],        # mask mean intensity
                                               fp_master_profile_delta[fp_val],  # mask ΔF/F
-                                              1],                               # mask mean / master mask mean (1 for Ca dye channel)
+                                              1],                               # mask sum / master mask sum (1 for Ca dye channel)
                                      index=self.profile_df.columns)
             self.profile_df = self.profile_df.append(point_series, ignore_index=True)
             
+
+
+
         # FP down regions
         fp_down_profile = self.prot_profile(mask=self.down_diff_mask[self.best_up_mask_index])
         fp_down_profile_delta = edge.deltaF(fp_down_profile, f_0_win=self.baseline_frames)
+        fp_down_sum = np.asarray([round(np.sum(ma.masked_where(~self.down_diff_mask[self.best_up_mask_index], img)), 3) for img in self.prot_series])
         for fp_val in range(0, len(self.prot_series)):
             point_series = pd.Series([f'{self.img_name}{id_suffix}',                               # recording ID
                                               self.stim_power,                                     # 405 nm stimulation power (%)
@@ -536,7 +542,7 @@ class MultiData():
                                               1,                                                   # mask region (1 for master or down)
                                               fp_down_profile[fp_val],                             # mask mean intensity
                                               fp_down_profile_delta[fp_val],                       # mask ΔF/F
-                                              fp_down_profile[fp_val]/fp_master_profile[fp_val]],  # mask mean / master mask mean (1 for Ca dye channel)
+                                              fp_down_sum[fp_val]/fp_master_sum[fp_val]],  # mask sum / master mask sum (1 for Ca dye channel)
                                      index=self.profile_df.columns)
             self.profile_df = self.profile_df.append(point_series, ignore_index=True)
 
@@ -549,7 +555,9 @@ class MultiData():
             best_up_mask_region = best_up_mask == i.label
             fp_up_profile = self.prot_profile(mask=best_up_mask_region)
             fp_up_profile_delta = edge.deltaF(fp_up_profile, f_0_win=self.baseline_frames)
-            fp_up_profile_dict.update({i.label: [fp_up_profile, fp_up_profile_delta]})
+            fp_up_sum = np.asarray([round(np.sum(ma.masked_where(~best_up_mask_region, img)), 3) for img in self.prot_series])
+
+            fp_up_profile_dict.update({i.label: [fp_up_profile, fp_up_profile_delta, fp_up_sum]})
         for fp_val in range(0, len(self.prot_series)):
             for up_region_key in fp_up_profile_dict.keys():
                 up_region = fp_up_profile_dict.get(up_region_key)
@@ -563,7 +571,7 @@ class MultiData():
                                           up_region_key,                                    # mask region (1 for master or down)
                                           up_region[0][fp_val],                             # mask mean intensity
                                           up_region[1][fp_val],                             # mask ΔF/F
-                                          up_region[0][fp_val]/fp_master_profile[fp_val]],  # mask mean / master mask mean (1 for Ca dye channel)
+                                          up_region[2][fp_val]/fp_master_sum[fp_val]],      # mask sum / master mask sum (1 for Ca dye channel)
                                         index=self.profile_df.columns)
                 self.profile_df = self.profile_df.append(point_series, ignore_index=True)
 
