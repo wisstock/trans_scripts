@@ -524,9 +524,6 @@ class MultiData():
                                               1],                               # mask sum / master mask sum (1 for Ca dye channel)
                                      index=self.profile_df.columns)
             self.profile_df = self.profile_df.append(point_series, ignore_index=True)
-            
-
-
 
         # FP down regions
         fp_down_profile = self.prot_profile(mask=self.down_diff_mask[self.best_up_mask_index])
@@ -640,27 +637,32 @@ class MultiData():
         """ Save up regions intensity pixel-wise, for best mask and corresponding pixel-wise ΔF/F image
 
         """
-        self.px_df = pd.DataFrame(columns=['ID',           # recording ID
+        self.px_df = pd.DataFrame(columns=['ID',           # recording ID 
+                                           'stim',         # stimulus number
                                            'mask_region',  # mask region (1 for master or down)
                                            'int',          # px intensity
                                            'delta'])       # px ΔF/F
 
-        best_delta_img = self.peak_deltaF_series[self.best_up_mask_index]
-        best_img = self.stim_mean_series[self.best_up_mask_index]
-
         best_up_mask = self.up_diff_mask[self.best_up_mask_index]
         best_up_mask_prop = measure.regionprops(best_up_mask)
 
-        for i in best_up_mask_prop:  # calculate profiles for each up region
-            best_up_mask_region = best_up_mask == i.label 
-            for px_int, px_delta in zip(ma.compressed(ma.masked_where(~best_up_mask_region, best_img)),
-                                        ma.compressed(ma.masked_where(~best_up_mask_region, best_delta_img))): 
-                point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
-                                          i.label,                         # mask region
-                                          px_int,                         # px intensity
-                                          px_delta],                            # px ΔF/F
-                                        index=self.px_df.columns)
-                self.px_df = self.px_df.append(point_series, ignore_index=True)
+        # best_delta_img = self.peak_deltaF_series[self.best_up_mask_index]
+        # best_img = self.stim_mean_series[self.best_up_mask_index]
+
+        for stim_img_num in range(len(self.stim_mean_series)):
+            stim_mean_img = self.stim_mean_series[stim_img_num]
+            stim_deltaF_img = self.peak_deltaF_series[stim_img_num]
+            for i in best_up_mask_prop:  # calculate profiles for each up region
+                best_up_mask_region = best_up_mask == i.label 
+                for px_int, px_delta in zip(ma.compressed(ma.masked_where(~best_up_mask_region, stim_mean_img)),
+                                            ma.compressed(ma.masked_where(~best_up_mask_region, stim_deltaF_img))): 
+                    point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
+                                              stim_img_num+1,                 # stimulus number  
+                                              i.label,                        # mask region
+                                              px_int,                         # px intensity
+                                              px_delta],                      # px ΔF/F
+                                            index=self.px_df.columns)
+                    self.px_df = self.px_df.append(point_series, ignore_index=True)
 
         logging.info(f'Recording profile data frame {self.px_df.shape} created')
         return self.px_df

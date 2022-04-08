@@ -67,6 +67,7 @@ df_area = pd.DataFrame(columns=['ID',          # recording ID
                                 'rel_area'])   # mask relative area (mask / master mask)
 
 df_px = pd.DataFrame(columns=['ID',           # recording ID
+                              'stim',         # stimulus number
                               'mask_region',  # mask region (1 for master or down)
                               'int',          # px mean intensity
                               'delta'])       # px ΔF/F
@@ -105,14 +106,14 @@ for record in record_list:
                          down_min_tolerance=-0.2, down_max_tolerance=-0.1)
     record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
                            deltaF_up=0.1, deltaF_down=-0.1)
-    record.save_ctrl_profiles(path=record_path)
-    record.save_ctrl_img(path=record_path)
+    # record.save_ctrl_profiles(path=record_path)
+    # record.save_ctrl_img(path=record_path)
 
-    df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
-    df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
+    # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
+    # df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
     df_px = df_px.append(record.save_px_df(id_suffix=date_name_suffix), ignore_index=True)
 
 # data frames saving
-df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
-df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
+# df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
+# df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
 df_px.to_csv(f'{res_path}/px{date_name_suffix}.csv', index=False)
