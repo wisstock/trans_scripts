@@ -22,8 +22,8 @@ from skimage import measure
 
 sys.path.append('modules')
 # import oiffile as oif
-import reg_type as rt
-import edge
+import type_multi as rt  # registration type module
+import edge              # util functions module
 
 
 plt.style.use('dark_background')
