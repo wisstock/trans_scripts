@@ -144,6 +144,7 @@ class MultiData():
         self.stim_peak = self.stim_peak[(self.stim_peak >= l_lim) & (self.stim_peak <= r_lim)]  # filter outer peaks
         logging.info(f'Detected peaks: {self.stim_peak}')
 
+    # derivetive series
     def peak_img_diff(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, up_min_tolerance=0.2, up_max_tolerance=0.75, down_min_tolerance=2, down_max_tolerance=0.75, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
@@ -163,22 +164,24 @@ class MultiData():
         self.up_diff_mask_prop = []
         self.comb_diff_mask = []
         for stim_position in self.stim_peak:
-            # logging.info(f'Loop mean frame index: {loop_start_index}-{loop_fin_index}')
             diff_frames_start = stim_position + stim_shift
             diff_frames_end = stim_position + stim_shift + stim_win
             stim_mean_img = np.mean(prot_series_sigma[diff_frames_start:diff_frames_end], axis=0)
             stim_diff_img = stim_mean_img - baseline_prot_img
 
+            # creating and normalization of differential image
             stim_diff_img[self.distances >= 30] = 0 
             stim_diff_img = stim_diff_img/np.max(np.abs(stim_diff_img))
             self.peak_diff_series.append(stim_diff_img)
 
+            # up regions thresholding
             frame_diff_up_mask = filters.apply_hysteresis_threshold(stim_diff_img,
                                                                     low=up_min_tolerance,
                                                                     high=up_max_tolerance)
             frame_diff_up_mask_elements = measure.label(frame_diff_up_mask)
             self.up_diff_mask.append(frame_diff_up_mask_elements)
 
+            # down regions thresholding
             frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
                                                                     low=down_min_tolerance,
                                                                     high=down_max_tolerance)
@@ -218,14 +221,53 @@ class MultiData():
         self.up_delta_mask = self.up_delta_mask >= deltaF_up
         self.up_delta_mask[~np.broadcast_to(self.master_mask, np.shape(self.up_delta_mask))] = 0
 
+
+    def diff_mask_segment(self):
+        """ Up regions mask segmentation.
+
+        """
+        best_mask = self.up_diff_mask[self.best_up_mask_index]
+        demo_segment = np.copy(best_mask)[60:180, 100:150]
+        demo_segment[demo_segment!=0] = 1
+
+        px_num = 1
+        for i, j in np.ndindex(demo_segment.shape):
+            if demo_segment[i, j] != 0:
+                demo_segment[i, j] = px_num
+                px_num += 1
+            # demo_segment[i, j] = 10
+
+        segment_num = 8
+        segment_range = px_num // segment_num
+        segment_lab_dict = {segment_i:[segment_i * segment_range - segment_range + 1, segment_i * segment_range]
+                            for segment_i in range(1, segment_num+1)}
+
+        print(px_num)
+        print(segment_num * segment_range)
+        print(segment_lab_dict)
+
+        demo_results = np.copy(demo_segment)
+        for segment_lab in segment_lab_dict.keys():
+            range_list = segment_lab_dict[segment_lab]
+            demo_results[(demo_results >= range_list[0]) & (demo_results <= range_list[1])] = segment_lab
+
+        fig, ax = plt.subplots()
+        ax.imshow(best_mask, cmap='seismic')
+        plt.show()
+
+    # extract mask profile
     def ca_profile(self, mask=False):
         if not mask:
             mask = self.master_mask
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.ca_series])
 
     def prot_profile(self, mask=None):
+        """ Test
+
+        """
         return np.asarray([round(np.sum(ma.masked_where(~mask, img)) / np.sum(mask), 3) for img in self.prot_series])
 
+    # data frame saving
     def save_profile_df(self, id_suffix):
         """ Masked regions intensity profiles data frame
 
@@ -419,6 +461,7 @@ class MultiData():
         logging.info(f'Recording profile data frame {self.px_df.shape} created')
         return self.px_df
 
+    # image saving
     def save_ctrl_profiles(self, path, baseline_frames=3):
         """ Masks intensity profiles
 
