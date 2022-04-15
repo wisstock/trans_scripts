@@ -104,7 +104,7 @@ class MultiData():
         # self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
 
     # cell masking
-    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5, nuclear_ext=2, multi_otsu_nucleus_mask=False):
+    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5, nuclear_ext=2, multi_otsu_nucleus_mask=True):
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
         Filters greater element of draft Otsu mask and return master mask array.
 
@@ -115,56 +115,51 @@ class MultiData():
 
         self.detection_img = filters.gaussian(np.mean(self.ca_series, axis=0), sigma=sigma, truncate=trun(kernel_size, sigma))
 
-        otsu = filters.threshold_otsu(self.detection_img)
-        draft_mask = self.detection_img > otsu
-        self.element_label, self.element_num = measure.label(draft_mask, return_num=True)
-        logging.info(f'{self.element_num} Otsu mask elements detected')
-
-        detection_label = np.copy(self.element_label)
-        element_area = {element.area : element.label for element in measure.regionprops(detection_label)}
-        self.master_mask = detection_label == element_area[max(element_area.keys())]
-
-        # mask expansion
-        self.distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
-        self.master_mask = self.distances <= mask_ext
-
-
         # multi Otsu mask for nucleus detection
         self.multi_otsu_nucleus_mask = multi_otsu_nucleus_mask
         if self.multi_otsu_nucleus_mask:
             multi_otsu = filters.threshold_multiotsu(self.detection_img, classes=3)
-            self.multi_otsu_regions = np.digitize(self.detection_img, bins=multi_otsu)  # 1 - cell elements, 2 - intracellular and nuclear elements
+            self.element_label = np.digitize(self.detection_img, bins=multi_otsu)  # 1 - cell elements, 2 - intracellular and nuclear elements
 
-        # get larger multi Otsu cellular element
-        cell_element = (self.multi_otsu_regions == 1) | (self.multi_otsu_regions == 2)
-        cell_element_label = measure.label(cell_element)
-        cell_element_area = {element.area : element.label for element in measure.regionprops(cell_element_label)}
-        cell_border_mask = cell_element_label == cell_element_area[max(cell_element_area.keys())]
-        cell_distances, _ = distance_transform_edt(~cell_border_mask, return_indices=True)
-        self.cell_mask = cell_distances <= mask_ext
+            # get larger multi Otsu cellular element
+            cell_element = (self.element_label == 1) | (self.element_label == 2)
+            cell_element_label = measure.label(cell_element)
+            cell_element_area = {element.area : element.label for element in measure.regionprops(cell_element_label)}
+            cell_border_mask = cell_element_label == cell_element_area[max(cell_element_area.keys())]
+            self.cell_distances, _ = distance_transform_edt(~cell_border_mask, return_indices=True)
+            self.cell_mask = self.cell_distances <= mask_ext
 
-        # get larger multi Otsu intracellular element
-        nuclear_element = self.multi_otsu_regions == 2
-        nuclear_element_label = measure.label(nuclear_element)
-        nuclear_element_area = {element.area : element.label for element in measure.regionprops(nuclear_element_label)}
-        nuclear_element_border = nuclear_element_label == nuclear_element_area[max(nuclear_element_area.keys())]
-        nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
-        self.nuclear_mask = nuclear_distances <= nuclear_ext
+            # get larger multi Otsu intracellular element
+            nuclear_element = self.element_label == 2
+            nuclear_element_label = measure.label(nuclear_element)
+            nuclear_element_area = {element.area : element.label for element in measure.regionprops(nuclear_element_label)}
+            nuclear_element_border = nuclear_element_label == nuclear_element_area[max(nuclear_element_area.keys())]
+            nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
+            self.nuclear_mask = nuclear_distances <= nuclear_ext
 
-        self.total_mask = np.copy(self.cell_mask)
-        self.total_mask[self.nuclear_mask] = 0
+            self.master_mask = np.copy(self.cell_mask)
+            self.master_mask[self.nuclear_mask] = 0
+        else:
+            # please, DON'T use this option!
+            otsu = filters.threshold_otsu(self.detection_img)
+            draft_mask = self.detection_img > otsu
+            self.element_label, self.element_num = measure.label(draft_mask, return_num=True)
+            logging.info(f'{self.element_num} Otsu mask elements detected')
 
-        fig, ax = plt.subplots()
-        ax.imshow(self.total_mask, cmap='jet')
-        plt.show()
+            detection_label = np.copy(self.element_label)
+            element_area = {element.area : element.label for element in measure.regionprops(detection_label)}
+            self.master_mask = detection_label == element_area[max(element_area.keys())]
 
-    def get_plasm_mask(self):
-        """ Cytoplasm only mask with nucleus region exclusion.
-        Created on Fluo-4 channel data.
+            # mask expansion
+            self.cell_distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
+            self.master_mask = self.cell_distances <= mask_ext
 
-        """
-        pass
+        self.total_byte_prot_img = filters.gaussian(util.img_as_ubyte(np.mean(self.prot_series, axis=0)/np.max(np.abs(np.mean(self.prot_series, axis=0)))), sigma=sigma, truncate=trun(kernel_size, sigma))
+        self.total_mask_ctrl_img = label2rgb(self.master_mask, image=self.total_byte_prot_img, colors=['blue'], alpha=0.2)
 
+        # fig, ax = plt.subplots()
+        # ax.imshow(self.total_mask_ctrl_img, cmap='jet')
+        # plt.show()
 
     def find_stimul_peak(self, h=0.15, d=3, l_lim=5, r_lim=18):
         """ Require master_mask, results of get_master_mask!
@@ -203,7 +198,7 @@ class MultiData():
             stim_diff_img = stim_mean_img - baseline_prot_img
 
             # creating and normalization of differential image
-            stim_diff_img[self.distances >= 30] = 0 
+            stim_diff_img[self.cell_distances >= 30] = 0 
             stim_diff_img = stim_diff_img/np.max(np.abs(stim_diff_img))
             self.peak_diff_series.append(stim_diff_img)
 
@@ -259,33 +254,37 @@ class MultiData():
         """ Up regions mask segmentation.
 
         """
-        best_mask = self.up_diff_mask[self.best_up_mask_index]
-        demo_segment = np.copy(best_mask)  # [60:180, 100:150]
-        demo_segment[demo_segment!=0] = 1
+        element_total_mask = self.up_diff_mask[self.best_up_mask_index]  # [60:180, 100:150]
+        segment_mask = np.zeros_like(element_total_mask)
 
-        px_num = 1
-        for i, j in np.ndindex(demo_segment.shape):
-            if demo_segment[i, j] != 0:
-                demo_segment[i, j] = px_num
-                px_num += 1
-            # demo_segment[i, j] = 10
+        for element_num in measure.regionprops(element_total_mask):
+            print(element_num.area)
+            element_mask = element_total_mask == element_num.label
+            element_segment = np.copy(element_mask).astype('int32')
 
-        segment_num = 4
-        segment_range = px_num // segment_num
-        segment_lab_dict = {segment_i:[segment_i * segment_range - segment_range + 1, segment_i * segment_range]
-                            for segment_i in range(1, segment_num+1)}
+            px_num = 1
+            for i, j in np.ndindex(element_segment.shape):
+                if element_segment[i, j] != 0:
+                    element_segment[i, j] = px_num
+                    px_num += 1
 
-        print(px_num)
-        print(segment_num * segment_range)
-        print(segment_lab_dict)
+            segment_num = 5
+            segment_range = px_num // segment_num
+            segment_lab_dict = {segment_i:[segment_i * segment_range - segment_range + 1, segment_i * segment_range]
+                                for segment_i in range(1, segment_num+1)}
 
-        demo_results = np.copy(demo_segment)
-        for segment_lab in segment_lab_dict.keys():
-            range_list = segment_lab_dict[segment_lab]
-            demo_results[(demo_results >= range_list[0]) & (demo_results <= range_list[1])] = segment_lab
+            # outlayer pixel handling, add it to last segment
+            last_segment_range = segment_lab_dict[list(segment_lab_dict)[-1]]
+            last_segment_range[-1] = px_num  # are dict element still connected to dict?
 
+            for segment_lab in segment_lab_dict.keys():
+                range_limits = segment_lab_dict[segment_lab]
+                element_segment[(element_segment >= range_limits[0]) & (element_segment <= range_limits[1])] = segment_lab
+            np.putmask(segment_mask, element_mask, element_segment)
+
+        print(np.shape(segment_mask))
         fig, ax = plt.subplots()
-        ax.imshow(demo_results, cmap='jet')
+        ax.imshow(segment_mask, cmap='jet')
         plt.show()
 
     # extract mask profile
@@ -580,15 +579,20 @@ class MultiData():
         # MASTER MASK
         plt.figure(figsize=(15,8))
 
-        ax0 = plt.subplot(121)
-        ax0.set_title('Otsu mask elements')
+        ax0 = plt.subplot(131)
+        ax0.set_title('Otsu elements')
         ax0.imshow(self.element_label, cmap='jet')
         ax0.axis('off')
 
-        ax1 = plt.subplot(122)
-        ax1.set_title('Cell master mask')
+        ax1 = plt.subplot(132)
+        ax1.set_title('Effective master mask')
         ax1.imshow(self.master_mask, cmap='jet')
         ax1.axis('off')
+
+        ax2 = plt.subplot(133)
+        ax2.set_title('FP img overlap')
+        ax2.imshow(self.total_mask_ctrl_img)
+        ax2.axis('off')
 
         plt.suptitle(f'{self.img_name} master mask', fontsize=20)
         plt.tight_layout()
