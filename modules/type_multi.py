@@ -221,13 +221,13 @@ class MultiData():
         self.up_delta_mask = self.up_delta_mask >= deltaF_up
         self.up_delta_mask[~np.broadcast_to(self.master_mask, np.shape(self.up_delta_mask))] = 0
 
-
+    # mask elements sub-segmentation
     def diff_mask_segment(self):
         """ Up regions mask segmentation.
 
         """
         best_mask = self.up_diff_mask[self.best_up_mask_index]
-        demo_segment = np.copy(best_mask)[60:180, 100:150]
+        demo_segment = np.copy(best_mask)  # [60:180, 100:150]
         demo_segment[demo_segment!=0] = 1
 
         px_num = 1
@@ -237,7 +237,7 @@ class MultiData():
                 px_num += 1
             # demo_segment[i, j] = 10
 
-        segment_num = 8
+        segment_num = 4
         segment_range = px_num // segment_num
         segment_lab_dict = {segment_i:[segment_i * segment_range - segment_range + 1, segment_i * segment_range]
                             for segment_i in range(1, segment_num+1)}
@@ -252,7 +252,7 @@ class MultiData():
             demo_results[(demo_results >= range_list[0]) & (demo_results <= range_list[1])] = segment_lab
 
         fig, ax = plt.subplots()
-        ax.imshow(best_mask, cmap='seismic')
+        ax.imshow(demo_results, cmap='jet')
         plt.show()
 
     # extract mask profile
