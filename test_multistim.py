@@ -99,16 +99,16 @@ for record in record_list:
     if not os.path.exists(record_path):
         os.makedirs(record_path)
 
-    record.get_master_mask(mask_ext=5, multi_otsu_nucleus_mask=False)
-    record.find_stimul_peak()
-    record.peak_img_diff(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
-                         up_min_tolerance=0.2, up_max_tolerance=0.7,
-                         down_min_tolerance=-0.2, down_max_tolerance=-0.1)
-    record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
-                           deltaF_up=0.1, deltaF_down=-0.1)
+    record.get_master_mask(mask_ext=3, nuclear_ext=3, multi_otsu_nucleus_mask=True)
+    # record.find_stimul_peak()
+    # record.peak_img_diff(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
+    #                      up_min_tolerance=0.2, up_max_tolerance=0.7,
+    #                      down_min_tolerance=-0.2, down_max_tolerance=-0.1)
+    # record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
+    #                        deltaF_up=0.1, deltaF_down=-0.1)
     
     # DEMO FUN
-    record.diff_mask_segment()
+    # record.diff_mask_segment()
 
     # RESULTS OUTPUT
     # record.save_ctrl_profiles(path=record_path)

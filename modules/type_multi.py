@@ -103,7 +103,8 @@ class MultiData():
         # tail_path = f'{oif_path}/{img_name}_0{loop_num+1}.oif'
         # self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
 
-    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5, multi_otsu_nucleus_mask=False):
+    # cell masking
+    def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5, nuclear_ext=2, multi_otsu_nucleus_mask=False):
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
         Filters greater element of draft Otsu mask and return master mask array.
 
@@ -112,7 +113,7 @@ class MultiData():
         """
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
 
-        self.detection_img = filters.gaussian(np.mean(self.prot_series, axis=0), sigma=sigma, truncate=trun(kernel_size, sigma))
+        self.detection_img = filters.gaussian(np.mean(self.ca_series, axis=0), sigma=sigma, truncate=trun(kernel_size, sigma))
 
         otsu = filters.threshold_otsu(self.detection_img)
         draft_mask = self.detection_img > otsu
@@ -127,11 +128,43 @@ class MultiData():
         self.distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
         self.master_mask = self.distances <= mask_ext
 
+
         # multi Otsu mask for nucleus detection
         self.multi_otsu_nucleus_mask = multi_otsu_nucleus_mask
         if self.multi_otsu_nucleus_mask:
             multi_otsu = filters.threshold_multiotsu(self.detection_img, classes=3)
-            self.cell_regions = np.digitize(self.detection_img, bins=multi_otsu)
+            self.multi_otsu_regions = np.digitize(self.detection_img, bins=multi_otsu)  # 1 - cell elements, 2 - intracellular and nuclear elements
+
+        # get larger multi Otsu cellular element
+        cell_element = (self.multi_otsu_regions == 1) | (self.multi_otsu_regions == 2)
+        cell_element_label = measure.label(cell_element)
+        cell_element_area = {element.area : element.label for element in measure.regionprops(cell_element_label)}
+        cell_border_mask = cell_element_label == cell_element_area[max(cell_element_area.keys())]
+        cell_distances, _ = distance_transform_edt(~cell_border_mask, return_indices=True)
+        self.cell_mask = cell_distances <= mask_ext
+
+        # get larger multi Otsu intracellular element
+        nuclear_element = self.multi_otsu_regions == 2
+        nuclear_element_label = measure.label(nuclear_element)
+        nuclear_element_area = {element.area : element.label for element in measure.regionprops(nuclear_element_label)}
+        nuclear_element_border = nuclear_element_label == nuclear_element_area[max(nuclear_element_area.keys())]
+        nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
+        self.nuclear_mask = nuclear_distances <= nuclear_ext
+
+        self.total_mask = np.copy(self.cell_mask)
+        self.total_mask[self.nuclear_mask] = 0
+
+        fig, ax = plt.subplots()
+        ax.imshow(self.total_mask, cmap='jet')
+        plt.show()
+
+    def get_plasm_mask(self):
+        """ Cytoplasm only mask with nucleus region exclusion.
+        Created on Fluo-4 channel data.
+
+        """
+        pass
+
 
     def find_stimul_peak(self, h=0.15, d=3, l_lim=5, r_lim=18):
         """ Require master_mask, results of get_master_mask!
@@ -144,7 +177,7 @@ class MultiData():
         self.stim_peak = self.stim_peak[(self.stim_peak >= l_lim) & (self.stim_peak <= r_lim)]  # filter outer peaks
         logging.info(f'Detected peaks: {self.stim_peak}')
 
-    # derivetive series
+    # translocation regions masking
     def peak_img_diff(self, sigma=1, kernel_size=5, baseline_win=3, stim_shift=0, stim_win=3, up_min_tolerance=0.2, up_max_tolerance=0.75, down_min_tolerance=2, down_max_tolerance=0.75, path=False):
         """ Mask for up and down regions of FP channel data.
         baseline_win - indexes of frames for baseline image creation
@@ -179,7 +212,7 @@ class MultiData():
                                                                     low=up_min_tolerance,
                                                                     high=up_max_tolerance)
             frame_diff_up_mask_elements = measure.label(frame_diff_up_mask)
-            self.up_diff_mask.append(frame_diff_up_mask_elements)
+            self.up_diff_mask.append(frame_diff_up_mask_elements)  # up mask elements labeling
 
             # down regions thresholding
             frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
