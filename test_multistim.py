@@ -108,7 +108,7 @@ for record in record_list:
     #                        deltaF_up=0.1, deltaF_down=-0.1)
     
     # DEMO FUN
-    record.diff_mask_segment()
+    record.diff_mask_segment(segment_num=6, element_min_area=100)
 
     # RESULTS OUTPUT
     # record.save_ctrl_profiles(path=record_path)

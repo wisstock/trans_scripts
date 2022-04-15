@@ -5,13 +5,6 @@ Multiple stimulation during registration.
 
 Does NOT requires oifpars module.
 
-Analysis functions tree:
-
-get_master_mask -- find_stimul_peak --|-- peak_img_diff
-                                      |
-                                      |-- peak_img_deltaF
-
-
 Useful links:
 https://www.cs.auckland.ac.nz/courses/compsci773s1c/lectures/ImageProcessing-html/topic4.htm
 
@@ -134,8 +127,8 @@ class MultiData():
             nuclear_element_label = measure.label(nuclear_element)
             nuclear_element_area = {element.area : element.label for element in measure.regionprops(nuclear_element_label)}
             nuclear_element_border = nuclear_element_label == nuclear_element_area[max(nuclear_element_area.keys())]
-            nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
-            self.nuclear_mask = nuclear_distances <= nuclear_ext
+            self.nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
+            self.nuclear_mask = self.nuclear_distances <= nuclear_ext
 
             self.master_mask = np.copy(self.cell_mask)
             self.master_mask[self.nuclear_mask] = 0
@@ -250,7 +243,7 @@ class MultiData():
         self.up_delta_mask[~np.broadcast_to(self.master_mask, np.shape(self.up_delta_mask))] = 0
 
     # mask elements sub-segmentation
-    def diff_mask_segment(self):
+    def diff_mask_segment(self, segment_num=3, element_min_area=100):
         """ Up regions mask segmentation.
 
         """
@@ -258,34 +251,38 @@ class MultiData():
         segment_mask = np.zeros_like(element_total_mask)
 
         for element_num in measure.regionprops(element_total_mask):
-            print(element_num.area)
             element_mask = element_total_mask == element_num.label
             element_segment = np.copy(element_mask).astype('int32')
 
-            px_num = 1
-            for i, j in np.ndindex(element_segment.shape):
-                if element_segment[i, j] != 0:
-                    element_segment[i, j] = px_num
-                    px_num += 1
+            if element_num.area < element_min_area:
+                logging.info(f'Mask element {element_num.label} area is too low ({element_num.area}px < lim {element_min_area}px)')
+                np.putmask(self.segment_mask, element_mask, element_segment)
+                continue
+            else:
+                px_num = 1
+                for i, j in np.ndindex(element_segment.shape):
+                    if element_segment[i, j] != 0:
+                        element_segment[i, j] = px_num
+                        px_num += 1
 
-            segment_num = 5
-            segment_range = px_num // segment_num
-            segment_lab_dict = {segment_i:[segment_i * segment_range - segment_range + 1, segment_i * segment_range]
-                                for segment_i in range(1, segment_num+1)}
+                segment_range = px_num // segment_num
+                segment_lab_dict = {segment_i:[segment_i * segment_range - segment_range + 1, segment_i * segment_range]
+                                    for segment_i in range(1, segment_num+1)}
 
-            # outlayer pixel handling, add it to last segment
-            last_segment_range = segment_lab_dict[list(segment_lab_dict)[-1]]
-            last_segment_range[-1] = px_num  # are dict element still connected to dict?
+                # outlier pixels handling, addition it to the last segment
+                segment_lab_dict[list(segment_lab_dict)[-1]][-1] = px_num
 
-            for segment_lab in segment_lab_dict.keys():
-                range_limits = segment_lab_dict[segment_lab]
-                element_segment[(element_segment >= range_limits[0]) & (element_segment <= range_limits[1])] = segment_lab
-            np.putmask(segment_mask, element_mask, element_segment)
+                for segment_lab in segment_lab_dict.keys():
+                    range_limits = segment_lab_dict[segment_lab]
+                    element_segment[(element_segment >= range_limits[0]) & (element_segment <= range_limits[1])] = segment_lab
+                np.putmask(segment_mask, element_mask, element_segment)
+                
+        self.up_segments_mask_array = np.stack((element_total_mask, segment_mask), axis=0)  # 0 - elements mask, 1 - segments mask
+        logging.info(f'Up mask elements segmented, segment num={segment_num}')
 
-        print(np.shape(segment_mask))
-        fig, ax = plt.subplots()
-        ax.imshow(segment_mask, cmap='jet')
-        plt.show()
+        # fig, ax = plt.subplots()
+        # ax.imshow(self.up_segments_array[1], cmap='jet')
+        # plt.show()
 
     # extract mask profile
     def ca_profile(self, mask=False):
@@ -494,7 +491,7 @@ class MultiData():
         return self.px_df
 
     # image saving
-    def save_ctrl_profiles(self, path, baseline_frames=3):
+    def save_ctrl_profiles(self, path, baseline_frames=5):
         """ Masks intensity profiles
 
         """
