@@ -242,21 +242,21 @@ class MultiData():
         self.up_delta_mask = self.up_delta_mask >= deltaF_up
         self.up_delta_mask[~np.broadcast_to(self.master_mask, np.shape(self.up_delta_mask))] = 0
 
-    # mask elements sub-segmentation
-    def diff_mask_segment(self, segment_num=3, element_min_area=100):
+    # advanced segmentation
+    def diff_mask_segment(self, segment_num=3, segment_min_area=30):
         """ Up regions mask segmentation.
 
         """
-        element_total_mask = self.up_diff_mask[self.best_up_mask_index]  # [60:180, 100:150]
+        element_total_mask = self.up_diff_mask[self.best_up_mask_index]  # [60:180, 100:150]  # test element of cell7 up mask
         segment_mask = np.zeros_like(element_total_mask)
 
         for element_num in measure.regionprops(element_total_mask):
             element_mask = element_total_mask == element_num.label
             element_segment = np.copy(element_mask).astype('int32')
 
-            if element_num.area < element_min_area:
-                logging.info(f'Mask element {element_num.label} area is too low ({element_num.area}px < lim {element_min_area}px)')
-                np.putmask(self.segment_mask, element_mask, element_segment)
+            if element_num.area // segment_num < segment_min_area:  # check element area limitation, if lower - no segmentation
+                logging.warning(f'Element {element_num.label} segmentation range is too low ({element_num.area // segment_num}px < lim {segment_min_area}px)')
+                np.putmask(segment_mask, element_mask, element_segment)
                 continue
             else:
                 px_num = 1
@@ -264,10 +264,11 @@ class MultiData():
                     if element_segment[i, j] != 0:
                         element_segment[i, j] = px_num
                         px_num += 1
-
                 segment_range = px_num // segment_num
                 segment_lab_dict = {segment_i:[segment_i * segment_range - segment_range + 1, segment_i * segment_range]
                                     for segment_i in range(1, segment_num+1)}
+
+                logging.info(f'Element {element_num.label} segmentation range is {segment_range}px')
 
                 # outlier pixels handling, addition it to the last segment
                 segment_lab_dict[list(segment_lab_dict)[-1]][-1] = px_num
@@ -278,11 +279,30 @@ class MultiData():
                 np.putmask(segment_mask, element_mask, element_segment)
                 
         self.up_segments_mask_array = np.stack((element_total_mask, segment_mask), axis=0)  # 0 - elements mask, 1 - segments mask
+        self.up_segments_mask_ctrl_img = label2rgb(self.up_segments_mask_array[1], image=self.total_byte_prot_img, alpha=0.4)
         logging.info(f'Up mask elements segmented, segment num={segment_num}')
 
-        # fig, ax = plt.subplots()
-        # ax.imshow(self.up_segments_array[1], cmap='jet')
-        # plt.show()
+    def segment_dist_calc(self):
+        """ Calculation of distance between nucleus and mask elements/segments.
+        Require multi Otsu cell without nucleus region and previously segmented up mask elements mask (diff_mask_segment).
+
+        """
+        demo_ring_mask = np.copy(self.master_mask)
+        demo_nuc_mask = np.copy(self.nuclear_mask)
+
+        demo_out = np.zeros(demo_ring_mask.shape, dtype='float64')  # np.zeros(((np.ndim(demo_ring_mask),) + demo_ring_mask.shape), dtype='int32')
+
+        distance_transform_edt(~demo_nuc_mask, return_indices=True, distances=demo_out)
+        # demo_out = ma.masked_where(~demo_ring_mask, demo_out)
+
+        demo_out[~demo_ring_mask] = 0
+
+        demo_dist_img = util.img_as_ubyte(demo_out*-1/np.max(np.abs(demo_out*-1)))
+        demo_ctrl = label2rgb(self.up_segments_mask_array[1], image=demo_out)
+
+        fig, ax = plt.subplots()
+        ax.imshow(self.up_segments_mask_ctrl_img)
+        plt.show()
 
     # extract mask profile
     def ca_profile(self, mask=False):
