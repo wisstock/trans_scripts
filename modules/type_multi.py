@@ -295,14 +295,30 @@ class MultiData():
         distance_transform_edt(~demo_nuc_mask, return_indices=True, distances=demo_out)
         # demo_out = ma.masked_where(~demo_ring_mask, demo_out)
 
-        demo_out[~demo_ring_mask] = 0
+        demo_out[~demo_ring_mask] = 0  # distancion mask
 
         demo_dist_img = util.img_as_ubyte(demo_out*-1/np.max(np.abs(demo_out*-1)))
         demo_ctrl = label2rgb(self.up_segments_mask_array[1], image=demo_out)
 
+    def cell_rim_profile(self, rim_th=2):
+        """ Creating of cell border rim mask for monitoring FP distribution along full cell.
+
+        """
+        f_print = morphology.disk(rim_th)
+        dilate_cell = morphology.binary_dilation(self.cell_mask, footprint=f_print)
+        erode_cell = morphology.binary_erosion(self.cell_mask, footprint=f_print)
+
+        self.cell_rim = np.logical_and(dilate_cell, ~erode_cell)
+        # rim_line = np.sum(self.cell_rim, axis=0)
+
+        seed_line = int(measure.regionprops(self.cell_rim.astype(int))[0].centroid[1])
+        print(seed_line)
+
         fig, ax = plt.subplots()
-        ax.imshow(self.up_segments_mask_ctrl_img)
+        ax.plot([seed_line, seed_line], [0, 255], color="white", linewidth=3)
+        ax.imshow(self.cell_rim)
         plt.show()
+
 
     # extract mask profile
     def ca_profile(self, mask=False):

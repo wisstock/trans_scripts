@@ -109,7 +109,8 @@ for record in record_list:
     record.diff_mask_segment(segment_num=6, segment_min_area=30)
 
     # DEMO FUN
-    record.segment_dist_calc()
+    # record.segment_dist_calc()
+    record.cell_rim_profile(rim_th=2)
 
     # RESULTS OUTPUT
     # record.save_ctrl_profiles(path=record_path)
