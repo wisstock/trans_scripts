@@ -105,12 +105,12 @@ for record in record_list:
                          up_min_tolerance=0.2, up_max_tolerance=0.7,
                          down_min_tolerance=-0.2, down_max_tolerance=-0.1)
     # record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
-    #                        deltaF_up=0.1, deltaF_down=-0.1)
+                           # deltaF_up=0.1, deltaF_down=-0.1)
     record.diff_mask_segment(segment_num=6, segment_min_area=30)
 
     # DEMO FUN
     # record.segment_dist_calc()
-    record.cell_rim_profile(rim_th=2)
+    record.cell_rim_profile(rim_th=1)
 
     # RESULTS OUTPUT
     # record.save_ctrl_profiles(path=record_path)

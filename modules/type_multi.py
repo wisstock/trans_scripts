@@ -210,6 +210,10 @@ class MultiData():
 
             self.comb_diff_mask.append((frame_diff_up_mask*2) + (frame_diff_down_mask-2)*-1)
 
+        # fig, ax = plt.subplots()
+        # ax.imshow(self.up_diff_mask[0], c)
+        # plt.show()
+
         # find better up mask (with maximal area)
         self.best_up_mask_index = np.argmax([np.sum(u_m != 0) for u_m in self.up_diff_mask])
         logging.info(f'Best up mask {self.best_up_mask_index+1} (stim frame {self.stim_peak[self.best_up_mask_index]})')
@@ -318,7 +322,6 @@ class MultiData():
         ax.plot([seed_line, seed_line], [0, 255], color="white", linewidth=3)
         ax.imshow(self.cell_rim)
         plt.show()
-
 
     # extract mask profile
     def ca_profile(self, mask=False):
