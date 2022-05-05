@@ -2,6 +2,7 @@
 .data/
 data/
 results/
+img_results/
 
 __pycache__/
 
