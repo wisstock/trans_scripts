@@ -94,7 +94,7 @@ for root, dirs, files in os.walk(data_path):  # loop over OIF files
 
 # records analysis
 for record in record_list:
-    logging.info(f'Record {record.img_name} in progress')
+    logging.info(f'>>> Record {record.img_name} in progress <<<')
     record_path = f'{res_path}/{record.img_name}{date_name_suffix}'
     if not os.path.exists(record_path):
         os.makedirs(record_path)
@@ -109,8 +109,8 @@ for record in record_list:
     record.diff_mask_segment(segment_num=6, segment_min_area=30)
 
     # DEMO FUN
-    # record.segment_dist_calc()
-    record.cell_rim_profile(rim_th=1)
+    record.segment_dist_calc()
+    # record.cell_rim_profile(rim_th=1)
 
     # RESULTS OUTPUT
     # record.save_ctrl_profiles(path=record_path)

@@ -199,8 +199,9 @@ class MultiData():
             frame_diff_up_mask = filters.apply_hysteresis_threshold(stim_diff_img,
                                                                     low=up_min_tolerance,
                                                                     high=up_max_tolerance)
-            frame_diff_up_mask_elements = measure.label(frame_diff_up_mask)
+            frame_diff_up_mask_elements, frame_diff_up_mask_elements_num = measure.label(frame_diff_up_mask, return_num=True)
             self.up_diff_mask.append(frame_diff_up_mask_elements)  # up mask elements labeling
+            logging.info(f'In stim peak {stim_position} finded {frame_diff_up_mask_elements_num} up regions')
 
             # down regions thresholding
             frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
@@ -294,15 +295,16 @@ class MultiData():
         demo_ring_mask = np.copy(self.master_mask)
         demo_nuc_mask = np.copy(self.nuclear_mask)
 
-        demo_out = np.zeros(demo_ring_mask.shape, dtype='float64')  # np.zeros(((np.ndim(demo_ring_mask),) + demo_ring_mask.shape), dtype='int32')
+        self.cytoplasm_dist = np.zeros(demo_ring_mask.shape, dtype='float64')  # np.zeros(((np.ndim(demo_ring_mask),) + demo_ring_mask.shape), dtype='int32')
+        distance_transform_edt(~self.nuclear_mask, return_indices=True, distances=self.cytoplasm_dist)
+        self.cytoplasm_dist[~self.master_mask] = 0  # distancion mask
 
-        distance_transform_edt(~demo_nuc_mask, return_indices=True, distances=demo_out)
-        # demo_out = ma.masked_where(~demo_ring_mask, demo_out)
+        # demo_dist_img = util.img_as_ubyte(demo_out*-1/np.max(np.abs(demo_out*-1)))
+        # demo_ctrl = label2rgb(self.up_segments_mask_array[1], image=demo_out)
 
-        demo_out[~demo_ring_mask] = 0  # distancion mask
-
-        demo_dist_img = util.img_as_ubyte(demo_out*-1/np.max(np.abs(demo_out*-1)))
-        demo_ctrl = label2rgb(self.up_segments_mask_array[1], image=demo_out)
+        fig, ax = plt.subplots()
+        ax.imshow(self.cytoplasm_dist, cmap='jet')  # self.up_segments_mask_ctrl_img
+        plt.show()
 
     def cell_rim_profile(self, rim_th=2):
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
