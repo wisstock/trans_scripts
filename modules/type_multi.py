@@ -71,7 +71,7 @@ class MultiData():
             native_total_intensity = np.sum(np.mean(self.prot_series[:2], axis=0))
             self.prot_series = np.asarray([frame / (np.sum(frame)/native_total_intensity) for frame in self.prot_series])
 
-        # create derevative series
+        # create derevative series for Ca dye series
         zero_end = np.vstack((self.ca_series, np.zeros_like(self.ca_series[0:1])))                     # array with last 0 frame
         zero_start = np.vstack((np.zeros_like(self.ca_series[0:1]), self.ca_series))                   # array with first 0 frame
         self.derivate_series = np.subtract(zero_end, zero_start)[1:-1]                                 # derivative frames series
@@ -297,13 +297,27 @@ class MultiData():
 
         self.cytoplasm_dist = np.zeros(demo_ring_mask.shape, dtype='float64')  # np.zeros(((np.ndim(demo_ring_mask),) + demo_ring_mask.shape), dtype='int32')
         distance_transform_edt(~self.nuclear_mask, return_indices=True, distances=self.cytoplasm_dist)
+        self.nuclear_dist = np.copy(self.cytoplasm_dist)
         self.cytoplasm_dist[~self.master_mask] = 0  # distancion mask
+
+        up_element_mask = self.up_segments_mask_array[0]
+        up_segment_mask = self.up_segments_mask_array[1]
+
+        # for element_num in measure.regionprops(up_element_mask):
+        element_mask = up_element_mask == 5 #  element_num.label
+        one_element = np.copy(up_segment_mask)
+        one_element[~element_mask] = 0
+
+        for segment_num in measure.regionprops(one_element):
+            one_segment = np.copy(one_element)
+            one_segment = one_segment == segment_num.label
+            print(segment_num.label)
 
         # demo_dist_img = util.img_as_ubyte(demo_out*-1/np.max(np.abs(demo_out*-1)))
         # demo_ctrl = label2rgb(self.up_segments_mask_array[1], image=demo_out)
 
         fig, ax = plt.subplots()
-        ax.imshow(self.cytoplasm_dist, cmap='jet')  # self.up_segments_mask_ctrl_img
+        ax.imshow(one_segment, cmap='jet')  # self.up_segments_mask_ctrl_img
         plt.show()
 
     def cell_rim_profile(self, rim_th=2):
@@ -745,7 +759,7 @@ class MultiData():
         logging.info(f'{self.img_name} control images saved!')
 
 if __name__=="__main__":
-  pass
+  print('А шо ти хочеш?')
 
 
 # That's all!

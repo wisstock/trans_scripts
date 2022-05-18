@@ -8,6 +8,7 @@ import sys
 import os
 import logging
 import yaml
+import time
 
 import numpy as np
 import numpy.ma as ma
@@ -72,6 +73,9 @@ df_px = pd.DataFrame(columns=['ID',           # recording ID
                               'int',          # px mean intensity
                               'delta'])       # px ΔF/F
 
+# script start time
+tic = time.perf_counter()
+
 # metadata YAML file uploading
 for root, dirs, files in os.walk(data_path):
     for file in files:
@@ -124,3 +128,7 @@ for record in record_list:
 # df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
 # df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
 # df_px.to_csv(f'{res_path}/px{date_name_suffix}.csv', index=False)
+
+# script fin time
+tac = time.perf_counter()
+logging.info(f'Data processed in {tac - tic:0.4f} seconds')
