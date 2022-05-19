@@ -303,21 +303,34 @@ class MultiData():
         up_element_mask = self.up_segments_mask_array[0]
         up_segment_mask = self.up_segments_mask_array[1]
 
-        # for element_num in measure.regionprops(up_element_mask):
-        element_mask = up_element_mask == 5 #  element_num.label
-        one_element = np.copy(up_segment_mask)
-        one_element[~element_mask] = 0
+        self.segment_dist = np.copy(up_element_mask)
 
-        for segment_num in measure.regionprops(one_element):
-            one_segment = np.copy(one_element)
-            one_segment = one_segment == segment_num.label
-            print(segment_num.label)
+        self.dist_df = pd.DataFrame(columns=['ID',            # recording ID
+                                             'mask_element',  # up mask element number
+                                             'segment',       # up mask element's segment number
+                                             'dist'])         # segment distance
 
-        # demo_dist_img = util.img_as_ubyte(demo_out*-1/np.max(np.abs(demo_out*-1)))
-        # demo_ctrl = label2rgb(self.up_segments_mask_array[1], image=demo_out)
+        for element_num in measure.regionprops(up_element_mask):
+            element_mask = up_element_mask == element_num.label
+            one_element = np.copy(up_segment_mask)
+            one_element[~element_mask] = 0
+            for segment_num in measure.regionprops(one_element):
+                one_segment = np.copy(one_element)
+                one_segment = one_segment == segment_num.label  # mask for individual segment
+                one_segment_dist = round(np.mean(ma.masked_where(~one_segment, self.nuclear_dist)), 3)
+                np.putmask(self.segment_dist, one_segment, one_segment_dist)  # distances image updating
+
+                dist_series = pd.Series([f'{self.img_name}{id_suffix}',
+                                         element_num.label,
+                                         segment_num.label,
+                                         one_segment_dist],
+                                        index=self.dist_df.columns)
+                self.dist_df = self.dist_df.append(dist_series, ignore_index=True)
+
+        return self.dist_df
 
         fig, ax = plt.subplots()
-        ax.imshow(one_segment, cmap='jet')  # self.up_segments_mask_ctrl_img
+        ax.imshow(self.segment_dist, cmap='jet')  # self.up_segments_mask_ctrl_img
         plt.show()
 
     def cell_rim_profile(self, rim_th=2):
@@ -518,25 +531,27 @@ class MultiData():
         self.px_df = pd.DataFrame(columns=['ID',           # recording ID 
                                            'stim',         # stimulus number
                                            'mask_region',  # mask region (1 for master or down)
+                                           'd',            # distances from nucleus border
                                            'int',          # px intensity
                                            'delta'])       # px ΔF/F
 
         best_up_mask = self.up_diff_mask[self.best_up_mask_index]
         best_up_mask_prop = measure.regionprops(best_up_mask)
 
-        # best_delta_img = self.peak_deltaF_series[self.best_up_mask_index]
-        # best_img = self.stim_mean_series[self.best_up_mask_index]
-
         for stim_img_num in range(len(self.stim_mean_series)):
             stim_mean_img = self.stim_mean_series[stim_img_num]
             stim_deltaF_img = self.peak_deltaF_series[stim_img_num]
             for i in best_up_mask_prop:  # calculate profiles for each up region
-                best_up_mask_region = best_up_mask == i.label 
-                for px_int, px_delta in zip(ma.compressed(ma.masked_where(~best_up_mask_region, stim_mean_img)),
-                                            ma.compressed(ma.masked_where(~best_up_mask_region, stim_deltaF_img))): 
+                best_up_mask_region = best_up_mask == i.label
+
+                # loop over masked px in images 
+                for px_int, px_delta, px_d in zip(ma.compressed(ma.masked_where(~best_up_mask_region, stim_mean_img)),
+                                                  ma.compressed(ma.masked_where(~best_up_mask_region, stim_deltaF_img)),
+                                                  ma.compressed(ma.masked_where(~best_up_mask_region, self.nuclear_distances))): 
                     point_series = pd.Series([f'{self.img_name}{id_suffix}',  # recording ID
                                               stim_img_num+1,                 # stimulus number  
                                               i.label,                        # mask region
+                                              px_d,                           # px distances from nucleus
                                               px_int,                         # px intensity
                                               px_delta],                      # px ΔF/F
                                             index=self.px_df.columns)

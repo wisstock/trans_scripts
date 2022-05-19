@@ -67,11 +67,11 @@ df_area = pd.DataFrame(columns=['ID',          # recording ID
                                 'area',        # mask region area (in px)
                                 'rel_area'])   # mask relative area (mask / master mask)
 
-df_px = pd.DataFrame(columns=['ID',           # recording ID
-                              'stim',         # stimulus number
-                              'mask_region',  # mask region (1 for master or down)
-                              'int',          # px mean intensity
-                              'delta'])       # px ΔF/F
+df_px = pd.DataFrame(columns=['ID',            # recording ID
+                              'stim',          # stimulus number
+                              'mask_element',  # mask region (1 for master or down)
+                              'int',           # px mean intensity
+                              'delta'])        # px ΔF/F
 
 # script start time
 tic = time.perf_counter()
@@ -103,31 +103,32 @@ for record in record_list:
     if not os.path.exists(record_path):
         os.makedirs(record_path)
 
+    # MAIN PIPELINE
     record.get_master_mask(mask_ext=3, nuclear_ext=3, multi_otsu_nucleus_mask=True)
     record.find_stimul_peak()
     record.peak_img_diff(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
                          up_min_tolerance=0.2, up_max_tolerance=0.7,
                          down_min_tolerance=-0.2, down_max_tolerance=-0.1)
-    # record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
-                           # deltaF_up=0.1, deltaF_down=-0.1)
-    record.diff_mask_segment(segment_num=6, segment_min_area=30)
+    record.peak_img_deltaF(sigma=1.5, kernel_size=20, baseline_win=6, stim_shift=2, stim_win=3,
+                           deltaF_up=0.1, deltaF_down=-0.1)
 
     # DEMO FUN
-    record.segment_dist_calc()
+    # record.diff_mask_segment(segment_num=6, segment_min_area=30)
+    # record.segment_dist_calc()
     # record.cell_rim_profile(rim_th=1)
 
     # RESULTS OUTPUT
-    # record.save_ctrl_profiles(path=record_path)
-    # record.save_ctrl_img(path=record_path)
+    record.save_ctrl_profiles(path=record_path)
+    record.save_ctrl_img(path=record_path)
 
-    # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
-    # df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
+    df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
+    df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
     # df_px = df_px.append(record.save_px_df(id_suffix=date_name_suffix), ignore_index=True)
 
 # data frames saving
-# df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
-# df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
-# df_px.to_csv(f'{res_path}/px{date_name_suffix}.csv', index=False)
+df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
+df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
+df_px.to_csv(f'{res_path}/px{date_name_suffix}.csv', index=False)
 
 # script fin time
 tac = time.perf_counter()
