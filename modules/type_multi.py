@@ -201,7 +201,7 @@ class MultiData():
                                                                     high=up_max_tolerance)
             frame_diff_up_mask_elements, frame_diff_up_mask_elements_num = measure.label(frame_diff_up_mask, return_num=True)
             self.up_diff_mask.append(frame_diff_up_mask_elements)  # up mask elements labeling
-            logging.info(f'In stim peak {stim_position} finded {frame_diff_up_mask_elements_num} up regions')
+            logging.info(f'In stim frame {stim_position} finded {frame_diff_up_mask_elements_num} up regions')
 
             # down regions thresholding
             frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
@@ -521,7 +521,7 @@ class MultiData():
                                            ignore_index=True)
         
 
-        logging.info(f'Recording profile data frame {self.area_df.shape} created')
+        logging.info(f'Mask area data frame {self.area_df.shape} created')
         return self.area_df
 
     def save_px_df(self, id_suffix):
@@ -557,7 +557,7 @@ class MultiData():
                                             index=self.px_df.columns)
                     self.px_df = self.px_df.append(point_series, ignore_index=True)
 
-        logging.info(f'Recording profile data frame {self.px_df.shape} created')
+        logging.info(f'px-wise intensity data frame {self.px_df.shape} created')
         return self.px_df
 
     # image saving

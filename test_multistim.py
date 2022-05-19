@@ -118,16 +118,16 @@ for record in record_list:
     # record.cell_rim_profile(rim_th=1)
 
     # RESULTS OUTPUT
-    record.save_ctrl_profiles(path=record_path)
-    record.save_ctrl_img(path=record_path)
+    # record.save_ctrl_profiles(path=record_path)
+    # record.save_ctrl_img(path=record_path)
 
-    df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
-    df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
-    # df_px = df_px.append(record.save_px_df(id_suffix=date_name_suffix), ignore_index=True)
+    # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
+    # df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
+    df_px = df_px.append(record.save_px_df(id_suffix=date_name_suffix), ignore_index=True)
 
 # data frames saving
-df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
-df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
+# df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
+# df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
 df_px.to_csv(f'{res_path}/px{date_name_suffix}.csv', index=False)
 
 # script fin time
