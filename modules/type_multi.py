@@ -528,12 +528,12 @@ class MultiData():
         """ Save up regions intensity pixel-wise, for best mask and corresponding pixel-wise ΔF/F image
 
         """
-        self.px_df = pd.DataFrame(columns=['ID',           # recording ID 
-                                           'stim',         # stimulus number
-                                           'mask_region',  # mask region (1 for master or down)
-                                           'd',            # distances from nucleus border
-                                           'int',          # px intensity
-                                           'delta'])       # px ΔF/F
+        self.px_df = pd.DataFrame(columns=['ID',            # recording ID 
+                                           'stim',          # stimulus number
+                                           'mask_element',  # mask region (1 for master or down)
+                                           'd',             # distances from nucleus border
+                                           'int',           # px intensity
+                                           'delta'])        # px ΔF/F
 
         best_up_mask = self.up_diff_mask[self.best_up_mask_index]
         best_up_mask_prop = measure.regionprops(best_up_mask)

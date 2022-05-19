@@ -70,6 +70,7 @@ df_area = pd.DataFrame(columns=['ID',          # recording ID
 df_px = pd.DataFrame(columns=['ID',            # recording ID
                               'stim',          # stimulus number
                               'mask_element',  # mask region (1 for master or down)
+                              'd',             # distances from nucleus border
                               'int',           # px mean intensity
                               'delta'])        # px ΔF/F
 
