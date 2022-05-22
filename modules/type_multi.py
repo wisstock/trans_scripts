@@ -33,6 +33,7 @@ from skimage import exposure
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.animation as anm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import colors
 from matplotlib.colors import LinearSegmentedColormap
@@ -304,7 +305,6 @@ class MultiData():
         up_segment_mask = self.up_segments_mask_array[1]
 
         self.segment_dist = np.copy(up_element_mask)
-
         self.dist_df = pd.DataFrame(columns=['ID',            # recording ID
                                              'mask_element',  # up mask element number
                                              'segment',       # up mask element's segment number
@@ -667,7 +667,6 @@ class MultiData():
 
         # COMPARISON IMG
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
-
         cdict_blue_red = {
                           'red':(
                             (0.0, 0.0, 0.0),
@@ -768,10 +767,43 @@ class MultiData():
         plt.suptitle(f'{self.img_name} up/down mask ctrl img', fontsize=20)
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_up_down_ctrl.png')
+        plt.close('all')
 
+        # BEST UP MASK DISTANCES
+        best_up_mask = self.up_diff_mask[self.best_up_mask_index]
+        best_up_mask = best_up_mask > 0
+        best_up_mask_dist = ma.masked_where(~best_up_mask, self.nuclear_distances)
+
+        plt.figure(figsize=(8, 8))
+        ax = plt.subplot()
+        img = ax.imshow(best_up_mask_dist, cmap='jet')  # , norm=colors.LogNorm(vmin=-1.0, vmax=1.0))
+        # img0.set_clim(vmin=-1, vmax=1)
+        div = make_axes_locatable(ax)
+        cax = div.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img, cax=cax)
+        ax.axis('off')
+        plt.suptitle(f'{self.img_name} best up mask distance', fontsize=20)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_up_dist.png')
 
         plt.close('all')
         logging.info(f'{self.img_name} control images saved!')
+
+    def save_ca_gif(self, path):
+        masked_ca_series = [ma.masked_where(~self.master_mask, img) for img in self.ca_series] 
+        fig = plt.figure() 
+        img = plt.imshow(masked_ca_series[0])
+        plt_text = plt.text(10,15,'',fontsize=10)
+        def ani(i):
+          img.set_array(masked_ca_series[i])
+          plt_text.set_text(f'{i+1}')
+          return img,
+        ani = anm.FuncAnimation(fig, ani, interval=200, repeat_delay=500, frames=len(masked_ca_series))
+        plt.suptitle(f'{self.img_name} cytoplasm Ca2+ dynamics', fontsize=10)
+        plt.axis('off')
+
+        ani.save(f'{path}/{self.img_name}_ca_dyn.gif', writer='imagemagick', fps=5)
+        # plt.show()
 
 if __name__=="__main__":
   print('А шо ти хочеш?')
