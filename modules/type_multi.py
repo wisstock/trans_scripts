@@ -133,18 +133,12 @@ class MultiData():
 
             # get larger multi Otsu cellular element
             cell_element = (self.element_label == 1) | (self.element_label == 2)
-            # cell_element_label = measure.label(cell_element)
-            # cell_element_area = {element.area : element.label for element in measure.regionprops(cell_element_label)}
-            # cell_border_mask = cell_element_label == cell_element_area[max(cell_element_area.keys())]
             cell_border_mask = self._select_larg_mask(raw_mask=cell_element)
             self.cell_distances, _ = distance_transform_edt(~cell_border_mask, return_indices=True)
             self.cell_mask = self.cell_distances <= mask_ext
 
             # get larger multi Otsu intracellular element
             nuclear_element = self.element_label == 2
-            # nuclear_element_label = measure.label(nuclear_element)
-            # nuclear_element_area = {element.area : element.label for element in measure.regionprops(nuclear_element_label)}
-            # nuclear_element_border = nuclear_element_label == nuclear_element_area[max(nuclear_element_area.keys())]
             nuclear_element_border = self._select_larg_mask(raw_mask=nuclear_element)
             self.nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
             self.nuclear_mask = self.nuclear_distances <= nuclear_ext
@@ -355,12 +349,6 @@ class MultiData():
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
 
         """
-        # f_print = morphology.disk(rim_th)
-        # dilate_cell = morphology.binary_dilation(self.cell_mask, footprint=f_print)
-        # erode_cell = morphology.binary_erosion(self.cell_mask, footprint=f_print)
-
-        # self.cell_rim = np.logical_and(dilate_cell, ~erode_cell)
-        # # rim_line = np.sum(self.cell_rim, axis=0)
         self.cell_rim = self._ger_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
         seed_line = int(measure.regionprops(self.cell_rim.astype(int))[0].centroid[1])
         print(seed_line)
@@ -728,30 +716,6 @@ class MultiData():
             plt.suptitle(f'{self.img_name} baseline-peak comparison, peak frame {self.stim_peak[peak_num]}', fontsize=20)
             plt.tight_layout()
             plt.savefig(f'{path}/{self.img_name}_comparison_peak_{self.stim_peak[peak_num]}.png')
-
-        # # UP/DOWN REGIONS MASKS
-        # for peak_num in range(0, len(self.stim_peak)):
-        #     delta_up_mask = self.up_delta_mask[peak_num] 
-
-        #     diff_up_mask = self.up_diff_mask[peak_num] 
-        #     diff_down_mask = self.down_diff_mask[peak_num]
-        #     diff_comb_mask = self.comb_diff_mask[peak_num]
-
-        #     plt.figure(figsize=(15,8))
-
-        #     ax0 = plt.subplot(121)
-        #     ax0.set_title('Differential up/down masks')
-        #     ax0.imshow(diff_comb_mask, cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
-        #     ax0.axis('off')
-
-        #     ax1 = plt.subplot(122)
-        #     ax1.set_title('Up mask elements')
-        #     ax1.imshow(diff_up_mask, cmap='jet')
-        #     ax1.axis('off')
-
-        #     plt.suptitle(f'{self.img_name} up mask, peak frame {self.stim_peak[peak_num]}', fontsize=20)
-        #     plt.tight_layout()
-        #     plt.savefig(f'{path}/{self.img_name}_up_mask_{self.stim_peak[peak_num]}.png')
 
         # UP REGION ENUMERATION
         up_mask_prop = measure.regionprops(self.up_diff_mask[self.best_up_mask_index])
