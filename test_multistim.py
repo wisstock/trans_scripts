@@ -120,8 +120,9 @@ for record in record_list:
 
     # IMAGES SAVING
     # record.save_ctrl_profiles(path=record_path)
-    record.save_ctrl_img(path=record_path)
+    # record.save_ctrl_img(path=record_path)
     # record.save_ca_gif(path=record_path)
+    record.save_dist_ctrl_img(path=record_path)
 
     # DATA FRAME UPDATE
     # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)

@@ -97,6 +97,22 @@ class MultiData():
         # tail_path = f'{oif_path}/{img_name}_0{loop_num+1}.oif'
         # self.img_series = np.concatenate((self.img_series, oif.OibImread(tail_path)), axis=1)  # add tail record
 
+    @classmethod
+    def _select_larg_mask(self, raw_mask):
+        # get larger mask element
+        _element_label = measure.label(raw_mask)
+        _element_area = {_element.area : _element.label for _element in measure.regionprops(_element_label)}
+        _larger_mask = _element_label == _element_area[max(_element_area.keys())]
+        return _larger_mask
+
+    @classmethod
+    def _ger_mask_rim(self, raw_mask, rim_th=2):
+        # get binary mask rim
+        f_print = morphology.disk(rim_th)
+        _dilate_mask = morphology.binary_dilation(raw_mask, footprint=morphology.disk(rim_th))
+        _erode_mask = morphology.binary_erosion(raw_mask, footprint=morphology.disk(rim_th))
+        return np.logical_and(_dilate_mask, ~_erode_mask)
+
     # cell masking
     def get_master_mask(self, sigma=1, kernel_size=5, mask_ext=5, nuclear_ext=2, multi_otsu_nucleus_mask=True):
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
@@ -117,17 +133,19 @@ class MultiData():
 
             # get larger multi Otsu cellular element
             cell_element = (self.element_label == 1) | (self.element_label == 2)
-            cell_element_label = measure.label(cell_element)
-            cell_element_area = {element.area : element.label for element in measure.regionprops(cell_element_label)}
-            cell_border_mask = cell_element_label == cell_element_area[max(cell_element_area.keys())]
+            # cell_element_label = measure.label(cell_element)
+            # cell_element_area = {element.area : element.label for element in measure.regionprops(cell_element_label)}
+            # cell_border_mask = cell_element_label == cell_element_area[max(cell_element_area.keys())]
+            cell_border_mask = self._select_larg_mask(raw_mask=cell_element)
             self.cell_distances, _ = distance_transform_edt(~cell_border_mask, return_indices=True)
             self.cell_mask = self.cell_distances <= mask_ext
 
             # get larger multi Otsu intracellular element
             nuclear_element = self.element_label == 2
-            nuclear_element_label = measure.label(nuclear_element)
-            nuclear_element_area = {element.area : element.label for element in measure.regionprops(nuclear_element_label)}
-            nuclear_element_border = nuclear_element_label == nuclear_element_area[max(nuclear_element_area.keys())]
+            # nuclear_element_label = measure.label(nuclear_element)
+            # nuclear_element_area = {element.area : element.label for element in measure.regionprops(nuclear_element_label)}
+            # nuclear_element_border = nuclear_element_label == nuclear_element_area[max(nuclear_element_area.keys())]
+            nuclear_element_border = self._select_larg_mask(raw_mask=nuclear_element)
             self.nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
             self.nuclear_mask = self.nuclear_distances <= nuclear_ext
 
@@ -337,13 +355,13 @@ class MultiData():
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
 
         """
-        f_print = morphology.disk(rim_th)
-        dilate_cell = morphology.binary_dilation(self.cell_mask, footprint=f_print)
-        erode_cell = morphology.binary_erosion(self.cell_mask, footprint=f_print)
+        # f_print = morphology.disk(rim_th)
+        # dilate_cell = morphology.binary_dilation(self.cell_mask, footprint=f_print)
+        # erode_cell = morphology.binary_erosion(self.cell_mask, footprint=f_print)
 
-        self.cell_rim = np.logical_and(dilate_cell, ~erode_cell)
-        # rim_line = np.sum(self.cell_rim, axis=0)
-
+        # self.cell_rim = np.logical_and(dilate_cell, ~erode_cell)
+        # # rim_line = np.sum(self.cell_rim, axis=0)
+        self.cell_rim = self._ger_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
         seed_line = int(measure.regionprops(self.cell_rim.astype(int))[0].centroid[1])
         print(seed_line)
 
@@ -803,7 +821,18 @@ class MultiData():
         plt.axis('off')
 
         ani.save(f'{path}/{self.img_name}_ca_dyn.gif', writer='imagemagick', fps=5)
-        # plt.show()
+    
+    def save_dist_ctrl_img(self, path):
+        best_up_mask = self.up_diff_mask[self.best_up_mask_index]
+
+        all_mask = (self.cell_mask + best_up_mask) != 0 
+        all_mask = self._select_larg_mask(raw_mask=all_mask)
+
+        all_rim = self._ger_mask_rim(raw_mask=all_mask, rim_th=1)
+
+        fig, ax = plt.subplots()
+        ax.imshow(all_rim, cmap='jet')
+        plt.show()
 
 if __name__=="__main__":
   print('А шо ти хочеш?')
