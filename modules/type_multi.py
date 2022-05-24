@@ -751,26 +751,6 @@ class MultiData():
         plt.savefig(f'{path}/{self.img_name}_up_down_ctrl.png')
         plt.close('all')
 
-        # BEST UP MASK DISTANCES
-        best_up_mask = self.up_diff_mask[self.best_up_mask_index]
-        best_up_mask = best_up_mask > 0
-        best_up_mask_dist = ma.masked_where(~best_up_mask, self.nuclear_distances)
-
-        plt.figure(figsize=(8, 8))
-        ax = plt.subplot()
-        img = ax.imshow(best_up_mask_dist, cmap='jet')  # , norm=colors.LogNorm(vmin=-1.0, vmax=1.0))
-        # img0.set_clim(vmin=-1, vmax=1)
-        div = make_axes_locatable(ax)
-        cax = div.append_axes('right', size='3%', pad=0.1)
-        plt.colorbar(img, cax=cax)
-        ax.axis('off')
-        plt.suptitle(f'{self.img_name} best up mask distance', fontsize=20)
-        plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_up_dist.png')
-
-        plt.close('all')
-        logging.info(f'{self.img_name} control images saved!')
-
     def save_ca_gif(self, path):
         masked_ca_series = [ma.masked_where(~self.master_mask, img) for img in self.ca_series] 
         fig = plt.figure() 
@@ -783,20 +763,29 @@ class MultiData():
         ani = anm.FuncAnimation(fig, ani, interval=200, repeat_delay=500, frames=len(masked_ca_series))
         plt.suptitle(f'{self.img_name} cytoplasm Ca2+ dynamics', fontsize=10)
         plt.axis('off')
-
         ani.save(f'{path}/{self.img_name}_ca_dyn.gif', writer='imagemagick', fps=5)
+        plt.close('all')
     
     def save_dist_ctrl_img(self, path):
-        best_up_mask = self.up_diff_mask[self.best_up_mask_index]
-
-        all_mask = (self.cell_mask + best_up_mask) != 0 
-        all_mask = self._select_larg_mask(raw_mask=all_mask)
-
+        best_up_mask = self.up_diff_mask[self.best_up_mask_index] != 0
+        all_mask = self._select_larg_mask(raw_mask=(self.cell_mask + best_up_mask))
         all_rim = self._ger_mask_rim(raw_mask=all_mask, rim_th=1)
+        master_fp = filters.gaussian(np.mean(self.prot_series*-1, axis=0), sigma=1)
 
-        fig, ax = plt.subplots()
-        ax.imshow(all_rim, cmap='jet')
-        plt.show()
+        plt.figure(figsize=(10, 10))
+        ax = plt.subplot()
+        ax.imshow(master_fp, interpolation='none', cmap='Greys', alpha=.6)
+        ax.imshow(ma.masked_where(~all_rim, all_rim), interpolation='none', cmap='Greys', alpha=.75)
+        ax.imshow(ma.masked_where(~self.nuclear_mask, np.ones_like(self.nuclear_mask)), interpolation='none', cmap='Greys', alpha=.4)
+        img = ax.imshow(ma.masked_where(~best_up_mask, self.nuclear_distances), interpolation='none', cmap='jet', alpha=.6)
+        div = make_axes_locatable(ax)
+        cax = div.append_axes('right', size='3%', pad=0.1)
+        plt.colorbar(img, cax=cax)
+        ax.axis('off')
+        plt.suptitle(f'{self.img_name} best up mask distance\nwhite - cell mask border and nuclear mask', fontsize=15)
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_all_mask_ctrl.png')
+        plt.close('all')
 
 if __name__=="__main__":
   print('А шо ти хочеш?')
