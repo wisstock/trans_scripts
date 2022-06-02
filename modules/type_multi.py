@@ -19,6 +19,7 @@ import numpy.ma as ma
 
 from scipy.signal import find_peaks
 from scipy.ndimage import distance_transform_edt
+import scipy.ndimage as ndi
 
 import yaml
 import pandas as pd
@@ -29,6 +30,7 @@ from skimage import morphology
 from skimage.color import label2rgb
 from skimage import util
 from skimage import exposure
+from skimage import transform
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -106,7 +108,7 @@ class MultiData():
         return _larger_mask
 
     @classmethod
-    def _ger_mask_rim(self, raw_mask, rim_th=2):
+    def _get_mask_rim(self, raw_mask, rim_th=2):
         # get binary mask rim
         f_print = morphology.disk(rim_th)
         _dilate_mask = morphology.binary_dilation(raw_mask, footprint=morphology.disk(rim_th))
@@ -214,7 +216,7 @@ class MultiData():
                                                                     high=up_max_tolerance)
             frame_diff_up_mask_elements, frame_diff_up_mask_elements_num = measure.label(frame_diff_up_mask, return_num=True)
             self.up_diff_mask.append(frame_diff_up_mask_elements)  # up mask elements labeling
-            logging.info(f'In stim frame {stim_position} finded {frame_diff_up_mask_elements_num} up regions')
+            # logging.info(f'In stim frame {stim_position} finded {frame_diff_up_mask_elements_num} up regions')
 
             # down regions thresholding
             frame_diff_down_mask = filters.apply_hysteresis_threshold(stim_diff_img,
@@ -247,7 +249,8 @@ class MultiData():
 
         delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
         vdelta = np.vectorize(delta)
-        # centr = lambda img: abs(np.max(img))*0.5 if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))
+
+        self.deltaF_series = np.asarray([vdelta(i, baseline_prot_img) for i in prot_series_sigma])
 
         self.stim_mean_series = []
         for stim_position in self.stim_peak:
@@ -349,13 +352,48 @@ class MultiData():
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
 
         """
-        self.cell_rim = self._ger_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
-        seed_line = int(measure.regionprops(self.cell_rim.astype(int))[0].centroid[1])
-        print(seed_line)
+        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
+        rim_center = measure.regionprops(measure.label(cell_rim))[0].centroid
+        rad_rim = transform.warp_polar(cell_rim, center=rim_center)
+        polar_prot_series = [transform.warp_polar(frame, center=rim_center) for frame in self.deltaF_series] 
 
-        fig, ax = plt.subplots()
-        ax.plot([seed_line, seed_line], [0, 255], color="white", linewidth=3)
-        ax.imshow(self.cell_rim)
+        # shift cell rim gap to the top
+        rim_sum = np.sum(rad_rim, axis=1)
+        gap_start = np.argmin(rim_sum)  # find rim gap start index
+        if rim_sum[gap_start] == 0:
+            logging.warning(f'Cell rim gap start index {gap_start}')
+            rad_rim = np.roll(rad_rim, shift=-gap_start, axis=0)
+            rad_rim = rad_rim[~np.all(rad_rim == 0, axis=1)]  # drop zeros only lines
+
+            # drop line from FP series
+            drop_i = np.shape(polar_prot_series[0])[0] - np.shape(rad_rim)[0] - 1
+            polar_prot_series = [np.roll(frame, shift=-gap_start, axis=0)[drop_i:-1,:] for frame in polar_prot_series]
+        else:
+            logging.info('There is no gap in cell rim')
+
+        # rim pixels enumeration
+        rad_rim_num = np.int_(np.copy(rad_rim))
+        px_num = 1
+        for i, j in np.ndindex(rad_rim_num.shape):
+            if rad_rim_num[i, j] != 0:
+                rad_rim_num[i, j] = px_num
+                px_num += 1
+
+        # loop over polar transformed FP frames
+        rim_profiles = []
+        for polar_frame in polar_prot_series:
+            frame_row = np.array([])
+            for rim_element in range(1, np.max(rad_rim_num)):
+                rim_element_mask = rad_rim_num == rim_element
+                frame_row = np.append(frame_row, polar_frame[rim_element_mask], axis=0)
+            rim_profiles.append(frame_row)
+        rim_profiles = np.array(rim_profiles)
+
+        plt.figure(figsize=(10, 10))
+        ax = plt.subplot()
+        # ax.scatter(x=x_i, y=y_i, color='red', label='seed point')
+        ax.imshow(rim_profiles, aspect=10, cmap='jet')
+        # plt.legend()
         plt.show()
 
     # extract mask profile
@@ -769,7 +807,7 @@ class MultiData():
     def save_dist_ctrl_img(self, path):
         best_up_mask = self.up_diff_mask[self.best_up_mask_index] != 0
         all_mask = self._select_larg_mask(raw_mask=(self.cell_mask + best_up_mask))
-        all_rim = self._ger_mask_rim(raw_mask=all_mask, rim_th=1)
+        all_rim = self._get_mask_rim(raw_mask=all_mask, rim_th=1)
         master_fp = filters.gaussian(np.mean(self.prot_series*-1, axis=0), sigma=1)
 
         plt.figure(figsize=(10, 10))
