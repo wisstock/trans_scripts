@@ -392,8 +392,9 @@ class MultiData():
         plt.figure(figsize=(10, 10))
         ax = plt.subplot()
         # ax.scatter(x=x_i, y=y_i, color='red', label='seed point')
-        ax.imshow(rim_profiles, aspect=10, cmap='jet')
-        # plt.legend()
+        ax.imshow(rim_profiles, aspect=13, cmap='jet')
+        [ax.axhline(y=i+1, linestyle='--') for i in self.stim_peak]
+        plt.yticks(ticks=range(0,30), labels=range(1,31))
         plt.show()
 
     # extract mask profile
