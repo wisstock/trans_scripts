@@ -348,55 +348,6 @@ class MultiData():
         ax.imshow(self.segment_dist, cmap='jet')  # self.up_segments_mask_ctrl_img
         plt.show()
 
-    def cell_rim_profile(self, rim_th=2):
-        """ Creating of cell border rim mask for monitoring FP distribution along full cell.
-
-        """
-        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
-        rim_center = measure.regionprops(measure.label(cell_rim))[0].centroid
-        rad_rim = transform.warp_polar(cell_rim, center=rim_center)
-        polar_prot_series = [transform.warp_polar(frame, center=rim_center) for frame in self.deltaF_series] 
-
-        # shift cell rim gap to the top
-        rim_sum = np.sum(rad_rim, axis=1)
-        gap_start = np.argmin(rim_sum)  # find rim gap start index
-        if rim_sum[gap_start] == 0:
-            logging.warning(f'Cell rim gap start index {gap_start}')
-            rad_rim = np.roll(rad_rim, shift=-gap_start, axis=0)
-            rad_rim = rad_rim[~np.all(rad_rim == 0, axis=1)]  # drop zeros only lines
-
-            # drop line from FP series
-            drop_i = np.shape(polar_prot_series[0])[0] - np.shape(rad_rim)[0] - 1
-            polar_prot_series = [np.roll(frame, shift=-gap_start, axis=0)[drop_i:-1,:] for frame in polar_prot_series]
-        else:
-            logging.info('There is no gap in cell rim')
-
-        # rim pixels enumeration
-        rad_rim_num = np.int_(np.copy(rad_rim))
-        px_num = 1
-        for i, j in np.ndindex(rad_rim_num.shape):
-            if rad_rim_num[i, j] != 0:
-                rad_rim_num[i, j] = px_num
-                px_num += 1
-
-        # loop over polar transformed FP frames
-        rim_profiles = []
-        for polar_frame in polar_prot_series:
-            frame_row = np.array([])
-            for rim_element in range(1, np.max(rad_rim_num)):
-                rim_element_mask = rad_rim_num == rim_element
-                frame_row = np.append(frame_row, polar_frame[rim_element_mask], axis=0)
-            rim_profiles.append(frame_row)
-        rim_profiles = np.array(rim_profiles)
-
-        plt.figure(figsize=(10, 10))
-        ax = plt.subplot()
-        # ax.scatter(x=x_i, y=y_i, color='red', label='seed point')
-        ax.imshow(rim_profiles, aspect=13, cmap='jet')
-        [ax.axhline(y=i+1, linestyle='--') for i in self.stim_peak]
-        plt.yticks(ticks=range(0,30), labels=range(1,31))
-        plt.show()
-
     # extract mask profile
     def ca_profile(self, mask=False):
         if not mask:
@@ -825,6 +776,110 @@ class MultiData():
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_all_mask_ctrl.png')
         plt.close('all')
+
+    def save_rim_profile(self, rim_th=2, px_size=0.25):
+        """ Creating of cell border rim mask for monitoring FP distribution along full cell.
+
+        """
+        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
+        rim_center = measure.regionprops(measure.label(cell_rim))[0].centroid
+        rad_rim = transform.warp_polar(cell_rim, center=rim_center)
+        polar_prot_series = [transform.warp_polar(frame, center=rim_center) for frame in self.deltaF_series]
+        polar_dist = transform.warp_polar(self.nuclear_distances, center=rim_center)
+
+        # shift cell rim gap to the top
+        rim_sum = np.sum(rad_rim, axis=1)
+        gap_start = np.argmin(rim_sum)  # find rim gap start index
+        if rim_sum[gap_start] == 0:
+            logging.warning(f'Cell rim gap start index {gap_start}')
+            rad_rim = np.roll(rad_rim, shift=-gap_start, axis=0)
+            rad_rim = rad_rim[~np.all(rad_rim == 0, axis=1)]  # drop zeros only lines
+
+            # drop line from images
+            drop_i = np.shape(polar_prot_series[0])[0] - np.shape(rad_rim)[0] - 1
+            polar_prot_series = [np.roll(frame, shift=-gap_start, axis=0)[drop_i:-1,:] for frame in polar_prot_series]
+            polar_dist = np.roll(polar_dist, shift=-gap_start, axis=0)[drop_i:-1,:]
+        else:
+            logging.info('There is no gap in cell rim')
+
+        # rim pixels enumeration
+        rad_rim_num = np.int_(np.copy(rad_rim))
+        px_num = 1
+        for i, j in np.ndindex(rad_rim_num.shape):
+            if rad_rim_num[i, j] != 0:
+                rad_rim_num[i, j] = px_num
+                px_num += 1
+
+        # loop over polar transformed FP frames
+        rim_profiles = []
+        for polar_frame in polar_prot_series:
+            frame_row = np.array([])
+            for rim_element in range(1, np.max(rad_rim_num)):
+                rim_element_mask = rad_rim_num == rim_element
+                frame_row = np.append(frame_row, polar_frame[rim_element_mask], axis=0)
+            rim_profiles.append(frame_row)
+        rim_profiles = np.array(rim_profiles)
+
+        # loop over polar transformed distances image
+        dist_bar = np.array([])
+        for rim_element in range(1, np.max(rad_rim_num)):
+            rim_element_mask = rad_rim_num == rim_element
+            dist_bar = np.append(dist_bar, polar_dist[rim_element_mask], axis=0)
+        dist_bar = np.resize(dist_bar, (1, len(dist_bar))) * px_size
+
+
+        # plotting
+        cdict_blue_red = {
+                  'red':(
+                    (0.0, 0.0, 0.0),
+                    (0.52, 0.0, 0.0),
+                    (0.55, 0.3, 0.3),
+                    (1.0, 1.0, 1.0)),
+                  'blue':(
+                    (0.0, 0.0, 0.0),
+                    (1.0, 0.0, 0.0)),
+                  'green':(
+                    (0.0, 1.0, 1.0),
+                    (0.45, 0.3, 0.3),
+                    (0.48, 0.0, 0.0),
+                    (1.0, 0.0, 0.0))
+                    }
+
+        fig = plt.figure(figsize=(10, 10))
+        gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.0, wspace=0.0,
+                              height_ratios=(4, 1))
+
+        ax0 = fig.add_subplot(gs[0]) # FP profile
+        img0 = ax0.imshow(rim_profiles, vmin=-np.max(np.abs(rim_profiles)), vmax=np.max(np.abs(rim_profiles)),
+                          aspect='auto', cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
+        div0 = make_axes_locatable(ax0)
+        cax0 = div0.append_axes('top', size='4%', pad=0.3)
+        clb0 = plt.colorbar(img0, cax=cax0, orientation='horizontal') 
+        clb0.ax.set_title('ΔF/F',fontsize=10)
+        [ax0.axhline(y=i+1, linestyle='--') for i in self.stim_peak]
+        ax0.set_xticks([])
+        frame_tick = np.arange(0,np.shape(rim_profiles)[0],1)
+        frame_lab = frame_tick + 1
+        ax0.set_yticks(frame_tick)
+        ax0.set_yticklabels(frame_lab)
+        ax0.set_ylabel('Frame number')
+
+        ax1 = fig.add_subplot(gs[1])  # dist bar
+        img1 = ax1.imshow(dist_bar, aspect='auto', cmap='jet')
+        div1 = make_axes_locatable(ax1)
+        cax1 = div1.append_axes('bottom', size='30%', pad=0.3)
+        clb1 = plt.colorbar(img1, cax=cax1, orientation='horizontal') 
+        clb1.ax.set_title('μm',fontsize=10)
+        # bar_tick = np.arange(0,np.shape(dist_bar)[1],50)
+        # bar_lab = bar_tick * px_size
+        ax1.set_xticks([])
+        # ax1.set_xticklabels(bar_lab)
+        ax1.set_yticks([])
+        # ax1.set_xticklabels(column_labels, minor=False)
+        # plt.yticks(ticks=range(0,30), labels=range(1,31))
+        plt.subplots_adjust(wspace=0, hspace=0)
+        plt.show()
+
 
 if __name__=="__main__":
   print('А шо ти хочеш?')

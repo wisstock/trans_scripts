@@ -116,13 +116,13 @@ for record in record_list:
     # DEMO FUN
     # record.diff_mask_segment(segment_num=6, segment_min_area=30)
     # record.segment_dist_calc()
-    record.cell_rim_profile(rim_th=1)
 
     # IMAGES SAVING
     # record.save_ctrl_profiles(path=record_path)
     # record.save_ctrl_img(path=record_path)
     # record.save_ca_gif(path=record_path)
     # record.save_dist_ctrl_img(path=record_path)
+    record.save_rim_profile(rim_th=1)
 
     # DATA FRAME UPDATE
     # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
