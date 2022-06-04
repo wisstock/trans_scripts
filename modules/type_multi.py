@@ -10,6 +10,10 @@ https://www.cs.auckland.ac.nz/courses/compsci773s1c/lectures/ImageProcessing-htm
 
 """
 
+        # fig, ax = plt.subplots()
+        # ax.imshow(self.total_mask_ctrl_img, cmap='jet')
+        # plt.show()
+
 import sys
 import os
 import logging
@@ -19,6 +23,7 @@ import numpy.ma as ma
 
 from scipy.signal import find_peaks
 from scipy.ndimage import distance_transform_edt
+from scipy.ndimage import distance_transform_cdt
 import scipy.ndimage as ndi
 
 import yaml
@@ -120,6 +125,8 @@ class MultiData():
         """ Whole cell mask building by Ca dye channel data with Otsu thresholding.
         Filters greater element of draft Otsu mask and return master mask array.
 
+        Also create nuclear distances images (euclidean and chess metrics)
+
         mask_ext - otsu mask extension value in px
 
         """
@@ -143,31 +150,30 @@ class MultiData():
             nuclear_element = self.element_label == 2
             nuclear_element_border = self._select_larg_mask(raw_mask=nuclear_element)
             self.nuclear_distances, _ = distance_transform_edt(~nuclear_element_border, return_indices=True)
+            self.nuclear_distances_chess = distance_transform_cdt(~nuclear_element_border, metric='chessboard')
             self.nuclear_mask = self.nuclear_distances <= nuclear_ext
 
             self.master_mask = np.copy(self.cell_mask)
             self.master_mask[self.nuclear_mask] = 0
         else:
-            # please, DON'T use this option!
-            otsu = filters.threshold_otsu(self.detection_img)
-            draft_mask = self.detection_img > otsu
-            self.element_label, self.element_num = measure.label(draft_mask, return_num=True)
-            logging.info(f'{self.element_num} Otsu mask elements detected')
+            logging.fatal('multi_otsu_nucleus_mask=False, please DO NOT this!')
+            raise ValueError('incorrect master mask option')
+            # # please, DON'T use this option!
+            # otsu = filters.threshold_otsu(self.detection_img)
+            # draft_mask = self.detection_img > otsu
+            # self.element_label, self.element_num = measure.label(draft_mask, return_num=True)
+            # logging.info(f'{self.element_num} Otsu mask elements detected')
 
-            detection_label = np.copy(self.element_label)
-            element_area = {element.area : element.label for element in measure.regionprops(detection_label)}
-            self.master_mask = detection_label == element_area[max(element_area.keys())]
+            # detection_label = np.copy(self.element_label)
+            # element_area = {element.area : element.label for element in measure.regionprops(detection_label)}
+            # self.master_mask = detection_label == element_area[max(element_area.keys())]
 
-            # mask expansion
-            self.cell_distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
-            self.master_mask = self.cell_distances <= mask_ext
+            # # mask expansion
+            # self.cell_distances, _ = distance_transform_edt(~self.master_mask, return_indices=True)
+            # self.master_mask = self.cell_distances <= mask_ext
 
         self.total_byte_prot_img = filters.gaussian(util.img_as_ubyte(np.mean(self.prot_series, axis=0)/np.max(np.abs(np.mean(self.prot_series, axis=0)))), sigma=sigma, truncate=trun(kernel_size, sigma))
         self.total_mask_ctrl_img = label2rgb(self.master_mask, image=self.total_byte_prot_img, colors=['blue'], alpha=0.2)
-
-        # fig, ax = plt.subplots()
-        # ax.imshow(self.total_mask_ctrl_img, cmap='jet')
-        # plt.show()
 
     def find_stimul_peak(self, h=0.15, d=3, l_lim=5, r_lim=18):
         """ Require master_mask, results of get_master_mask!
@@ -567,20 +573,19 @@ class MultiData():
         derivate_deltaF = edge.deltaF(self.derivate_profile)
 
         plt.figure(figsize=(15,4))
-        plt.plot(self.time_line, ca_deltaF, label='Ca dye profile')
-        plt.plot(self.time_line, prot_deltaF, label='FP profile')
-        plt.plot(self.time_line[1:], derivate_deltaF, label='Ca dye derivate', linestyle='--')
+        plt.plot(self.time_line, ca_deltaF, label='Кальцієвий барвник')
+        plt.plot(self.time_line, prot_deltaF, label='Флуоресцентний білок')
+        plt.plot(self.time_line[1:], derivate_deltaF, label='Похідна інтенсивності кальцієвого барвника', linestyle='--')
         plt.plot(np.take(self.time_line[1:], self.stim_peak), np.take(derivate_deltaF, self.stim_peak), 'v',
-                 label='stimulation peak', markersize=10, color='red')
+                 label='UV стимули', markersize=10, color='red')
         
         plt.grid(visible=True, linestyle=':')
-        plt.xlabel('Time (s)')
+        plt.xlabel('Час реєстрації, s')
         plt.ylabel('ΔF/F')
         plt.xticks(np.arange(0, np.max(self.time_line)+2, step=1/self.time_scale))
         plt.legend()
         plt.tight_layout()
-        plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
-        plt.tight_layout()
+        # plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
         plt.savefig(f'{path}/{self.img_name}_profile_ca.png')
 
         # UP REGIONS PROFILES + CA PROFILE
@@ -730,13 +735,13 @@ class MultiData():
         # CTRL IMG OF UP/DOWN MASKS
         ctrl_img = util.img_as_ubyte(self.detection_img/np.max(np.abs(self.detection_img)))
         ctrl_img = exposure.equalize_adapthist(ctrl_img)
-        plt.figure(figsize=(8, 8))
+        plt.figure(figsize=(10, 10))
         ax = plt.subplot()
         ax.imshow(label2rgb(self.comb_diff_mask[self.best_up_mask_index],
                             image=ctrl_img,
                             colors=['green', 'red'], bg_label=1, alpha=0.5))
         ax.axis('off')
-        plt.suptitle(f'{self.img_name} up/down mask ctrl img', fontsize=20)
+        # plt.suptitle(f'{self.img_name} up/down mask ctrl img', fontsize=20)
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_up_down_ctrl.png')
         plt.close('all')
@@ -777,15 +782,23 @@ class MultiData():
         plt.savefig(f'{path}/{self.img_name}_all_mask_ctrl.png')
         plt.close('all')
 
-    def save_rim_profile(self, rim_th=2, px_size=0.25):
+    def save_rim_profile(self, path, rim_th=2, px_size=0.25):
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
 
         """
+        # cell rim creation
         cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
         rim_center = measure.regionprops(measure.label(cell_rim))[0].centroid
+
+        # images polar transforming
         rad_rim = transform.warp_polar(cell_rim, center=rim_center)
         polar_prot_series = [transform.warp_polar(frame, center=rim_center) for frame in self.deltaF_series]
         polar_dist = transform.warp_polar(self.nuclear_distances, center=rim_center)
+
+        # fig, ax = plt.subplots()
+        # ax.imshow(self.nuclear_distances, cmap='jet')
+        # ax.axis('off')
+        # plt.show()
 
         # shift cell rim gap to the top
         rim_sum = np.sum(rad_rim, axis=1)
@@ -821,14 +834,13 @@ class MultiData():
         rim_profiles = np.array(rim_profiles)
 
         # loop over polar transformed distances image
-        dist_bar = np.array([])
+        dist_bar = []
         for rim_element in range(1, np.max(rad_rim_num)):
             rim_element_mask = rad_rim_num == rim_element
-            dist_bar = np.append(dist_bar, polar_dist[rim_element_mask], axis=0)
-        dist_bar = np.resize(dist_bar, (1, len(dist_bar))) * px_size
+            dist_bar.append(polar_dist[rim_element_mask])
+        dist_bar = np.resize(np.array(dist_bar), (1, len(dist_bar))) * px_size
 
-
-        # plotting
+        # custom cmap for rim profiles
         cdict_blue_red = {
                   'red':(
                     (0.0, 0.0, 0.0),
@@ -845,40 +857,68 @@ class MultiData():
                     (1.0, 0.0, 0.0))
                     }
 
-        fig = plt.figure(figsize=(10, 10))
+        # plotting
+        fig = plt.figure(figsize=(7, 7))
         gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.0, wspace=0.0,
-                              height_ratios=(4, 1))
+                              height_ratios=(6, 1))
 
         ax0 = fig.add_subplot(gs[0]) # FP profile
         img0 = ax0.imshow(rim_profiles, vmin=-np.max(np.abs(rim_profiles)), vmax=np.max(np.abs(rim_profiles)),
                           aspect='auto', cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
         div0 = make_axes_locatable(ax0)
-        cax0 = div0.append_axes('top', size='4%', pad=0.3)
+        cax0 = div0.append_axes('top', size='4%', pad=0.85)
         clb0 = plt.colorbar(img0, cax=cax0, orientation='horizontal') 
         clb0.ax.set_title('ΔF/F',fontsize=10)
-        [ax0.axhline(y=i+1, linestyle='--') for i in self.stim_peak]
+        [ax0.axhline(y=i+1, linestyle='--', color='white') for i in self.stim_peak]
+        [ax0.text(x=np.shape(rim_profiles)[1]-65, y=i, s='UV стимул', fontsize=7, color='white') for i in self.stim_peak]
         ax0.set_xticks([])
         frame_tick = np.arange(0,np.shape(rim_profiles)[0],1)
-        frame_lab = frame_tick + 1
+        frame_lab = frame_tick+1 * 2
         ax0.set_yticks(frame_tick)
         ax0.set_yticklabels(frame_lab)
-        ax0.set_ylabel('Frame number')
+        ax0.set_ylabel('Час реєстрації, s')
+        bar_tick = np.arange(0,np.shape(dist_bar)[1],100)
+        bar_lab = np.int_(bar_tick * px_size)
+        ax0.set_xticks(bar_tick)
+        ax0.set_xticklabels(bar_lab)
+        ax0.xaxis.tick_top()
+        ax0.xaxis.set_label_position('top') 
+        ax0.set_xlabel('Дистанція вздовж периметру клітини, μm')
 
         ax1 = fig.add_subplot(gs[1])  # dist bar
         img1 = ax1.imshow(dist_bar, aspect='auto', cmap='jet')
         div1 = make_axes_locatable(ax1)
         cax1 = div1.append_axes('bottom', size='30%', pad=0.3)
         clb1 = plt.colorbar(img1, cax=cax1, orientation='horizontal') 
-        clb1.ax.set_title('μm',fontsize=10)
-        # bar_tick = np.arange(0,np.shape(dist_bar)[1],50)
-        # bar_lab = bar_tick * px_size
+        clb1.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
         ax1.set_xticks([])
-        # ax1.set_xticklabels(bar_lab)
         ax1.set_yticks([])
-        # ax1.set_xticklabels(column_labels, minor=False)
-        # plt.yticks(ticks=range(0,30), labels=range(1,31))
-        plt.subplots_adjust(wspace=0, hspace=0)
+
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_rim_profile.png')
+        plt.close('all')
         plt.show()
+
+
+    def fast_img(self, path):
+        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=1)
+
+        plt.figure(figsize=(7, 7))
+        ax = plt.subplot()
+        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances*0.138)[30:170,110:], cmap='jet', alpha=1)
+        div = make_axes_locatable(ax)
+        cax = div.append_axes('top', size='3%', pad=0.1)
+        clb = plt.colorbar(img, cax=cax, orientation='horizontal') 
+        clb.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
+        ax.imshow(ma.masked_where(~cell_rim[30:170,110:], cell_rim[30:170,110:]), interpolation='none', cmap='magma', alpha=1)
+        ax.plot(142, 67, marker='^', color='red', markersize=20)
+
+        ax.axis('off')
+        plt.tight_layout()
+        plt.savefig(f'{path}/{self.img_name}_cyto_dist.png')
+        plt.close('all')
+        plt.show()
+
 
 
 if __name__=="__main__":

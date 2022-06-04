@@ -27,8 +27,8 @@ import type_multi as rt  # registration type module
 import edge              # util functions module
 
 
-plt.style.use('dark_background')
-plt.rcParams['figure.facecolor'] = '#272b30'
+# plt.style.use('dark_background')
+# plt.rcParams['figure.facecolor'] = '#272b30'
 plt.rcParams['image.cmap'] = 'inferno'
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
@@ -122,7 +122,8 @@ for record in record_list:
     # record.save_ctrl_img(path=record_path)
     # record.save_ca_gif(path=record_path)
     # record.save_dist_ctrl_img(path=record_path)
-    record.save_rim_profile(rim_th=1)
+    # record.save_rim_profile(rim_th=1, path=record_path, px_size=0.138)
+    record.fast_img(path=record_path)
 
     # DATA FRAME UPDATE
     # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
