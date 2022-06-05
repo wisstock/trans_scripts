@@ -572,7 +572,7 @@ class MultiData():
         prot_deltaF = edge.deltaF(self.prot_profile(mask=self.master_mask))
         derivate_deltaF = edge.deltaF(self.derivate_profile)
 
-        plt.figure(figsize=(15,4))
+        plt.figure(figsize=(12,3))
         plt.plot(self.time_line, ca_deltaF, label='Кальцієвий барвник')
         plt.plot(self.time_line, prot_deltaF, label='Флуоресцентний білок')
         plt.plot(self.time_line[1:], derivate_deltaF, label='Похідна інтенсивності кальцієвого барвника', linestyle='--')
@@ -858,7 +858,7 @@ class MultiData():
                     }
 
         # plotting
-        fig = plt.figure(figsize=(7, 7))
+        fig = plt.figure(figsize=(12, 6))
         gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.0, wspace=0.0,
                               height_ratios=(6, 1))
 
@@ -866,24 +866,24 @@ class MultiData():
         img0 = ax0.imshow(rim_profiles, vmin=-np.max(np.abs(rim_profiles)), vmax=np.max(np.abs(rim_profiles)),
                           aspect='auto', cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
         div0 = make_axes_locatable(ax0)
-        cax0 = div0.append_axes('top', size='4%', pad=0.85)
+        cax0 = div0.append_axes('top', size='4%', pad=0.6)
         clb0 = plt.colorbar(img0, cax=cax0, orientation='horizontal') 
         clb0.ax.set_title('ΔF/F',fontsize=10)
         [ax0.axhline(y=i+1, linestyle='--', color='white') for i in self.stim_peak]
-        [ax0.text(x=np.shape(rim_profiles)[1]-65, y=i, s='UV стимул', fontsize=7, color='white') for i in self.stim_peak]
+        [ax0.text(x=np.shape(rim_profiles)[1]-40, y=i, s='UV стимул', fontsize=7, color='white') for i in self.stim_peak]
         ax0.set_xticks([])
         frame_tick = np.arange(0,np.shape(rim_profiles)[0],1)
-        frame_lab = frame_tick+1 * 2
+        frame_lab = (frame_tick+1) * 2
         ax0.set_yticks(frame_tick)
         ax0.set_yticklabels(frame_lab)
         ax0.set_ylabel('Час реєстрації, s')
         bar_tick = np.arange(0,np.shape(dist_bar)[1],100)
         bar_lab = np.int_(bar_tick * px_size)
         ax0.set_xticks(bar_tick)
-        ax0.set_xticklabels(bar_lab)
+        ax0.set_xticklabels([])
         ax0.xaxis.tick_top()
-        ax0.xaxis.set_label_position('top') 
-        ax0.set_xlabel('Дистанція вздовж периметру клітини, μm')
+        ax0.xaxis.set_label_position('top')
+        ax0.set_xlabel('Дистанція вздовж периметру клітини')
 
         ax1 = fig.add_subplot(gs[1])  # dist bar
         img1 = ax1.imshow(dist_bar, aspect='auto', cmap='jet')
@@ -901,17 +901,19 @@ class MultiData():
 
 
     def fast_img(self, path):
+        """ Some shit for fast plotting
+        """
         cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=1)
 
         plt.figure(figsize=(7, 7))
         ax = plt.subplot()
-        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances*0.138)[30:170,110:], cmap='jet', alpha=1)
+        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances), cmap='jet', alpha=1)
         div = make_axes_locatable(ax)
         cax = div.append_axes('top', size='3%', pad=0.1)
         clb = plt.colorbar(img, cax=cax, orientation='horizontal') 
-        clb.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
-        ax.imshow(ma.masked_where(~cell_rim[30:170,110:], cell_rim[30:170,110:]), interpolation='none', cmap='magma', alpha=1)
-        ax.plot(142, 67, marker='^', color='red', markersize=20)
+        # clb.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
+        # ax.imshow(ma.masked_where(~cell_rim[30:170,110:], cell_rim[30:170,110:]), interpolation='none', cmap='magma', alpha=1)
+        # ax.plot(142, 67, marker='^', color='red', markersize=20)
 
         ax.axis('off')
         plt.tight_layout()
