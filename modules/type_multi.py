@@ -586,7 +586,7 @@ class MultiData():
         plt.legend()
         plt.tight_layout()
         # plt.suptitle(f'Master mask int profile, {self.img_name}, {self.stim_power}%', fontsize=20)
-        plt.savefig(f'{path}/{self.img_name}_profile_ca.png')
+        plt.savefig(f'{path}/{self.img_name}_profile_ca.png', dpi=300)
 
         # UP REGIONS PROFILES + CA PROFILE
         best_mask = self.up_diff_mask[self.best_up_mask_index]
@@ -782,7 +782,7 @@ class MultiData():
         plt.savefig(f'{path}/{self.img_name}_all_mask_ctrl.png')
         plt.close('all')
 
-    def save_rim_profile(self, path, rim_th=2, px_size=0.25):
+    def save_rim_profile(self, path, rim_th=2, px_size=0.25, rim_enum='line'):
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
 
         """
@@ -815,30 +815,39 @@ class MultiData():
         else:
             logging.info('There is no gap in cell rim')
 
-        # rim pixels enumeration
-        rad_rim_num = np.int_(np.copy(rad_rim))
-        px_num = 1
-        for i, j in np.ndindex(rad_rim_num.shape):
-            if rad_rim_num[i, j] != 0:
-                rad_rim_num[i, j] = px_num
-                px_num += 1
+        if rim_enum == 'px':
+            # rim pixels enumeration
+            rad_rim_num = np.int_(np.copy(rad_rim))
+            px_num = 1
+            for i, j in np.ndindex(rad_rim_num.shape):
+                if rad_rim_num[i, j] != 0:
+                    rad_rim_num[i, j] = px_num
+                    px_num += 1
 
-        # loop over polar transformed FP frames
-        rim_profiles = []
-        for polar_frame in polar_prot_series:
-            frame_row = np.array([])
+            # loop over polar transformed FP frames
+            rim_profiles = []
+            for polar_frame in polar_prot_series:
+                frame_row = np.array([])
+                for rim_element in range(1, np.max(rad_rim_num)):
+                    rim_element_mask = rad_rim_num == rim_element
+                    frame_row = np.append(frame_row, polar_frame[rim_element_mask], axis=0)
+                rim_profiles.append(frame_row)
+            rim_profiles = np.array(rim_profiles)
+
+            # loop over polar transformed distances image
+            dist_bar = []
             for rim_element in range(1, np.max(rad_rim_num)):
                 rim_element_mask = rad_rim_num == rim_element
-                frame_row = np.append(frame_row, polar_frame[rim_element_mask], axis=0)
-            rim_profiles.append(frame_row)
-        rim_profiles = np.array(rim_profiles)
+                dist_bar.append(polar_dist[rim_element_mask])
+            dist_bar = np.resize(np.array(dist_bar), (1, len(dist_bar))) * px_size
 
-        # loop over polar transformed distances image
-        dist_bar = []
-        for rim_element in range(1, np.max(rad_rim_num)):
-            rim_element_mask = rad_rim_num == rim_element
-            dist_bar.append(polar_dist[rim_element_mask])
-        dist_bar = np.resize(np.array(dist_bar), (1, len(dist_bar))) * px_size
+        elif rim_enum == 'line':
+            rim_profiles = []
+            for polar_frame in polar_prot_series:
+                rim_polar_frame = ma.masked_where(~rad_rim, polar_frame)
+                rim_profiles.append(np.mean(rim_polar_frame, axis=1))
+            dist_bar = np.mean(ma.masked_where(~rad_rim, polar_dist), axis=1)
+            dist_bar = np.resize(np.array(dist_bar), (1, len(dist_bar))) * px_size
 
         # custom cmap for rim profiles
         cdict_blue_red = {
@@ -870,7 +879,7 @@ class MultiData():
         clb0 = plt.colorbar(img0, cax=cax0, orientation='horizontal') 
         clb0.ax.set_title('ΔF/F',fontsize=10)
         [ax0.axhline(y=i+1, linestyle='--', color='white') for i in self.stim_peak]
-        [ax0.text(x=np.shape(rim_profiles)[1]-40, y=i, s='UV стимул', fontsize=7, color='white') for i in self.stim_peak]
+        [ax0.text(x=np.shape(rim_profiles)[1]-20, y=i, s='UV стимул', fontsize=7, color='white') for i in self.stim_peak]
         ax0.set_xticks([])
         frame_tick = np.arange(0,np.shape(rim_profiles)[0],1)
         frame_lab = (frame_tick+1) * 2
@@ -895,9 +904,9 @@ class MultiData():
         ax1.set_yticks([])
 
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_rim_profile.png')
+        plt.savefig(f'{path}/{self.img_name}_rim_profile.png', dpi=300)
         plt.close('all')
-        plt.show()
+        # plt.show()
 
 
     def fast_img(self, path):
@@ -905,19 +914,19 @@ class MultiData():
         """
         cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=1)
 
-        plt.figure(figsize=(7, 7))
+        plt.figure(figsize=(4, 4))
         ax = plt.subplot()
-        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances), cmap='jet', alpha=1)
+        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances)[30:170,110:] * 0.138, cmap='jet', alpha=1)
         div = make_axes_locatable(ax)
         cax = div.append_axes('top', size='3%', pad=0.1)
         clb = plt.colorbar(img, cax=cax, orientation='horizontal') 
-        # clb.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
-        # ax.imshow(ma.masked_where(~cell_rim[30:170,110:], cell_rim[30:170,110:]), interpolation='none', cmap='magma', alpha=1)
-        # ax.plot(142, 67, marker='^', color='red', markersize=20)
+        clb.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
+        ax.imshow(ma.masked_where(~cell_rim[30:170,110:], cell_rim[30:170,110:]), interpolation='none', cmap='magma', alpha=1)
+        ax.plot(142, 67, marker='^', color='red', markersize=10)
 
         ax.axis('off')
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_cyto_dist.png')
+        plt.savefig(f'{path}/{self.img_name}_cyto_dist.png', dpi=300)
         plt.close('all')
         plt.show()
 

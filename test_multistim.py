@@ -122,7 +122,7 @@ for record in record_list:
     # record.save_ctrl_img(path=record_path)
     # record.save_ca_gif(path=record_path)
     # record.save_dist_ctrl_img(path=record_path)
-    record.save_rim_profile(rim_th=1, path=record_path, px_size=0.138)
+    record.save_rim_profile(rim_th=2, path=record_path, px_size=0.138)
     # record.fast_img(path=record_path)
 
     # DATA FRAME UPDATE
