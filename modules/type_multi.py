@@ -250,13 +250,18 @@ class MultiData():
 
         """
         trun = lambda k, sd: (((k - 1)/2)-0.5)/sd  # calculate truncate value for gaussian fliter according to sigma value and kernel size
-        prot_series_sigma = [filters.gaussian(i, sigma=sigma, truncate=trun(kernel_size, sigma)) for i in self.prot_series]
-        baseline_prot_img = np.mean(prot_series_sigma[:baseline_win], axis=0)
-
         delta = lambda f, f_0: (f - f_0)/f_0 if f_0 > 0 else f_0 
         vdelta = np.vectorize(delta)
 
+        # px-wise delta for FP ch
+        prot_series_sigma = [filters.gaussian(i, sigma=sigma, truncate=trun(kernel_size, sigma)) for i in self.prot_series]
+        baseline_prot_img = np.mean(prot_series_sigma[:baseline_win], axis=0)
         self.deltaF_series = np.asarray([vdelta(i, baseline_prot_img) for i in prot_series_sigma])
+
+        # px-wise delta for Ca dye ch
+        ca_series_sigma = [filters.gaussian(i, sigma=sigma, truncate=trun(kernel_size, sigma)) for i in self.ca_series]
+        baseline_ca_img = np.mean(ca_series_sigma[:baseline_win], axis=0) 
+        self.deltaF_ca_series = np.asarray([vdelta(i, baseline_ca_img) for i in ca_series_sigma])
 
         self.stim_mean_series = []
         for stim_position in self.stim_peak:
@@ -573,14 +578,14 @@ class MultiData():
         derivate_deltaF = edge.deltaF(self.derivate_profile)
 
         plt.figure(figsize=(12,3))
-        plt.plot(self.time_line, ca_deltaF, label='Кальцієвий барвник')
-        plt.plot(self.time_line, prot_deltaF, label='Флуоресцентний білок')
-        plt.plot(self.time_line[1:], derivate_deltaF, label='Похідна інтенсивності кальцієвого барвника', linestyle='--')
+        plt.plot(self.time_line, ca_deltaF, label='Ca2+ dye')
+        plt.plot(self.time_line, prot_deltaF, label='FP')
+        plt.plot(self.time_line[1:], derivate_deltaF, label='Ca2+ dye derivative', linestyle='--')
         plt.plot(np.take(self.time_line[1:], self.stim_peak), np.take(derivate_deltaF, self.stim_peak), 'v',
-                 label='UV стимули', markersize=10, color='red')
+                 label='Stimulation', markersize=10, color='red')
         
         plt.grid(visible=True, linestyle=':')
-        plt.xlabel('Час реєстрації, s')
+        plt.xlabel('Time, s')
         plt.ylabel('ΔF/F')
         plt.xticks(np.arange(0, np.max(self.time_line)+2, step=1/self.time_scale))
         plt.legend()
@@ -782,17 +787,25 @@ class MultiData():
         plt.savefig(f'{path}/{self.img_name}_all_mask_ctrl.png')
         plt.close('all')
 
-    def save_rim_profile(self, path, rim_th=2, px_size=0.25, rim_enum='line'):
+    def save_rim_profile(self, path, rim_th=2, px_size=0.25, rim_enum='line', rim_ch='FP'):
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
+        rim_ch - create rim for FP or Ca dye channel
 
         """
+        if rim_ch == 'FP':
+            rim_name = f'{self.img_name}_fp_rim'
+            series_for_rim = self.deltaF_series
+        elif rim_ch == 'Ca':
+            rim_name = f'{self.img_name}_ca_rim'
+            series_for_rim = self.deltaF_ca_series
+
         # cell rim creation
         cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=rim_th)
         rim_center = measure.regionprops(measure.label(cell_rim))[0].centroid
 
         # images polar transforming
         rad_rim = transform.warp_polar(cell_rim, center=rim_center)
-        polar_prot_series = [transform.warp_polar(frame, center=rim_center) for frame in self.deltaF_series]
+        polar_prot_series = [transform.warp_polar(frame, center=rim_center) for frame in series_for_rim]
         polar_dist = transform.warp_polar(self.nuclear_distances, center=rim_center)
 
         # fig, ax = plt.subplots()
@@ -850,21 +863,29 @@ class MultiData():
             dist_bar = np.resize(np.array(dist_bar), (1, len(dist_bar))) * px_size
 
         # custom cmap for rim profiles
-        cdict_blue_red = {
-                  'red':(
-                    (0.0, 0.0, 0.0),
-                    (0.52, 0.0, 0.0),
-                    (0.55, 0.3, 0.3),
-                    (1.0, 1.0, 1.0)),
-                  'blue':(
-                    (0.0, 0.0, 0.0),
-                    (1.0, 0.0, 0.0)),
-                  'green':(
-                    (0.0, 1.0, 1.0),
-                    (0.45, 0.3, 0.3),
-                    (0.48, 0.0, 0.0),
-                    (1.0, 0.0, 0.0))
-                    }
+        if rim_ch == 'FP':
+            cdict_blue_red = {
+                      'red':(
+                        (0.0, 0.0, 0.0),
+                        (0.52, 0.0, 0.0),
+                        (0.55, 0.3, 0.3),
+                        (1.0, 1.0, 1.0)),
+                      'blue':(
+                        (0.0, 0.0, 0.0),
+                        (1.0, 0.0, 0.0)),
+                      'green':(
+                        (0.0, 1.0, 1.0),
+                        (0.45, 0.3, 0.3),
+                        (0.48, 0.0, 0.0),
+                        (1.0, 0.0, 0.0))
+                        }
+            rim_cmap = LinearSegmentedColormap('RedGreen', cdict_blue_red)
+            vmin_val = -np.max(np.abs(rim_profiles))
+            vmax_val = np.max(np.abs(rim_profiles))
+        elif rim_ch == 'Ca':
+            rim_cmap = 'viridis'
+            vmin_val = np.min(np.abs(rim_profiles))
+            vmax_val = np.max(np.abs(rim_profiles))
 
         # plotting
         fig = plt.figure(figsize=(12, 6))
@@ -872,56 +893,55 @@ class MultiData():
                               height_ratios=(6, 1))
 
         ax0 = fig.add_subplot(gs[0]) # FP profile
-        img0 = ax0.imshow(rim_profiles, vmin=-np.max(np.abs(rim_profiles)), vmax=np.max(np.abs(rim_profiles)),
-                          aspect='auto', cmap=LinearSegmentedColormap('RedGreen', cdict_blue_red))
+        img0 = ax0.imshow(rim_profiles, vmin=vmin_val, vmax=vmax_val,
+                          aspect='auto', cmap=rim_cmap)
         div0 = make_axes_locatable(ax0)
         cax0 = div0.append_axes('top', size='4%', pad=0.6)
         clb0 = plt.colorbar(img0, cax=cax0, orientation='horizontal') 
         clb0.ax.set_title('ΔF/F',fontsize=10)
         [ax0.axhline(y=i+1, linestyle='--', color='white') for i in self.stim_peak]
-        [ax0.text(x=np.shape(rim_profiles)[1]-20, y=i, s='UV стимул', fontsize=7, color='white') for i in self.stim_peak]
+        [ax0.text(x=np.shape(rim_profiles)[1]-20, y=i, s='Stimulation', fontsize=7, color='white') for i in self.stim_peak]
         ax0.set_xticks([])
         frame_tick = np.arange(0,np.shape(rim_profiles)[0],1)
         frame_lab = (frame_tick+1) * 2
         ax0.set_yticks(frame_tick)
         ax0.set_yticklabels(frame_lab)
-        ax0.set_ylabel('Час реєстрації, s')
+        ax0.set_ylabel('Time, s')
         bar_tick = np.arange(0,np.shape(dist_bar)[1],100)
         bar_lab = np.int_(bar_tick * px_size)
         ax0.set_xticks(bar_tick)
         ax0.set_xticklabels([])
         ax0.xaxis.tick_top()
         ax0.xaxis.set_label_position('top')
-        ax0.set_xlabel('Дистанція вздовж периметру клітини')
+        ax0.set_xlabel('Distance along cell border')
 
         ax1 = fig.add_subplot(gs[1])  # dist bar
         img1 = ax1.imshow(dist_bar, aspect='auto', cmap='jet')
         div1 = make_axes_locatable(ax1)
         cax1 = div1.append_axes('bottom', size='30%', pad=0.3)
         clb1 = plt.colorbar(img1, cax=cax1, orientation='horizontal') 
-        clb1.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
+        clb1.ax.set_title('Distance from nucleus, μm',fontsize=10)
         ax1.set_xticks([])
         ax1.set_yticks([])
 
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_rim_profile.png', dpi=300)
+        plt.savefig(f'{path}/{rim_name}.png', dpi=300)
         plt.close('all')
         # plt.show()
-
 
     def fast_img(self, path):
         """ Some shit for fast plotting
         """
-        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=1)
+        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=5)
 
         plt.figure(figsize=(4, 4))
         ax = plt.subplot()
-        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances)[30:170,110:] * 0.138, cmap='jet', alpha=1)
+        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances) * 0.138, cmap='jet', alpha=0.75)
         div = make_axes_locatable(ax)
         cax = div.append_axes('top', size='3%', pad=0.1)
         clb = plt.colorbar(img, cax=cax, orientation='horizontal') 
-        clb.ax.set_title('Дистанція від границі ядра, μm',fontsize=10)
-        ax.imshow(ma.masked_where(~cell_rim[30:170,110:], cell_rim[30:170,110:]), interpolation='none', cmap='magma', alpha=1)
+        clb.ax.set_title('Distance from nucleus, μm',fontsize=10)
+        ax.imshow(ma.masked_where(~cell_rim, cell_rim), interpolation='none', cmap='Greys', alpha=0.75)
         ax.plot(142, 67, marker='^', color='red', markersize=10)
 
         ax.axis('off')
