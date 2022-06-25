@@ -921,7 +921,7 @@ class MultiData():
         cax0 = div0.append_axes('top', size='4%', pad=0.6)
         clb0 = plt.colorbar(img0, cax=cax0, orientation='horizontal') 
         clb0.ax.set_title('ΔF/F',fontsize=10)
-        [ax0.axhline(y=i+1, linestyle='--', color='white') for i in self.stim_peak]
+        [ax0.axhline(y=i, linestyle='--', color='white') for i in self.stim_peak]
         [ax0.text(x=np.shape(rim_profiles)[1]-20, y=i, s='Stimulation', fontsize=7, color='white') for i in self.stim_peak]
         ax0.set_xticks([])
         frame_tick = np.arange(0,np.shape(rim_profiles)[0],1)

@@ -124,15 +124,15 @@ for record in record_list:
     # record.save_ctrl_img(path=record_path)
     # record.save_ca_gif(path=record_path)
     # record.save_dist_ctrl_img(path=record_path)
-    # record_df_rim = record.save_rim_profile(rim_th=1, path=record_path, px_size=0.138, rim_ch='FP', save_df=True)
-    # record.save_rim_profile(rim_th=5, path=record_path, px_size=0.138, rim_ch='Ca')
-    record.fast_img(path=record_path)
+    record_df_rim = record.save_rim_profile(rim_th=1, path=record_path, px_size=0.138, rim_ch='FP')  # , save_df=True
+    record_df_rim = record.save_rim_profile(rim_th=5, path=record_path, px_size=0.138, rim_ch='Ca')
+    # record.fast_img(path=record_path)
 
     # DATA FRAME UPDATE
-    # df_rim = df_rim.append(record_df_rim, ignore_index=True)
     # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
     # df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
     # df_px = df_px.append(record.save_px_df(id_suffix=date_name_suffix), ignore_index=True)
+    # df_rim = df_rim.append(record_df_rim, ignore_index=True)
 
 # data frames saving
 # df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
