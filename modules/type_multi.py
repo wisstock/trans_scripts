@@ -56,8 +56,9 @@ class MultiData():
     Does NOT requires oifpars module.
 
     """
-    def __init__(self, oif_path, img_name, meta_dict, time_scale=1, baseline_frames=5, prot_bleach_correction=True):
+    def __init__(self, oif_path, img_name, meta_dict, id_suffix, time_scale=1, baseline_frames=5, prot_bleach_correction=True):
         self.img_name = img_name
+        self.id_suffix = id_suffix
         self.stim_power = meta_dict['power']
 
         base_path = f'{oif_path}/{img_name}_01.oif'  # default OIF index 01
@@ -647,29 +648,29 @@ class MultiData():
 
         plt.suptitle(f'{self.img_name}, {self.stim_power}%, baseline image ({baseline_frames+1} frames)', fontsize=20)
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_baseline_img.png')
+        plt.savefig(f'{path}/{self.img_name}_baseline_img.png', dpi=300)
 
         # MASTER MASK
-        plt.figure(figsize=(15,8))
+        plt.figure(figsize=(13,8))
 
-        ax0 = plt.subplot(131)
+        ax0 = plt.subplot(121)
         ax0.set_title('Otsu elements')
         ax0.imshow(self.element_label, cmap='jet')
         ax0.axis('off')
 
-        ax1 = plt.subplot(132)
-        ax1.set_title('Effective master mask')
-        ax1.imshow(self.master_mask, cmap='jet')
-        ax1.axis('off')
+        # ax1 = plt.subplot(132)
+        # ax1.set_title('Effective master mask')
+        # ax1.imshow(self.master_mask, cmap='jet')
+        # ax1.axis('off')
 
-        ax2 = plt.subplot(133)
-        ax2.set_title('FP img overlap')
+        ax2 = plt.subplot(122)
+        ax2.set_title('Final mask & FP img overlap')
         ax2.imshow(self.total_mask_ctrl_img)
         ax2.axis('off')
 
         plt.suptitle(f'{self.img_name} master mask', fontsize=20)
         plt.tight_layout()
-        plt.savefig(f'{path}/{self.img_name}_master_mask.png')  
+        plt.savefig(f'{path}/{self.img_name}_master_mask.png', dpi=300)  
 
         # COMPARISON IMG
         centr = lambda img: abs(np.max(img)) if abs(np.max(img)) > abs(np.min(img)) else abs(np.min(img))  # center cmap around zero
@@ -787,8 +788,10 @@ class MultiData():
         plt.savefig(f'{path}/{self.img_name}_all_mask_ctrl.png')
         plt.close('all')
 
-    def save_rim_profile(self, path, rim_th=2, px_size=0.25, rim_enum='line', rim_ch='FP'):
+    def save_rim_profile(self, path, rim_th=2, px_size=0.25, rim_enum='line', rim_ch='FP', save_df=False):
         """ Creating of cell border rim mask for monitoring FP distribution along full cell.
+        rim_th - rim thinkness in px
+        px_size - img px size in um
         rim_ch - create rim for FP or Ca dye channel
 
         """
@@ -862,6 +865,25 @@ class MultiData():
             dist_bar = np.mean(ma.masked_where(~rad_rim, polar_dist), axis=1)
             dist_bar = np.resize(np.array(dist_bar), (1, len(dist_bar))) * px_size
 
+        # data frame saving
+        if save_df:
+            self.rim_df = pd.DataFrame(columns=['ID',     # recording ID 
+                                                'time',   # recording time           
+                                                'delta',  # rim point ΔF/F
+                                                'd'])     # distances from nucleus border
+            for frame_i in range(len(self.time_line)):
+                time_point = self.time_line[frame_i]
+                rim_frame_line = rim_profiles[frame_i]
+                for rim_point_i in range(len(rim_frame_line)):
+                    rim_point_series = pd.Series([f'{self.img_name}{self.id_suffix}',  # recording ID
+                                                  time_point,                     # recording time
+                                                  rim_frame_line[rim_point_i],    # rim point ΔF/F
+                                                  dist_bar[0, rim_point_i]],         # distances from nucleus border
+                                                 index=self.rim_df.columns)
+                    self.rim_df = self.rim_df.append(rim_point_series, ignore_index=True)
+            logging.info('Rim data frame created')
+            return self.rim_df
+
         # custom cmap for rim profiles
         if rim_ch == 'FP':
             cdict_blue_red = {
@@ -883,7 +905,7 @@ class MultiData():
             vmin_val = -np.max(np.abs(rim_profiles))
             vmax_val = np.max(np.abs(rim_profiles))
         elif rim_ch == 'Ca':
-            rim_cmap = 'viridis'
+            rim_cmap = 'jet'
             vmin_val = np.min(np.abs(rim_profiles))
             vmax_val = np.max(np.abs(rim_profiles))
 
@@ -916,7 +938,7 @@ class MultiData():
         ax0.set_xlabel('Distance along cell border')
 
         ax1 = fig.add_subplot(gs[1])  # dist bar
-        img1 = ax1.imshow(dist_bar, aspect='auto', cmap='jet')
+        img1 = ax1.imshow(dist_bar, aspect='auto', cmap='gnuplot2')
         div1 = make_axes_locatable(ax1)
         cax1 = div1.append_axes('bottom', size='30%', pad=0.3)
         clb1 = plt.colorbar(img1, cax=cax1, orientation='horizontal') 
@@ -932,23 +954,36 @@ class MultiData():
     def fast_img(self, path):
         """ Some shit for fast plotting
         """
-        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=5)
+        cell_rim = self._get_mask_rim(raw_mask=self.cell_mask, rim_th=1)
 
         plt.figure(figsize=(4, 4))
         ax = plt.subplot()
-        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances) * 0.138, cmap='jet', alpha=0.75)
+        img = ax.imshow(ma.masked_where(~self.master_mask, self.nuclear_distances) * 0.138, cmap='jet')
         div = make_axes_locatable(ax)
         cax = div.append_axes('top', size='3%', pad=0.1)
         clb = plt.colorbar(img, cax=cax, orientation='horizontal') 
         clb.ax.set_title('Distance from nucleus, μm',fontsize=10)
-        ax.imshow(ma.masked_where(~cell_rim, cell_rim), interpolation='none', cmap='Greys', alpha=0.75)
-        ax.plot(142, 67, marker='^', color='red', markersize=10)
+        ax.imshow(ma.masked_where(~cell_rim, cell_rim), interpolation='none', cmap='magma', alpha=0.8)
+        ax.plot(142, 67, marker='v', color='red', markersize=10)
 
         ax.axis('off')
         plt.tight_layout()
         plt.savefig(f'{path}/{self.img_name}_cyto_dist.png', dpi=300)
         plt.close('all')
-        plt.show()
+
+
+        # ca_img_list = [self.ca_series[0], self.ca_series[17]]
+        # vmin_val = np.min(ca_img_list[0])
+        # vmax_val = np.max(ca_img_list[1])
+        # for i in range(len(ca_img_list)):
+        #     ca_img = ca_img_list[i]
+        #     plt.figure(figsize=(4, 4))
+        #     ax = plt.subplot()
+        #     img = ax.imshow(ma.masked_where(~self.master_mask, ca_img), vmin=vmin_val, vmax=vmax_val, cmap='jet')
+        #     ax.axis('off')
+        #     plt.tight_layout()
+        #     plt.savefig(f'{path}/{self.img_name}_ca_{i}.png', dpi=300),
+        #     plt.close('all')
 
 
 

@@ -22,31 +22,27 @@ from skimage import filters
 from skimage import measure
 
 sys.path.append('modules')
-# import oiffile as oif
 import type_multi as rt  # registration type module
 import edge              # util functions module
 
 
-plt.style.use('dark_background')
-plt.rcParams['figure.facecolor'] = '#272b30'
+# plt.style.use('dark_background')
+# plt.rcParams['figure.facecolor'] = '#272b30'
 plt.rcParams['image.cmap'] = 'inferno'
 
 FORMAT = "%(asctime)s| %(levelname)s [%(filename)s: - %(funcName)20s]  %(message)s"
 logging.basicConfig(level=logging.INFO,
                     format=FORMAT)
 
-
 # I/O options
 data_path = os.path.join(sys.path[0], 'data')
 res_path = os.path.join(sys.path[0], 'results')
-
 if not os.path.exists(res_path):
     os.makedirs(res_path)
 
 # options
 date_name_suffix = '_02_2_2022' # suffix with recording date       
 frame_reg_time = 2.0   # frame rate, inter frame time in seconds
-save_csv = False
 
 # data frame init
 df_profile = pd.DataFrame(columns=['ID',           # recording ID
@@ -74,6 +70,11 @@ df_px = pd.DataFrame(columns=['ID',            # recording ID
                               'int',           # px mean intensity
                               'delta'])        # px ΔF/F
 
+df_rim = pd.DataFrame(columns=['ID',     # recording ID 
+                               'time',   # recording time           
+                               'delta',  # rim point ΔF/F
+                               'd'])     # distances from nucleus border
+
 # script start time
 tic = time.perf_counter()
 
@@ -93,6 +94,7 @@ for root, dirs, files in os.walk(data_path):  # loop over OIF files
         if one_dir in meta_data.keys():
             one_record = rt.MultiData(oif_path=os.path.join(root, one_dir),
                                       img_name=one_dir,
+                                      id_suffix=date_name_suffix,
                                       meta_dict=meta_data[one_dir],
                                       time_scale=0.5)
             record_list.append(one_record)
@@ -122,11 +124,12 @@ for record in record_list:
     # record.save_ctrl_img(path=record_path)
     # record.save_ca_gif(path=record_path)
     # record.save_dist_ctrl_img(path=record_path)
-    record.save_rim_profile(rim_th=1, path=record_path, px_size=0.138, rim_ch='FP')
-    record.save_rim_profile(rim_th=5, path=record_path, px_size=0.138, rim_ch='Ca')
+    # record_df_rim = record.save_rim_profile(rim_th=1, path=record_path, px_size=0.138, rim_ch='FP', save_df=True)
+    # record.save_rim_profile(rim_th=5, path=record_path, px_size=0.138, rim_ch='Ca')
     record.fast_img(path=record_path)
 
     # DATA FRAME UPDATE
+    # df_rim = df_rim.append(record_df_rim, ignore_index=True)
     # df_profile = df_profile.append(record.save_profile_df(id_suffix=date_name_suffix), ignore_index=True)
     # df_area = df_area.append(record.save_area_df(id_suffix=date_name_suffix), ignore_index=True)
     # df_px = df_px.append(record.save_px_df(id_suffix=date_name_suffix), ignore_index=True)
@@ -135,6 +138,7 @@ for record in record_list:
 # df_profile.to_csv(f'{res_path}/profile{date_name_suffix}.csv', index=False)
 # df_area.to_csv(f'{res_path}/area{date_name_suffix}.csv', index=False)
 # df_px.to_csv(f'{res_path}/px{date_name_suffix}.csv', index=False)
+# df_rim.to_csv(f'{res_path}/rim{date_name_suffix}.csv', index=False)
 
 # script fin time
 tac = time.perf_counter()
